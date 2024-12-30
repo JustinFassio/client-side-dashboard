@@ -39,8 +39,11 @@ add_filter('template_include', 'load_dashboard_template');
 function athlete_dashboard_child_enqueue_assets() {
     // Only load dashboard assets on dashboard template
     if (!is_page_template('dashboard/templates/dashboard.php')) {
+        error_log('Not loading dashboard assets - not on dashboard template');
         return;
     }
+
+    error_log('Loading dashboard assets - WP_ENV: ' . WP_ENV);
 
     if (WP_ENV === 'development') {
         // Development mode - load from Vite dev server
@@ -51,7 +54,7 @@ function athlete_dashboard_child_enqueue_assets() {
         $vite_server = @file_get_contents('http://localhost:5173/@vite/client');
         if ($vite_server !== false) {
             // Vite server is running
-            error_log('Vite development server is running');
+            error_log('Vite development server is running at port 5173');
             
             // Vite HMR
             wp_enqueue_script('vite-client', 'http://localhost:5173/@vite/client', [], null, true);
@@ -59,9 +62,11 @@ function athlete_dashboard_child_enqueue_assets() {
             // Main application
             wp_register_script('dashboard-js', 'http://localhost:5173/assets/src/main.tsx', ['react', 'react-dom', 'vite-client'], null, true);
             wp_enqueue_script('dashboard-js');
+            
+            error_log('Development assets enqueued successfully');
         } else {
             // Fallback to production assets if Vite server is not running
-            error_log('Vite server not running, falling back to production assets');
+            error_log('Vite server not running at port 5173, falling back to production assets');
             load_production_assets();
         }
     } else {
@@ -77,6 +82,8 @@ function athlete_dashboard_child_enqueue_assets() {
         'templateUrl' => get_stylesheet_directory_uri(),
         'viteUrl' => WP_ENV === 'development' ? 'http://localhost:5173' : ''
     ]);
+
+    error_log('Script localization complete with environment: ' . WP_ENV);
 }
 
 function load_production_assets() {
