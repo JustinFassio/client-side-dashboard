@@ -1,16 +1,34 @@
+/* Theme Colors */
+:root {
+    --primary-color: #ddff0e;
+    --primary-color-darker: #c7e60d;
+    --primary-color-lighter: #e4ff2b;
+    --background-dark: #1a1a1a;
+    --background-darker: #141414;
+    --background-lighter: #2a2a2a;
+    --text-primary: #ffffff;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --text-tertiary: rgba(255, 255, 255, 0.5);
+    --border-color: #333333;
+    --error-color: #ff4444;
+    --success-color: #00ff88;
+}
+
 .profile-form {
     max-width: 800px;
     margin: 0 auto;
     padding: 2rem;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background: var(--background-darker);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
 }
 
 .form-section {
     margin-bottom: 2.5rem;
     padding-bottom: 2rem;
-    border-bottom: 1px solid var(--wp-admin-theme-color-darker-10);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .form-section:last-child {
@@ -19,10 +37,14 @@
 }
 
 .form-section h2 {
-    color: var(--wp-admin-theme-color);
+    color: var(--primary-color);
     font-size: 1.25rem;
     margin-bottom: 1.5rem;
     font-weight: 600;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color-darker);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .form-row {
@@ -44,13 +66,24 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #2c3338;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
 }
 
 .form-group.checkbox-group {
     display: flex;
     align-items: center;
     margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: var(--background-dark);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.form-group.checkbox-group:hover {
+    border-color: var(--primary-color);
+    background: var(--background-lighter);
 }
 
 .form-group.checkbox-group label {
@@ -58,11 +91,15 @@
     align-items: center;
     margin-bottom: 0;
     cursor: pointer;
+    font-weight: normal;
+    color: var(--text-primary);
 }
 
 .form-group.checkbox-group input[type="checkbox"] {
     width: auto;
-    margin-right: 0.5rem;
+    margin-right: 0.75rem;
+    border-color: var(--primary-color);
+    accent-color: var(--primary-color);
 }
 
 .form-group input[type="text"],
@@ -73,32 +110,41 @@
 .form-group textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #dcdcde;
-    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
     font-size: 1rem;
+    line-height: 1.5;
     transition: all 0.2s ease;
-    background-color: #fff;
+    background-color: var(--background-dark);
+    color: var(--text-primary);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: var(--text-tertiary);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: var(--wp-admin-theme-color);
-    box-shadow: 0 0 0 1px var(--wp-admin-theme-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+    background-color: var(--background-lighter);
 }
 
 .form-group input.error,
 .form-group select.error,
 .form-group textarea.error {
-    border-color: #d63638;
+    border-color: var(--error-color);
 }
 
 .form-group .error-message {
     display: block;
-    color: #d63638;
+    color: var(--error-color);
     font-size: 0.875rem;
     margin-top: 0.5rem;
+    padding: 0.25rem 0;
 }
 
 .form-group textarea {
@@ -109,42 +155,60 @@
 .form-actions {
     margin-top: 2rem;
     padding-top: 1.5rem;
-    border-top: 1px solid var(--wp-admin-theme-color-darker-10);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
 }
 
 .form-actions button {
-    width: 100%;
-    padding: 0.75rem;
-    background: var(--wp-admin-theme-color);
-    color: white;
+    min-width: 150px;
+    padding: 0.75rem 1.5rem;
+    background: var(--primary-color);
+    color: var(--background-darker);
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     font-size: 1rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .form-actions button:hover:not(:disabled) {
-    background: var(--wp-admin-theme-color-darker-20);
+    background: var(--primary-color-lighter);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(221, 255, 14, 0.2);
+}
+
+.form-actions button:active:not(:disabled) {
+    background: var(--primary-color-darker);
+    transform: translateY(0);
 }
 
 .form-actions button:disabled {
-    background: var(--wp-admin-theme-color-darker-10);
+    background: var(--background-lighter);
+    color: var(--text-tertiary);
     cursor: not-allowed;
+    opacity: 0.7;
 }
 
 .profile-form-loading {
     text-align: center;
     padding: 2rem;
-    color: var(--wp-admin-theme-color);
+    color: var(--primary-color);
     font-weight: 500;
+    background: var(--background-darker);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--border-color);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
     .profile-form {
         padding: 1.5rem;
+        margin: 1rem;
     }
 
     .form-row {
@@ -160,19 +224,76 @@
     .form-group {
         margin-bottom: 1.25rem;
     }
+
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
 }
 
 /* Accessibility Enhancements */
 .form-group input:focus-visible,
 .form-group select:focus-visible,
 .form-group textarea:focus-visible {
-    outline: 2px solid var(--wp-admin-theme-color);
+    outline: 2px solid var(--primary-color);
     outline-offset: 2px;
 }
 
 /* Required Field Indicator */
 .form-group label[for]:after {
-    content: "*";
-    color: #d63638;
+    content: " *";
+    color: var(--error-color);
     margin-left: 4px;
+}
+
+/* Field Help Text */
+.form-group .help-text {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+/* Section Transitions */
+.form-section {
+    transition: all 0.3s ease;
+}
+
+/* Loading State Animation */
+.profile-form-loading {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Modern Scrollbar for Textareas */
+textarea::-webkit-scrollbar {
+    width: 8px;
+}
+
+textarea::-webkit-scrollbar-track {
+    background: var(--background-darker);
+}
+
+textarea::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--background-lighter);
+}
+
+/* Input Hover States */
+.form-group input:hover:not(:focus),
+.form-group select:hover:not(:focus),
+.form-group textarea:hover:not(:focus) {
+    border-color: var(--primary-color-darker);
+    background-color: var(--background-lighter);
 } 
