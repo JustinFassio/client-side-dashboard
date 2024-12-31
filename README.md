@@ -14,11 +14,12 @@ A **React/TypeScript-powered** WordPress child theme designed to help athletes t
    - Each feature is self-contained, including its own logic, UI components, styling, and documentation.  
    - Communication happens via an **event-driven** system, ensuring features remain decoupled.
 
-2. **Hybrid WordPress + React**  
-   - **React/TypeScript** forms the interactive frontend (modals, dashboards).  
+2. **WordPress + React Integration**  
    - **WordPress PHP** provides the backend, using user meta for profile data and a custom post type (`workout`) for repeated entries.
+   - **React/TypeScript** forms the interactive frontend (modals, dashboards).
+   - Uses `@wordpress/scripts` for modern development workflow.
 
-3. **Key Objectives**  
+3. **Key Features**  
    - **Profile Management**: Collect user details (e.g., Age, Gender, Height, Weight, Injuries).  
    - **Training Persona**: Store preferences (experience level, workout frequency) in user meta.  
    - **Equipment/Environment**: Let users specify gym equipment or environment constraints.  
@@ -48,20 +49,18 @@ A typical layout (simplified):
 
 ```plaintext
 athlete-dashboard-child/
-├── dashboard/                  # Core WP+React framework
-│   ├── core/                   # PHP core classes
-│   ├── components/             # (Optional) shared React components
-│   ├── events.ts               # Event bus for the entire dashboard
-│   ├── styles/                 # Shared style tokens (optional)
-│   └── templates/              # WP templates
-├── features/                   # Modular feature folders
-│   ├── profile/                # Basic user profile data in user meta
-│   ├── training-persona/       # Persona data (level, frequency) in user meta
-│   ├── environment/            # Equipment/environment data in user meta
-│   └── ai-workout-generator/   # Generates or iterates workouts, stored as CPT
-├── assets/                     # Static assets and build outputs
-│   ├── dist/                   # Production builds (Vite output)
-│   └── src/                    # Source assets (if shared)
+├── dashboard/                  # Core dashboard framework
+│   ├── core/                   # Core PHP classes
+│   ├── components/             # Shared React components
+│   └── templates/              # Dashboard PHP templates
+├── features/                   # Modular features
+│   ├── profile/                # Profile feature (user meta)
+│   ├── training-persona/       # Training persona feature (user meta)
+│   ├── environment/            # Equipment/Environment feature (user meta)
+│   └── ai-workout-generator/   # AI generator feature (writes to workout CPT)
+├── assets/                     # Static assets
+│   ├── build/                  # Production-ready assets
+│   └── src/                    # Source files
 └── tests/                      # Unit and integration tests
 ```
 
@@ -107,114 +106,58 @@ Each **feature** has its own:
    ```
 
 2. **Install Dependencies**  
-   - **Node.js & npm** (for frontend build)  
-   - **Composer** (for PHP dependencies)
    ```bash
    npm install
-   composer install
    ```
 
 3. **Development Build**  
    ```bash
-   npm run dev
+   npm run start
    ```
-   - Runs Vite’s development server with hot module replacement (HMR).
+   - Runs WordPress scripts development server with hot reload
 
 4. **Production Build**  
    ```bash
    npm run build
    ```
-   - Outputs hashed, minified assets to `assets/dist/`.
+   - Creates optimized production build in `assets/build`
 
 5. **Activate the Child Theme**  
-   - Copy the theme folder to `wp-content/themes/`.  
-   - Activate it in **WordPress Admin** (`Appearance > Themes`).
+   - Copy the theme folder to `wp-content/themes/`
+   - Activate via WordPress Admin (`Appearance > Themes`)
 
 ---
 
-## **How to Develop Features**
+## **Development Workflow**
 
-1. **Create a Feature Folder**  
-   - `features/<feature-name>/`  
-   - Inside, create subfolders: `components/`, `assets/js/`, `assets/scss/`, and `events.ts`.  
-2. **Implement `FeatureInterface`**  
-   - A typical `FeatureInterface` includes methods like `register()` and `init()`.  
-   - Ensure the feature is recognized by the main dashboard loader.  
-3. **Define Events**  
-   - Add typed events to your `events.ts`.  
-   - Use the shared `Events` bus in `dashboard/events.ts` to emit or listen.  
-4. **Enqueue Assets**  
-   - In a PHP file (e.g., `functions.php` or a dedicated loader), enqueue the built script and style for your feature.  
-   - WordPress automatically looks for your compiled files in `assets/dist/`.
-
-For a **step-by-step** example, see any existing feature’s `README.md`.
-
----
-
-## **Workflow Example: Generating an AI Workout**
-
-1. **Profile & Persona Data**  
-   - A user updates their basic profile (e.g., Age, Injuries) and training persona (Level, Frequency) in user meta.  
-2. **Equipment**  
-   - The user specifies available equipment in `environment` feature.  
-3. **AI Generator Request**  
-   - The user clicks “Generate Workout.” The `ai-workout-generator` feature collects user meta, constructs a prompt, and calls the AI.  
-4. **New Workout Stored**  
-   - The returned workout is saved as a `workout` custom post, with sets/reps in post meta.  
-5. **Final Editing & Logging**  
-   - The user edits sets or reps and logs the workout for the day.  
-   - An event like `workout:logged` is emitted.
-
----
-
-## **Testing**
-
-1. **JavaScript/TypeScript Tests**  
+1. **Start Development Server**
    ```bash
-   npm run test
+   npm run start
    ```
-   - Uses a test runner (e.g., Jest) for unit tests.  
-2. **PHP Tests**  
-   ```bash
-   composer test
-   ```
-   - Runs PHPUnit tests. Filter specific features:  
-     ```bash
-     composer test -- --filter=<FeatureTest>
-     ```
-3. **Integration Tests**  
-   - Validate event flows between multiple features (e.g., a profile update triggering a persona update).  
-4. **Browser Dev Tools**  
-   - Check console logs if `Events.enableDebug()` is activated in `dashboard/events.ts`.
+   - Enables hot reloading for React components
+   - Compiles TypeScript in watch mode
+   - Processes SCSS files
 
----
-
-## **Deployment**
-
-1. **Build Assets**  
+2. **Build for Production**
    ```bash
    npm run build
    ```
-   - Minifies and hashes JS/CSS into `assets/dist/`.
-2. **Deploy Theme**  
-   - Upload the `athlete-dashboard-child` theme folder (including `dist/` assets) to your WordPress install.  
-   - Activate via **WordPress Admin**.
-3. **Verify**  
-   - Check if all features (Profile, Persona, Environment, etc.) are accessible, and the AI generator is functioning with proper network calls.
+   - Creates minified, production-ready assets
+   - Generates asset manifest for WordPress
+
+3. **Run Tests**
+   ```bash
+   npm run test
+   ```
 
 ---
 
-## **Troubleshooting**
+## **WordPress Integration**
 
-1. **Assets Not Loading**  
-   - Ensure `npm run build` was run before uploading.  
-   - Verify script enqueue paths in your loader or `functions.php`.
-2. **No Events Detected**  
-   - Confirm event strings match exactly in `Events.on(...)` and `Events.emit(...)`.  
-   - Check if `Events.enableDebug()` logs appear in the console.
-3. **Data Not Updating**  
-   - Confirm you’re using `update_user_meta()` and reading from the correct meta key.  
-   - Make sure your custom post type is registered and `wp_insert_post` or `update_post_meta` calls are correct.
+- Uses WordPress's built-in React (`wp-element`)
+- Leverages WordPress hooks and filters
+- Follows WordPress coding standards
+- Integrates with WordPress data layer
 
 ---
 
@@ -225,17 +168,18 @@ For a **step-by-step** example, see any existing feature’s `README.md`.
    git checkout -b feature/<your-feature>
    ```
 2. **Add Your Feature**  
-   - Follow **Feature-First** guidelines: new folder, self-contained assets, event definitions.  
-   - Write or update tests.  
+   - Follow Feature-First guidelines
+   - Write tests
+   - Update documentation
 3. **Pull Request**  
-   - Make sure everything passes `npm run test` and `composer test`.  
-   - Submit a PR with a clear summary of your changes.
+   - Ensure tests pass
+   - Follow coding standards
 
 ---
 
 ## **License**
 
-GNU General Public License v2 (or later). Refer to [LICENSE](LICENSE) for details.
+GNU General Public License v2 (or later). See [LICENSE](LICENSE) for details.
 
 ---
 

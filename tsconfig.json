@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "esnext",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "jsx": "react-jsx",
+    "moduleResolution": "node",
+    "allowJs": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@dashboard/*": ["dashboard/*"],
+      "@features/*": ["features/*"],
+      "@assets/*": ["assets/src/*"]
+    }
+  },
+  "include": [
+    "assets/src/**/*",
+    "dashboard/**/*",
+    "features/**/*"
+  ],
+  "exclude": ["node_modules", "build"]
+} 
