@@ -1,0 +1,14 @@
+/*
+Theme Name: Athlete Dashboard Child
+Theme URI: 
+Description: A Feature-First WordPress child theme for athlete workout management
+Author: Your Name
+Author URI: 
+Template: Divi
+Version: 1.0.0
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: athlete-dashboard
+*/
+
+@import url("../Divi/style.css");

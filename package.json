@@ -1,0 +1,20 @@
+{
+  "name": "athlete-dashboard-child",
+  "version": "1.0.0",
+  "description": "Below is a **final, detailed `README.md`** suited for **Cursor AI** integration. It provides a clear overview of your **Feature-First**, **WordPress-based** project design, references your new **`ARCHITECTURE.md`**, and outlines development workflows, data storage strategies, and testing procedures.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JustinFassio/athlete-dashboard-child.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/JustinFassio/athlete-dashboard-child/issues"
+  },
+  "homepage": "https://github.com/JustinFassio/athlete-dashboard-child#readme"
+}
