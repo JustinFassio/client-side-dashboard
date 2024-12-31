@@ -1,3 +1,12 @@
+/* Override WordPress admin container */
+#wpcontent {
+    padding-left: 0 !important;
+}
+
+#wpbody-content {
+    padding: 0 !important;
+}
+
 /* Theme Colors */
 :root {
     --primary-color: #ddff0e;
@@ -16,10 +25,12 @@
 
 .dashboard-shell {
     display: flex;
-    min-height: calc(100vh - 32px); /* Account for WP admin bar */
+    min-height: 100vh;
+    width: 100%;
     background: var(--background-dark);
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+    margin: -32px 0; /* Only offset top/bottom for admin bar */
 }
 
 .dashboard-shell-loading,
@@ -27,7 +38,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: calc(100vh - 32px);
+    min-height: 100vh;
+    margin: -32px -20px;
     background: var(--background-dark);
     color: var(--text-primary);
     font-size: 1rem;
@@ -62,29 +74,37 @@
 .nav-button {
     display: flex;
     align-items: center;
-    width: 100%;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    background: none;
-    color: var(--text-secondary);
-    font-size: 0.875rem;
-    text-align: left;
+    width: calc(100% - 2rem);
+    padding: 0.75rem 1rem;
+    margin: 0.25rem 1rem;
+    background: var(--background-darker);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-light);
+    font-size: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
-    border-left: 4px solid transparent;
+    min-height: 48px;
 }
 
 .nav-button:hover {
-    background-color: var(--background-lighter);
-    color: var(--primary-color);
-    border-left-color: var(--primary-color-darker);
+    background: var(--input-background);
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
 }
 
 .nav-button.active {
-    background-color: var(--background-lighter);
-    color: var(--primary-color);
+    background: var(--input-background);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+.nav-button .nav-label {
     font-weight: 500;
-    border-left-color: var(--primary-color);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .nav-icon {
@@ -225,4 +245,12 @@
 
 .dashboard-main::-webkit-scrollbar-thumb:hover {
     background: var(--background-lighter);
+}
+
+.nav-feature-icon {
+    flex-shrink: 0;
+    width: auto;
+    height: auto;
+    margin-right: 0.75rem;
+    transition: all 0.2s ease;
 } 

@@ -11,7 +11,7 @@ interface DashboardShellProps {
 interface NavItem {
     id: string;
     label: string;
-    icon?: string;
+    icon?: string | JSX.Element;
 }
 
 export const DashboardShell: React.FC<DashboardShellProps> = ({ registry: initialRegistry }) => {

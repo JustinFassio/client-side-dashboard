@@ -3,72 +3,43 @@
  * Defines all events that can be emitted by the Profile feature
  */
 
+import { Injury } from './components/InjuryTracker/types';
+
 export const PROFILE_EVENTS = {
-    PROFILE_LOADED: 'profile:loaded',
+    PROFILE_LOADING: 'profile:loading',
     PROFILE_UPDATED: 'profile:updated',
     PROFILE_UPDATE_FAILED: 'profile:update_failed',
-    PROFILE_LOADING: 'profile:loading',
+    INJURY_ADDED: 'profile:injury_added',
+    INJURY_UPDATED: 'profile:injury_updated',
+    INJURY_REMOVED: 'profile:injury_removed'
 } as const;
 
-export enum Gender {
-    MALE = 'male',
-    FEMALE = 'female',
-    OTHER = 'other',
-    PREFER_NOT_TO_SAY = 'prefer_not_to_say'
-}
-
-export interface MedicalInfo {
-    hasInjuries: boolean;
-    injuries?: string;
-    hasMedicalClearance: boolean;
-    medicalClearanceDate?: string;
-    medicalNotes?: string;
-}
-
 export interface ProfileData {
-    // Basic Info
-    firstName: string;
-    lastName: string;
-    email: string;
-    
-    // Physical Attributes
-    age: number;
-    gender: Gender;
-    height: number; // in centimeters
-    weight: number; // in kilograms
-    
-    // Medical Information
-    medicalInfo: MedicalInfo;
-    
-    // Optional Information
-    bio?: string;
-    fitnessGoals?: string;
-    preferredWorkoutTypes?: string[];
+    age?: number;
+    gender?: string;
+    height?: number;
+    weight?: number;
+    medicalConditions?: string;
+    injuries: Injury[];
 }
 
-export type ProfileEventPayloads = {
-    [PROFILE_EVENTS.PROFILE_LOADED]: ProfileData;
+export interface ProfileEventPayloads {
+    [PROFILE_EVENTS.PROFILE_LOADING]: undefined;
     [PROFILE_EVENTS.PROFILE_UPDATED]: ProfileData;
     [PROFILE_EVENTS.PROFILE_UPDATE_FAILED]: {
         error: string;
-        profileData?: Partial<ProfileData>;
+        profileData: ProfileData;
     };
-    [PROFILE_EVENTS.PROFILE_LOADING]: undefined;
-};
-
-// Type guard for profile data
-export function isProfileData(data: unknown): data is ProfileData {
-    if (!data || typeof data !== 'object') return false;
-    
-    const profile = data as Partial<ProfileData>;
-    return (
-        typeof profile.firstName === 'string' &&
-        typeof profile.lastName === 'string' &&
-        typeof profile.email === 'string' &&
-        typeof profile.age === 'number' &&
-        typeof profile.gender === 'string' &&
-        typeof profile.height === 'number' &&
-        typeof profile.weight === 'number' &&
-        typeof profile.medicalInfo === 'object'
-    );
+    [PROFILE_EVENTS.INJURY_ADDED]: {
+        injury: Injury;
+        allInjuries: Injury[];
+    };
+    [PROFILE_EVENTS.INJURY_UPDATED]: {
+        injury: Injury;
+        allInjuries: Injury[];
+    };
+    [PROFILE_EVENTS.INJURY_REMOVED]: {
+        injuryId: string;
+        allInjuries: Injury[];
+    };
 } 

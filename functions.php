@@ -191,3 +191,24 @@ function athlete_dashboard_load_template($template) {
     return $template;
 }
 add_filter('template_include', 'athlete_dashboard_load_template');
+
+// Remove Divi template parts for dashboard page
+function athlete_dashboard_remove_divi_template_parts() {
+    if (is_page_template('dashboard/templates/dashboard.php')) {
+        // Remove Divi's default layout
+        remove_action('et_header_top', 'et_add_mobile_navigation');
+        remove_action('et_after_main_content', 'et_divi_output_footer_items');
+        
+        // Remove sidebar
+        add_filter('et_divi_sidebar', '__return_false');
+        
+        // Remove default container classes
+        add_filter('body_class', function($classes) {
+            return array_diff($classes, ['et_right_sidebar', 'et_left_sidebar', 'et_includes_sidebar']);
+        });
+        
+        // Set full width layout
+        add_filter('et_pb_is_pagebuilder_used', '__return_false');
+    }
+}
+add_action('template_redirect', 'athlete_dashboard_remove_divi_template_parts');

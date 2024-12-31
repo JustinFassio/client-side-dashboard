@@ -6,14 +6,12 @@ Template Name: Dashboard
 get_header(); // Gets Divi header
 ?>
 
-<div id="main-content">
-    <div class="container">
-        <div id="dashboard-root">
-            <!-- React will mount here -->
-            <?php if (WP_DEBUG): ?>
-                <div id="debug-info" style="background: #f5f5f5; padding: 20px; margin: 20px 0; border: 1px solid #ddd;">
-                    <h3>Debug Information</h3>
-                    <pre>
+<div id="dashboard-root" class="athlete-dashboard-container">
+    <!-- React will mount here -->
+    <?php if (WP_DEBUG): ?>
+        <div id="debug-info" style="background: #f5f5f5; padding: 20px; margin: 20px 0; border: 1px solid #ddd;">
+            <h3>Debug Information</h3>
+            <pre>
 Template File: <?php echo get_page_template(); ?>
 Is Dashboard Template: <?php echo is_page_template('dashboard/templates/dashboard.php') ? 'Yes' : 'No'; ?>
 WP_DEBUG: <?php echo WP_DEBUG ? 'Enabled' : 'Disabled'; ?>
@@ -27,11 +25,9 @@ athleteDashboardData: <?php echo wp_json_encode(array(
     'apiUrl' => rest_url(),
     'userId' => get_current_user_id()
 )); ?>
-                    </pre>
-                </div>
-            <?php endif; ?>
+            </pre>
         </div>
-    </div>
+    <?php endif; ?>
 </div>
 
 <?php if (WP_DEBUG): ?>

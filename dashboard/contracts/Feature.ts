@@ -4,7 +4,7 @@ import type { Dispatch } from '@wordpress/data';
 export interface FeatureMetadata {
   name: string;
   description: string;
-  icon?: string;
+  icon?: string | JSX.Element;
   order?: number;
 }
 

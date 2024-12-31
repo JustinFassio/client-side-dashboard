@@ -1,8 +1,9 @@
 import { createElement } from '@wordpress/element';
 import { Feature, FeatureContext } from '../../dashboard/contracts/Feature';
 import { Events } from '../../dashboard/core/events';
-import { ProfileForm } from './components/ProfileForm';
+import { UserCircle2, Dumbbell, Heart, FileWarning } from 'lucide-react';
 import { PROFILE_EVENTS, ProfileData, ProfileEventPayloads } from './events';
+import { ProfileForm } from './components/ProfileForm';
 import { profileService } from './assets/js/profileService';
 
 export class ProfileFeature implements Feature {
@@ -10,16 +11,43 @@ export class ProfileFeature implements Feature {
     public readonly metadata = {
         name: 'Profile',
         description: 'Manage your athlete profile',
-        icon: '👤',
+        icon: createElement(UserCircle2, {
+            size: 36,
+            strokeWidth: 1.5,
+            className: 'nav-feature-icon',
+            color: '#ddff0e'
+        }),
         order: 1
     };
 
     private isInitialized = false;
     private context: FeatureContext | null = null;
 
+    sections = [
+        {
+            id: 'basic',
+            title: 'Basic Information',
+            icon: UserCircle2,
+        },
+        {
+            id: 'physical',
+            title: 'Physical Information',
+            icon: Dumbbell,
+        },
+        {
+            id: 'medical',
+            title: 'Medical Information',
+            icon: Heart,
+        },
+        {
+            id: 'injuries',
+            title: 'Injuries & Limitations',
+            icon: FileWarning,
+        }
+    ];
+
     async register(context: FeatureContext): Promise<void> {
         this.context = context;
-        // Configure profile service with context
         profileService.configure({
             nonce: context.nonce,
             apiUrl: context.apiUrl
@@ -60,7 +88,7 @@ export class ProfileFeature implements Feature {
     render(): JSX.Element {
         return createElement(ProfileForm, {
             onSave: this.handleProfileSave,
-            onError: this.handleError
+            sections: this.sections
         });
     }
 
@@ -101,9 +129,5 @@ export class ProfileFeature implements Feature {
     private handleProfileUpdateFailed = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATE_FAILED]) => {
         // Handle failed profile update
         console.error('Profile update failed:', payload.error);
-    };
-
-    private handleError = (error: string) => {
-        Events.emit(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, { error });
     };
 } 

@@ -12,3 +12,90 @@ Text Domain: athlete-dashboard
 */
 
 @import url("../Divi/style.css");
+
+/* Override Divi's default container */
+.athlete-dashboard-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    margin-top: calc(32px + 2rem) !important; /* Account for admin bar (32px) plus comfortable spacing */
+    position: relative;
+}
+
+/* Add gradient fill to top margin */
+.athlete-dashboard-container::before {
+    content: '';
+    position: absolute;
+    top: calc(-2rem - 32px); /* Match the margin-top */
+    left: 0;
+    right: 0;
+    height: calc(2rem + 32px);
+    background: linear-gradient(180deg, 
+        rgba(26, 26, 26, 0.95) 0%,
+        rgba(26, 26, 26, 0.98) 50%,
+        #1a1a1a 100%
+    );
+    z-index: -1;
+}
+
+/* Remove Divi's default spacing */
+#main-content {
+    background-color: transparent !important;
+    padding-top: 0 !important;
+}
+
+#main-content .container {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Remove any potential white backgrounds */
+#page-container {
+    background-color: #1a1a1a !important;
+}
+
+/* Ensure content spans full width */
+.et_right_sidebar #main-content .container:before {
+    display: none;
+}
+
+/* Additional Divi overrides for full width */
+.et_boxed_layout #page-container {
+    max-width: none;
+    box-shadow: none;
+}
+
+.et_no_sidebar #main-content .container:before {
+    display: none;
+}
+
+/* Handle mobile responsiveness */
+@media (max-width: 980px) {
+    #main-content .container {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    .et_pb_row {
+        width: 100% !important;
+        max-width: none !important;
+    }
+}
+
+/* Remove Divi's default padding on mobile */
+@media (max-width: 767px) {
+    #page-container {
+        padding-top: 0 !important;
+    }
+    
+    #main-content {
+        padding-top: 0 !important;
+    }
+    
+    .athlete-dashboard-container {
+        margin-top: calc(46px + 1.5rem) !important; /* Account for mobile admin bar (46px) plus spacing */
+    }
+}
