@@ -4,6 +4,7 @@ import { Events } from '../../dashboard/core/events';
 import { UserCircle2, Dumbbell, Heart, FileWarning } from 'lucide-react';
 import { PROFILE_EVENTS, ProfileData, ProfileEventPayloads } from './events';
 import { ProfileForm } from './components/ProfileForm';
+import { InjuryTracker } from './components/InjuryTracker';
 import { profileService } from './assets/js/profileService';
 
 export class ProfileFeature implements Feature {
@@ -43,6 +44,7 @@ export class ProfileFeature implements Feature {
             id: 'injuries',
             title: 'Injuries & Limitations',
             icon: FileWarning,
+            component: InjuryTracker
         }
     ];
 
@@ -68,6 +70,18 @@ export class ProfileFeature implements Feature {
             PROFILE_EVENTS.PROFILE_UPDATE_FAILED,
             this.handleProfileUpdateFailed
         );
+        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_ADDED]>(
+            PROFILE_EVENTS.INJURY_ADDED,
+            this.handleInjuryAdded
+        );
+        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_UPDATED]>(
+            PROFILE_EVENTS.INJURY_UPDATED,
+            this.handleInjuryUpdated
+        );
+        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_REMOVED]>(
+            PROFILE_EVENTS.INJURY_REMOVED,
+            this.handleInjuryRemoved
+        );
 
         this.isInitialized = true;
     }
@@ -76,6 +90,9 @@ export class ProfileFeature implements Feature {
         // Unregister event handlers
         Events.off(PROFILE_EVENTS.PROFILE_UPDATED, this.handleProfileUpdated);
         Events.off(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, this.handleProfileUpdateFailed);
+        Events.off(PROFILE_EVENTS.INJURY_ADDED, this.handleInjuryAdded);
+        Events.off(PROFILE_EVENTS.INJURY_UPDATED, this.handleInjuryUpdated);
+        Events.off(PROFILE_EVENTS.INJURY_REMOVED, this.handleInjuryRemoved);
 
         this.isInitialized = false;
         this.context = null;
@@ -121,13 +138,22 @@ export class ProfileFeature implements Feature {
     };
 
     private handleProfileUpdated = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATED]) => {
-        // Handle successful profile update
-        // This could trigger notifications or other UI updates
         console.log('Profile updated successfully:', payload);
     };
 
     private handleProfileUpdateFailed = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATE_FAILED]) => {
-        // Handle failed profile update
         console.error('Profile update failed:', payload.error);
+    };
+
+    private handleInjuryAdded = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_ADDED]) => {
+        console.log('Injury added:', payload.injury);
+    };
+
+    private handleInjuryUpdated = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_UPDATED]) => {
+        console.log('Injury updated:', payload.injury);
+    };
+
+    private handleInjuryRemoved = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_REMOVED]) => {
+        console.log('Injury removed:', payload.injuryId);
     };
 } 

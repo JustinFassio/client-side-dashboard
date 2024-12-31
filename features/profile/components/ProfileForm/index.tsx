@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { createElement, useState } from '@wordpress/element';
 import { LucideIcon } from 'lucide-react';
+import { InjuryTracker } from '../InjuryTracker';
+import { Injury } from '../InjuryTracker/types';
 import './ProfileForm.css';
 
 interface Section {
     id: string;
     title: string;
     icon: LucideIcon;
+    component?: React.ComponentType<any>;
 }
 
 interface ProfileFormProps {
@@ -21,7 +24,7 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
         height: '',
         weight: '',
         medicalConditions: '',
-        injuries: ''
+        injuries: [] as Injury[]
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -34,125 +37,116 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    return (
-        <div className="profile-form-container">
-            <nav className="profile-sections">
-                {sections.map(section => (
-                    <button
-                        key={section.id}
-                        className={`section-button ${activeSection === section.id ? 'active' : ''}`}
-                        onClick={() => setActiveSection(section.id)}
-                    >
-                        <section.icon size={20} />
-                        <span>{section.title}</span>
-                    </button>
-                ))}
-            </nav>
+    const handleInjuriesChange = (injuries: Injury[]) => {
+        setFormData(prev => ({ ...prev, injuries }));
+    };
 
-            <form onSubmit={handleSubmit} className="profile-form">
-                {activeSection === 'basic' && (
-                    <div className="form-section">
-                        <h2>Basic Information</h2>
-                        <div className="form-group">
-                            <label htmlFor="age">Age</label>
-                            <input
-                                type="number"
-                                id="age"
-                                name="age"
-                                value={formData.age}
-                                onChange={handleInputChange}
-                                min="0"
-                                max="120"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="gender">Gender</label>
-                            <select
-                                id="gender"
-                                name="gender"
-                                value={formData.gender}
-                                onChange={handleInputChange}
-                            >
-                                <option value="">Select gender</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
-                                <option value="prefer-not-to-say">Prefer not to say</option>
-                            </select>
-                        </div>
-                    </div>
-                )}
+    return createElement('div', { className: 'profile-form-container' }, [
+        createElement('nav', { className: 'profile-sections', key: 'nav' },
+            sections.map(section =>
+                createElement('button', {
+                    key: section.id,
+                    className: `section-button ${activeSection === section.id ? 'active' : ''}`,
+                    onClick: () => setActiveSection(section.id)
+                }, [
+                    createElement(section.icon, { size: 20, key: 'icon' }),
+                    createElement('span', { key: 'text' }, section.title)
+                ])
+            )
+        ),
 
-                {activeSection === 'physical' && (
-                    <div className="form-section">
-                        <h2>Physical Information</h2>
-                        <div className="form-group">
-                            <label htmlFor="height">Height (cm)</label>
-                            <input
-                                type="number"
-                                id="height"
-                                name="height"
-                                value={formData.height}
-                                onChange={handleInputChange}
-                                min="0"
-                                max="300"
-                            />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="weight">Weight (kg)</label>
-                            <input
-                                type="number"
-                                id="weight"
-                                name="weight"
-                                value={formData.weight}
-                                onChange={handleInputChange}
-                                min="0"
-                                max="500"
-                            />
-                        </div>
-                    </div>
-                )}
+        createElement('form', { onSubmit: handleSubmit, className: 'profile-form', key: 'form' }, [
+            activeSection === 'basic' && createElement('div', { className: 'form-section', key: 'basic' }, [
+                createElement('h2', { key: 'title' }, 'Basic Information'),
+                createElement('div', { className: 'form-group', key: 'age' }, [
+                    createElement('label', { htmlFor: 'age', key: 'label' }, 'Age'),
+                    createElement('input', {
+                        key: 'input',
+                        type: 'number',
+                        id: 'age',
+                        name: 'age',
+                        value: formData.age,
+                        onChange: handleInputChange,
+                        min: '0',
+                        max: '120'
+                    })
+                ]),
+                createElement('div', { className: 'form-group', key: 'gender' }, [
+                    createElement('label', { htmlFor: 'gender', key: 'label' }, 'Gender'),
+                    createElement('select', {
+                        key: 'select',
+                        id: 'gender',
+                        name: 'gender',
+                        value: formData.gender,
+                        onChange: handleInputChange
+                    }, [
+                        createElement('option', { value: '', key: 'default' }, 'Select gender'),
+                        createElement('option', { value: 'male', key: 'male' }, 'Male'),
+                        createElement('option', { value: 'female', key: 'female' }, 'Female'),
+                        createElement('option', { value: 'other', key: 'other' }, 'Other'),
+                        createElement('option', { value: 'prefer-not-to-say', key: 'prefer' }, 'Prefer not to say')
+                    ])
+                ])
+            ]),
 
-                {activeSection === 'medical' && (
-                    <div className="form-section">
-                        <h2>Medical Information</h2>
-                        <div className="form-group">
-                            <label htmlFor="medicalConditions">Medical Conditions</label>
-                            <textarea
-                                id="medicalConditions"
-                                name="medicalConditions"
-                                value={formData.medicalConditions}
-                                onChange={handleInputChange}
-                                rows={4}
-                                placeholder="List any medical conditions that may affect your training..."
-                            />
-                        </div>
-                    </div>
-                )}
+            activeSection === 'physical' && createElement('div', { className: 'form-section', key: 'physical' }, [
+                createElement('h2', { key: 'title' }, 'Physical Information'),
+                createElement('div', { className: 'form-group', key: 'height' }, [
+                    createElement('label', { htmlFor: 'height', key: 'label' }, 'Height (cm)'),
+                    createElement('input', {
+                        key: 'input',
+                        type: 'number',
+                        id: 'height',
+                        name: 'height',
+                        value: formData.height,
+                        onChange: handleInputChange,
+                        min: '0',
+                        max: '300'
+                    })
+                ]),
+                createElement('div', { className: 'form-group', key: 'weight' }, [
+                    createElement('label', { htmlFor: 'weight', key: 'label' }, 'Weight (kg)'),
+                    createElement('input', {
+                        key: 'input',
+                        type: 'number',
+                        id: 'weight',
+                        name: 'weight',
+                        value: formData.weight,
+                        onChange: handleInputChange,
+                        min: '0',
+                        max: '500'
+                    })
+                ])
+            ]),
 
-                {activeSection === 'injuries' && (
-                    <div className="form-section">
-                        <h2>Injuries & Limitations</h2>
-                        <div className="form-group">
-                            <label htmlFor="injuries">Current or Past Injuries</label>
-                            <textarea
-                                id="injuries"
-                                name="injuries"
-                                value={formData.injuries}
-                                onChange={handleInputChange}
-                                rows={4}
-                                placeholder="Describe any injuries or physical limitations..."
-                            />
-                        </div>
-                    </div>
-                )}
+            activeSection === 'medical' && createElement('div', { className: 'form-section', key: 'medical' }, [
+                createElement('h2', { key: 'title' }, 'Medical Information'),
+                createElement('div', { className: 'form-group', key: 'conditions' }, [
+                    createElement('label', { htmlFor: 'medicalConditions', key: 'label' }, 'Medical Conditions'),
+                    createElement('textarea', {
+                        key: 'textarea',
+                        id: 'medicalConditions',
+                        name: 'medicalConditions',
+                        value: formData.medicalConditions,
+                        onChange: handleInputChange,
+                        rows: 4,
+                        placeholder: 'List any medical conditions that may affect your training...'
+                    })
+                ])
+            ]),
 
-                <div className="form-actions">
-                    <button type="submit" className="save-button">
-                        Save Profile
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
+            activeSection === 'injuries' && createElement('div', { className: 'form-section', key: 'injuries' }, [
+                createElement('h2', { key: 'title' }, 'Injuries & Limitations'),
+                createElement(InjuryTracker, {
+                    key: 'tracker',
+                    injuries: formData.injuries,
+                    onChange: handleInjuriesChange
+                })
+            ]),
+
+            createElement('div', { className: 'form-actions', key: 'actions' },
+                createElement('button', { type: 'submit', className: 'save-button' }, 'Save Profile')
+            )
+        ])
+    ]);
 }; 
