@@ -9,63 +9,40 @@ function athlete_dashboard_debug_log($message) {
 }
 
 // Enqueue scripts and styles
-function athlete_dashboard_enqueue_scripts() {
-    $asset_file_path = get_stylesheet_directory() . '/assets/build/main.asset.php';
+function enqueue_athlete_dashboard_scripts() {
+    if (!is_page_template('templates/dashboard.php')) {
+        return;
+    }
+
+    $asset_file = include(get_stylesheet_directory() . '/assets/build/main.asset.php');
     
-    // Default dependencies and version
-    $asset_file = [
-        'dependencies' => ['wp-element'],
-        'version' => filemtime(get_stylesheet_directory() . '/assets/build/main.js')
-    ];
+    // Enqueue WordPress scripts we depend on
+    wp_enqueue_script('wp-data');
+    wp_enqueue_script('wp-api-fetch');
+    wp_enqueue_script('wp-i18n');
+    
+    wp_enqueue_script(
+        'athlete-dashboard',
+        get_stylesheet_directory_uri() . '/assets/build/main.js',
+        array_merge(['wp-element', 'wp-data', 'wp-api-fetch', 'wp-i18n'], $asset_file['dependencies']),
+        $asset_file['version']
+    );
 
-    // Try to load the asset file if it exists
-    if (file_exists($asset_file_path)) {
-        $asset_file = require $asset_file_path;
-    }
+    wp_localize_script('athlete-dashboard', 'athleteDashboardData', array(
+        'nonce' => wp_create_nonce('wp_rest'),
+        'siteUrl' => get_site_url(),
+        'apiUrl' => rest_url('wp/v2'),
+        'userId' => get_current_user_id()
+    ));
 
-    // Enqueue main script if it exists
-    $script_path = get_stylesheet_directory() . '/assets/build/main.js';
-    if (file_exists($script_path)) {
-        wp_enqueue_script(
-            'athlete-dashboard-scripts',
-            get_stylesheet_directory_uri() . '/assets/build/main.js',
-            $asset_file['dependencies'],
-            $asset_file['version'],
-            true
-        );
-
-        // Localize script with WordPress data
-        wp_localize_script(
-            'athlete-dashboard-scripts',
-            'athleteDashboardData',
-            array(
-                'nonce' => wp_create_nonce('wp_rest'),
-                'siteUrl' => get_site_url(),
-                'apiUrl' => get_rest_url(),
-                'userId' => get_current_user_id(),
-            )
-        );
-    } else {
-        athlete_dashboard_debug_log('Main script file not found: ' . $script_path);
-    }
-
-    // Enqueue main stylesheet if it exists
-    $style_path = get_stylesheet_directory() . '/assets/build/main.css';
-    if (file_exists($style_path)) {
-        wp_enqueue_style(
-            'athlete-dashboard-styles',
-            get_stylesheet_directory_uri() . '/assets/build/main.css',
-            array(),
-            $asset_file['version']
-        );
-    } else {
-        athlete_dashboard_debug_log('Main stylesheet not found: ' . $style_path);
-    }
-
-    // Always enqueue parent theme style
-    wp_enqueue_style('divi-style', get_template_directory_uri() . '/style.css');
+    wp_enqueue_style(
+        'athlete-dashboard',
+        get_stylesheet_directory_uri() . '/assets/build/main.css',
+        array(),
+        $asset_file['version']
+    );
 }
-add_action('wp_enqueue_scripts', 'athlete_dashboard_enqueue_scripts');
+add_action('wp_enqueue_scripts', 'enqueue_athlete_dashboard_scripts');
 
 // Add support for editor styles
 function athlete_dashboard_setup() {
