@@ -5,17 +5,12 @@
   "main": "assets/src/main.tsx",
   "scripts": {
     "build": "wp-scripts build",
-    "check-engines": "wp-scripts check-engines",
-    "check-licenses": "wp-scripts check-licenses",
-    "format": "wp-scripts format",
-    "lint:css": "wp-scripts lint-style",
-    "lint:js": "wp-scripts lint-js",
-    "lint:md:docs": "wp-scripts lint-md-docs",
-    "lint:pkg-json": "wp-scripts lint-pkg-json",
-    "packages-update": "wp-scripts packages-update",
     "start": "wp-scripts start",
-    "test:e2e": "wp-scripts test-e2e",
-    "test:unit": "wp-scripts test-unit-js"
+    "check-types": "tsc --noEmit",
+    "lint": "wp-scripts lint-js",
+    "lint:fix": "wp-scripts lint-js --fix",
+    "test": "wp-scripts test-unit-js",
+    "clean": "rm -rf build"
   },
   "repository": {
     "type": "git",
@@ -34,20 +29,26 @@
     "@wordpress/data": "^9.0.0",
     "@wordpress/element": "^5.0.0",
     "@wordpress/hooks": "^3.0.0",
+    "@wordpress/i18n": "^4.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "@types/wordpress__api-fetch": "^3.2.0",
+    "@types/wordpress__components": "^23.0.0",
+    "@types/wordpress__data": "^6.0.0",
     "@types/wordpress__element": "^2.4.0",
+    "@types/wordpress__i18n": "^3.11.0",
     "@wordpress/env": "^8.0.0",
     "@wordpress/scripts": "^26.0.0",
-    "css-loader": "^7.1.2",
-    "mini-css-extract-plugin": "^2.9.2",
-    "sass": "^1.83.0",
-    "sass-loader": "^16.0.4",
-    "style-loader": "^4.0.0",
-    "typescript": "^5.0.0"
+    "css-loader": "^6.8.1",
+    "mini-css-extract-plugin": "^2.7.6",
+    "sass": "^1.69.5",
+    "sass-loader": "^13.3.2",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3"
   }
 }
