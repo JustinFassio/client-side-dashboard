@@ -1,0 +1,13 @@
+/* Dashboard Core Theme Colors */
+:root {
+    --primary-color: #ddff0e;
+    --primary-hover: #c7e60d;
+    --background-dark: #1a1a1a;
+    --background-darker: #141414;
+    --text-light: #ffffff;
+    --text-dim: #a0a0a0;
+    --border-color: #333333;
+    --input-background: #242424;
+    --error-color: #ff4444;
+    --success-color: #00cc88;
+} 

@@ -1,7 +1,7 @@
 import { createElement, useState, useCallback } from '@wordpress/element';
 import { PlusCircle, AlertCircle, XCircle } from 'lucide-react';
 import { Injury, InjuryTrackerProps, PREDEFINED_INJURIES } from './types';
-import './InjuryTracker.css';
+import '../../assets/styles/components/InjuryTracker.css';
 
 export const InjuryTracker = ({ injuries, onChange, className = '' }: InjuryTrackerProps) => {
     const [newInjuryName, setNewInjuryName] = useState('');

@@ -2,7 +2,7 @@ import { createElement, useState } from '@wordpress/element';
 import { LucideIcon } from 'lucide-react';
 import { InjuryTracker } from '../InjuryTracker';
 import { Injury } from '../InjuryTracker/types';
-import './ProfileForm.css';
+import '../../assets/styles/components/ProfileForm.css';
 
 interface Section {
     id: string;
@@ -78,7 +78,8 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
                         id: 'gender',
                         name: 'gender',
                         value: formData.gender,
-                        onChange: handleInputChange
+                        onChange: handleInputChange,
+                        className: 'form-control'
                     }, [
                         createElement('option', { value: '', key: 'default' }, 'Select gender'),
                         createElement('option', { value: 'male', key: 'male' }, 'Male'),

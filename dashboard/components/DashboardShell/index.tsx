@@ -2,7 +2,7 @@ import { createElement, useState, useEffect } from '@wordpress/element';
 import { Feature, FeatureContext } from '../../contracts/Feature';
 import { FeatureRegistry } from '../../core/FeatureRegistry';
 import { Events } from '../../core/events';
-import './DashboardShell.css';
+import '../../styles/components/DashboardShell.css';
 
 interface DashboardShellProps {
     registry?: FeatureRegistry;

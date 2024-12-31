@@ -1,17 +1,7 @@
-/* Theme Colors */
-:root {
-    --primary-color: #ddff0e;
-    --primary-hover: #c7e60d;
-    --background-dark: #1a1a1a;
-    --background-darker: #141414;
-    --text-light: #ffffff;
-    --text-dim: #a0a0a0;
-    --border-color: #333333;
-    --input-background: #242424;
-    --error-color: #ff4444;
-    --success-color: #00cc88;
-}
+@import '../../../../../dashboard/styles/variables.css';
+@import '../forms.css';
 
+/* Profile Form Layout */
 .profile-form-container {
     display: flex;
     gap: 2rem;
@@ -83,7 +73,6 @@
     );
 }
 
-/* Remove border from last section */
 .form-section:last-child {
     border-bottom: none;
     margin-bottom: 0;
@@ -99,48 +88,6 @@
     margin-bottom: 1.5rem;
     font-size: 1.5rem;
     font-weight: 600;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: var(--text-dim);
-    font-size: 0.9rem;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    width: 100%;
-    padding: 0.75rem;
-    background-color: var(--input-background);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    color: var(--text-light);
-    font-size: 1rem;
-    transition: all 0.2s ease;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 1px var(--primary-color);
-}
-
-.form-group input::placeholder,
-.form-group textarea::placeholder {
-    color: var(--text-dim);
-}
-
-.form-group textarea {
-    resize: vertical;
-    min-height: 100px;
 }
 
 .form-actions {

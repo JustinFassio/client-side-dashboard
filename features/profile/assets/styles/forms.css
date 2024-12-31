@@ -1,0 +1,90 @@
+/* Profile Feature Form Styles */
+@import '../../../../dashboard/styles/variables.css';
+
+/* Form Groups */
+.dashboard-content .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-content .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-dim);
+    font-size: 0.9rem;
+}
+
+/* Form Controls */
+.dashboard-content .form-group input,
+.dashboard-content .form-group select,
+.dashboard-content .form-group textarea,
+.dashboard-content input.form-control,
+.dashboard-content select.form-control,
+.dashboard-content textarea.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--input-background) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-light) !important;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+/* Focus States */
+.dashboard-content .form-group input:focus,
+.dashboard-content .form-group select:focus,
+.dashboard-content .form-group textarea:focus,
+.dashboard-content input.form-control:focus,
+.dashboard-content select.form-control:focus,
+.dashboard-content textarea.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
+
+/* Placeholders */
+.dashboard-content .form-group input::placeholder,
+.dashboard-content .form-group textarea::placeholder {
+    color: var(--text-dim);
+}
+
+/* Textarea specific */
+.dashboard-content .form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+/* Select specific styles */
+.dashboard-content .form-group select,
+.dashboard-content select.form-control {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    background: var(--input-background) !important;
+    color: var(--text-light) !important;
+    font-family: inherit;
+}
+
+/* Select hover state */
+.dashboard-content .form-group select:hover,
+.dashboard-content select.form-control:hover {
+    border-color: var(--primary-color);
+}
+
+/* Select options */
+.dashboard-content .form-group select option,
+.dashboard-content select.form-control option {
+    background-color: var(--background-darker) !important;
+    color: var(--text-light) !important;
+    padding: 0.75rem 1rem;
+}
+
+/* Select option hover/focus */
+.dashboard-content .form-group select option:hover,
+.dashboard-content .form-group select option:focus,
+.dashboard-content select.form-control option:hover,
+.dashboard-content select.form-control option:focus {
+    background-color: rgba(221, 255, 14, 0.1) !important;
+} 

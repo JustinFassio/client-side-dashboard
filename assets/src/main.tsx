@@ -1,9 +1,9 @@
 import { createElement } from '@wordpress/element';
 import { createRoot } from '@wordpress/element';
-import { DashboardShell } from '../../dashboard/components/DashboardShell';
+import { DashboardShell } from '../../dashboard/components/DashboardShell/index';
 import { FeatureRegistry } from '../../dashboard/core/FeatureRegistry';
 import features from './features';
-import './styles/main.css';
+import '../../dashboard/styles/main.css';
 
 const initializeDashboard = async () => {
     // Wait for WordPress to be ready

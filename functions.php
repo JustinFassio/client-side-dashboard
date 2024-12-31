@@ -212,3 +212,6 @@ function athlete_dashboard_remove_divi_template_parts() {
     }
 }
 add_action('template_redirect', 'athlete_dashboard_remove_divi_template_parts');
+
+// Include admin user profile integration
+require_once get_stylesheet_directory() . '/includes/admin/user-profile.php';

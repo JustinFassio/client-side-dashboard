@@ -6,12 +6,12 @@
 import { Injury } from './components/InjuryTracker/types';
 
 export const PROFILE_EVENTS = {
-    PROFILE_LOADING: 'profile:loading',
-    PROFILE_UPDATED: 'profile:updated',
-    PROFILE_UPDATE_FAILED: 'profile:update_failed',
-    INJURY_ADDED: 'profile:injury_added',
-    INJURY_UPDATED: 'profile:injury_updated',
-    INJURY_REMOVED: 'profile:injury_removed'
+    PROFILE_LOADING: 'profile_loading',
+    PROFILE_UPDATED: 'profile_updated',
+    PROFILE_UPDATE_FAILED: 'profile_update_failed',
+    INJURY_ADDED: 'profile_injury_added',
+    INJURY_UPDATED: 'profile_injury_updated',
+    INJURY_REMOVED: 'profile_injury_removed'
 } as const;
 
 export interface ProfileData {
