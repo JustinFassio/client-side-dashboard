@@ -19,16 +19,20 @@
     "paths": {
       "@dashboard/*": ["dashboard/*"],
       "@features/*": ["features/*"],
-      "@assets/*": ["assets/src/*"]
+      "@assets/*": ["assets/src/*"],
+      "@test/*": ["__tests__/*"]
     },
     "typeRoots": [
       "./node_modules/@types",
       "./dashboard/types"
-    ]
+    ],
+    "types": ["jest", "@testing-library/jest-dom"]
   },
   "include": [
     "assets/src/**/*",
-    "dashboard/**/*"
+    "dashboard/**/*",
+    "features/**/*",
+    "**/__tests__/**/*"
   ],
   "exclude": [
     "node_modules",

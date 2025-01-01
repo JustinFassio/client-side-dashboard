@@ -1,7 +1,9 @@
 import { ProfileData, ProfileError, ProfileErrorCode } from '../types/profile';
+import { Events } from '../../../dashboard/core/events';
+import { PROFILE_EVENTS } from '../types/events';
 
 /**
- * Service for managing profile data
+ * Service for managing profile data and physical metrics
  */
 export class ProfileService {
     private static debugEndpoint(): void {
@@ -13,58 +15,54 @@ export class ProfileService {
     }
 
     private static getEndpoint(): string {
-        // Ensure we have the required data
         if (!window.athleteDashboardData?.apiUrl) {
             console.error('athleteDashboardData.apiUrl is not defined!');
             throw new Error('API URL is not configured');
         }
 
-        // Clean the base URL
         const baseUrl = window.athleteDashboardData.apiUrl.replace(/\/+$/, '');
-        
-        // If baseUrl already includes wp-json, don't add it again
         const hasWpJson = baseUrl.includes('/wp-json');
         const wpJsonBase = hasWpJson ? baseUrl : `${baseUrl}/wp-json`;
-        
-        // Construct the final endpoint
         const endpoint = `${wpJsonBase}/athlete-dashboard/v1/profile`;
-        
-        // Log the construction process
-        console.group('Endpoint Construction');
-        console.log('Base URL:', baseUrl);
-        console.log('Has wp-json:', hasWpJson);
-        console.log('WP JSON Base:', wpJsonBase);
-        console.log('Final Endpoint:', endpoint);
-        console.groupEnd();
         
         return endpoint;
     }
 
     private static endpoint = ProfileService.getEndpoint();
 
-    /**
-     * Test the API connection
-     */
-    public static async testConnection(): Promise<boolean> {
-        try {
-            this.debugEndpoint();
-            const testEndpoint = this.endpoint + '/test';
-            console.log('Testing connection to:', testEndpoint);
+    // Cache management
+    private static cache = new Map<string, any>();
+    private static cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
-            const response = await fetch(testEndpoint, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce': window.athleteDashboardData.nonce
-                }
-            });
+    private static getCacheKey(userId: number, dataType: string): string {
+        return `profile_${userId}_${dataType}`;
+    }
 
-            const data = await response.json();
-            console.log('Test response:', data);
-            return response.ok;
-        } catch (error) {
-            console.error('Connection test failed:', error);
-            return false;
+    private static setCacheItem(key: string, data: any): void {
+        this.cache.set(key, {
+            data,
+            timestamp: Date.now()
+        });
+    }
+
+    private static getCacheItem(key: string): any | null {
+        const item = this.cache.get(key);
+        if (!item) return null;
+
+        if (Date.now() - item.timestamp > this.cacheTimeout) {
+            this.cache.delete(key);
+            return null;
+        }
+
+        return item.data;
+    }
+
+    private static clearCache(userId: number): void {
+        const prefix = `profile_${userId}`;
+        for (const key of this.cache.keys()) {
+            if (key.startsWith(prefix)) {
+                this.cache.delete(key);
+            }
         }
     }
 
@@ -73,10 +71,17 @@ export class ProfileService {
      */
     public static async fetchProfile(): Promise<ProfileData> {
         try {
+            const userId = window.athleteDashboardData?.userId;
+            const cacheKey = this.getCacheKey(userId, 'profile');
+            const cachedData = this.getCacheItem(cacheKey);
+
+            if (cachedData) {
+                return cachedData;
+            }
+
             this.debugEndpoint();
             console.log('Fetching profile data...');
             
-            // Fetch both WordPress user data and custom profile data
             const [userResponse, profileResponse] = await Promise.all([
                 fetch(`${this.endpoint}/user`, {
                     method: 'GET',
@@ -95,10 +100,6 @@ export class ProfileService {
             ]);
 
             if (!userResponse.ok || !profileResponse.ok) {
-                console.error('Profile fetch failed:', {
-                    userStatus: userResponse.status,
-                    profileStatus: profileResponse.status
-                });
                 throw await this.handleError(userResponse.ok ? profileResponse : userResponse);
             }
 
@@ -107,9 +108,6 @@ export class ProfileService {
                 profileResponse.json()
             ]);
 
-            console.log('Raw responses:', { userData, profileData });
-
-            // Combine WordPress user data with custom profile data
             const combinedData: ProfileData = {
                 // WordPress core fields
                 username: userData.data?.username || '',
@@ -118,16 +116,25 @@ export class ProfileService {
                 firstName: userData.data?.first_name || '',
                 lastName: userData.data?.last_name || '',
                 
-                // Custom profile fields from profile response
+                // Custom profile fields
                 ...(profileData.data?.profile || {}),
                 
-                // Ensure numeric fields are properly typed
-                age: profileData.data?.profile?.age ? Number(profileData.data.profile.age) : null,
+                // Physical metrics
                 height: profileData.data?.profile?.height ? Number(profileData.data.profile.height) : null,
-                weight: profileData.data?.profile?.weight ? Number(profileData.data.profile.weight) : null
+                weight: profileData.data?.profile?.weight ? Number(profileData.data.profile.weight) : null,
+                age: profileData.data?.profile?.age ? Number(profileData.data.profile.age) : null,
+                
+                // Activity metrics
+                activityLevel: profileData.data?.profile?.activityLevel || null,
+                fitnessLevel: profileData.data?.profile?.fitnessLevel || null,
+                
+                // Medical information
+                medicalConditions: profileData.data?.profile?.medicalConditions || [],
+                exerciseLimitations: profileData.data?.profile?.exerciseLimitations || [],
+                medications: profileData.data?.profile?.medications || ''
             };
 
-            console.log('Combined profile data:', combinedData);
+            this.setCacheItem(cacheKey, combinedData);
             return combinedData;
         } catch (error) {
             console.error('Error fetching profile:', error);
@@ -144,10 +151,8 @@ export class ProfileService {
             console.group('Profile Update');
             console.log('Update data:', data);
 
-            // Separate WordPress user fields from custom profile fields
             const { username, email, displayName, firstName, lastName, ...customFields } = data;
             
-            // Update WordPress user data if any core fields are present
             if (email || displayName || firstName || lastName) {
                 const userResponse = await fetch(`${this.endpoint}/user`, {
                     method: 'POST',
@@ -164,15 +169,10 @@ export class ProfileService {
                 });
 
                 if (!userResponse.ok) {
-                    console.error('WordPress user update failed:', {
-                        status: userResponse.status,
-                        statusText: userResponse.statusText
-                    });
                     throw await this.handleError(userResponse);
                 }
             }
 
-            // Update custom profile fields
             if (Object.keys(customFields).length > 0) {
                 const profileResponse = await fetch(this.endpoint, {
                     method: 'POST',
@@ -184,22 +184,35 @@ export class ProfileService {
                 });
 
                 if (!profileResponse.ok) {
-                    console.error('Custom profile update failed:', {
-                        status: profileResponse.status,
-                        statusText: profileResponse.statusText
-                    });
                     throw await this.handleError(profileResponse);
                 }
             }
 
-            // Fetch the updated profile data
+            // Clear cache after successful update
+            this.clearCache(window.athleteDashboardData.userId);
+
+            // Fetch and return the updated profile
             const updatedProfile = await this.fetchProfile();
             console.log('Profile updated successfully:', updatedProfile);
             console.groupEnd();
+
+            // Emit profile updated event
+            Events.emit(PROFILE_EVENTS.UPDATE_SUCCESS, {
+                type: PROFILE_EVENTS.UPDATE_SUCCESS,
+                payload: updatedProfile
+            });
+
             return updatedProfile;
         } catch (error) {
             console.error('Error updating profile:', error);
             console.groupEnd();
+
+            // Emit error event
+            Events.emit(PROFILE_EVENTS.UPDATE_ERROR, {
+                type: PROFILE_EVENTS.UPDATE_ERROR,
+                error: this.normalizeError(error)
+            });
+
             throw this.normalizeError(error);
         }
     }
@@ -251,48 +264,30 @@ export class ProfileService {
 
         return {
             code: 'SERVER_ERROR',
-            message: error.message || 'An unknown error occurred'
+            message: error instanceof Error ? error.message : 'An unknown error occurred'
         };
     }
 
-    /**
-     * Type guard for ProfileError
-     */
     private static isProfileError(error: any): error is ProfileError {
-        return (
-            error &&
-            typeof error === 'object' &&
-            'code' in error &&
-            'message' in error
-        );
+        return error && typeof error === 'object' && 'code' in error && 'message' in error;
     }
 
-    /**
-     * Get default profile data
-     */
-    public static getDefaultProfile(): ProfileData {
+    static getDefaultProfile(): ProfileData {
         return {
-            // WordPress core fields
             username: '',
             email: '',
             displayName: '',
             firstName: '',
             lastName: '',
-            
-            // Custom profile fields
-            userId: 0,
-            age: null,
+            age: 0,
             gender: 'prefer_not_to_say',
-            phone: '',
-            dateOfBirth: '',
-            height: undefined,
-            weight: undefined,
-            dominantSide: undefined,
-            medicalClearance: false,
-            medicalNotes: '',
-            emergencyContactName: '',
-            emergencyContactPhone: '',
-            injuries: []
+            height: 0,
+            weight: 0,
+            fitnessLevel: 'beginner',
+            activityLevel: 'sedentary',
+            medicalConditions: [],
+            exerciseLimitations: [],
+            medications: ''
         };
     }
 } 

@@ -29,7 +29,7 @@ export function SaveAlert({ success, error, onDismiss }: SaveAlertProps) {
                 ✕
             </button>
 
-            <style jsx>{`
+            <style>{`
                 .save-alert {
                     position: relative;
                     padding: 15px 40px 15px 15px;

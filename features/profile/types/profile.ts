@@ -2,31 +2,27 @@
  * Core profile data interface
  */
 export interface ProfileData {
-    // WordPress core user fields
+    // WordPress core fields
     username: string;
     email: string;
     displayName: string;
-    
-    // Custom profile fields
-    userId: number;
     firstName: string;
     lastName: string;
+
+    // Basic profile fields
     age: number | null;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say';
-    phone?: string;
-    dateOfBirth?: string;
-    height?: number;
-    weight?: number;
-    dominantSide?: 'left' | 'right';
-    medicalClearance?: boolean;
-    medicalNotes?: string;
-    emergencyContactName?: string;
-    emergencyContactPhone?: string;
-    injuries?: Array<{
-        id: string;
-        name: string;
-        details: string;
-    }>;
+    gender: string;
+    height: number | null;  // in centimeters
+    weight: number | null;  // in kilograms
+
+    // Physical metrics
+    fitnessLevel: 'beginner' | 'intermediate' | 'advanced' | 'expert' | null;
+    activityLevel: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active' | null;
+
+    // Medical information
+    medicalConditions: string[];
+    exerciseLimitations: string[];
+    medications: string;
 }
 
 /**
@@ -44,14 +40,14 @@ export interface ProfileState {
  */
 export type ProfileErrorCode = 
     | 'VALIDATION_ERROR'
-    | 'NETWORK_ERROR'
     | 'AUTH_ERROR'
+    | 'NETWORK_ERROR'
     | 'SERVER_ERROR';
 
 export interface ProfileError {
     code: ProfileErrorCode;
     message: string;
-    details?: Record<string, any>;
+    details?: Record<string, string[]>;
 }
 
 /**
@@ -200,6 +196,62 @@ export const PROFILE_CONFIG = {
                 max: 500,
                 message: 'Weight must be between 0 and 500 kg'
             }
+        },
+        fitnessLevel: {
+            name: 'fitnessLevel',
+            label: 'Fitness Level',
+            type: 'select',
+            required: true,
+            options: [
+                { value: 'beginner', label: 'Beginner' },
+                { value: 'intermediate', label: 'Intermediate' },
+                { value: 'advanced', label: 'Advanced' },
+                { value: 'expert', label: 'Expert' }
+            ]
+        },
+        activityLevel: {
+            name: 'activityLevel',
+            label: 'Activity Level',
+            type: 'select',
+            required: true,
+            options: [
+                { value: 'sedentary', label: 'Sedentary' },
+                { value: 'lightly_active', label: 'Lightly Active' },
+                { value: 'moderately_active', label: 'Moderately Active' },
+                { value: 'very_active', label: 'Very Active' },
+                { value: 'extremely_active', label: 'Extremely Active' }
+            ]
+        },
+        medicalConditions: {
+            name: 'medicalConditions',
+            label: 'Medical Conditions',
+            type: 'select',
+            options: [
+                { value: 'none', label: 'None' },
+                { value: 'heart_condition', label: 'Heart Condition' },
+                { value: 'asthma', label: 'Asthma' },
+                { value: 'diabetes', label: 'Diabetes' },
+                { value: 'hypertension', label: 'Hypertension' },
+                { value: 'other', label: 'Other' }
+            ]
+        },
+        exerciseLimitations: {
+            name: 'exerciseLimitations',
+            label: 'Exercise Limitations',
+            type: 'select',
+            options: [
+                { value: 'none', label: 'None' },
+                { value: 'joint_pain', label: 'Joint Pain' },
+                { value: 'back_pain', label: 'Back Pain' },
+                { value: 'limited_mobility', label: 'Limited Mobility' },
+                { value: 'balance_issues', label: 'Balance Issues' },
+                { value: 'other', label: 'Other' }
+            ]
+        },
+        medications: {
+            name: 'medications',
+            label: 'Current Medications',
+            type: 'text'
         }
     } as const,
     
@@ -251,7 +303,12 @@ export const PROFILE_CONFIG = {
                 medicalNotes: [],
                 emergencyContactName: [],
                 emergencyContactPhone: [],
-                injuries: []
+                injuries: [],
+                fitnessLevel: [],
+                activityLevel: [],
+                medicalConditions: [],
+                exerciseLimitations: [],
+                medications: []
             };
 
             let isValid = true;
@@ -276,14 +333,19 @@ export const PROFILE_CONFIG = {
             gender: 'prefer_not_to_say',
             phone: '',
             dateOfBirth: '',
-            height: null,
-            weight: null,
+            height: undefined,
+            weight: undefined,
             dominantSide: undefined,
             medicalClearance: false,
             medicalNotes: '',
             emergencyContactName: '',
             emergencyContactPhone: '',
-            injuries: []
+            injuries: [],
+            fitnessLevel: null,
+            activityLevel: null,
+            medicalConditions: [],
+            exerciseLimitations: [],
+            medications: ''
         })
     }
 } as const; 
