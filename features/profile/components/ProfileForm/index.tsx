@@ -118,63 +118,6 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
         createElement('form', { onSubmit: handleSubmit, className: 'profile-form', key: 'form' }, [
             activeSection === 'basic' && createElement('div', { className: 'form-section', key: 'basic' }, [
                 createElement('h2', { key: 'title' }, 'Basic Information'),
-                
-                // WordPress Core Fields
-                createElement('div', { className: 'core-fields', key: 'core-fields' }, [
-                    createElement('div', { className: 'form-group', key: 'username' }, [
-                        createElement('label', { htmlFor: 'username' }, 'Username'),
-                        createElement('input', {
-                            type: 'text',
-                            id: 'username',
-                            value: formData.username || '',
-                            disabled: true,
-                            className: 'readonly-field'
-                        })
-                    ]),
-                    createElement('div', { className: 'form-group', key: 'firstName' }, [
-                        createElement('label', { htmlFor: 'firstName' }, 'First Name'),
-                        createElement('input', {
-                            type: 'text',
-                            id: 'firstName',
-                            name: 'firstName',
-                            value: formData.firstName || '',
-                            onChange: handleInputChange
-                        })
-                    ]),
-                    createElement('div', { className: 'form-group', key: 'lastName' }, [
-                        createElement('label', { htmlFor: 'lastName' }, 'Last Name'),
-                        createElement('input', {
-                            type: 'text',
-                            id: 'lastName',
-                            name: 'lastName',
-                            value: formData.lastName || '',
-                            onChange: handleInputChange
-                        })
-                    ]),
-                    createElement('div', { className: 'form-group', key: 'email' }, [
-                        createElement('label', { htmlFor: 'email' }, 'Email'),
-                        createElement('input', {
-                            type: 'email',
-                            id: 'email',
-                            name: 'email',
-                            value: formData.email || '',
-                            onChange: handleInputChange
-                        })
-                    ]),
-                    createElement('div', { className: 'form-group', key: 'displayName' }, [
-                        createElement('label', { htmlFor: 'displayName' }, 'Display Name'),
-                        createElement('input', {
-                            type: 'text',
-                            id: 'displayName',
-                            name: 'displayName',
-                            value: formData.displayName || '',
-                            onChange: handleInputChange
-                        })
-                    ])
-                ]),
-
-                // Custom Profile Fields
-                createElement('h3', { key: 'custom-fields-title' }, 'Additional Information'),
                 ...Object.entries(PROFILE_CONFIG.fields)
                     .filter(([_, field]) => field.type !== 'select')
                     .map(([fieldName, field]) => 
@@ -271,9 +214,72 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
                 })
             ]),
 
-            createElement('div', { className: 'form-actions', key: 'actions' },
-                createElement('button', { type: 'submit', className: 'save-button' }, 'Save Profile')
-            )
+            activeSection === 'account' && createElement('div', { className: 'form-section', key: 'account' }, [
+                createElement('h2', { key: 'title' }, 'Account Information'),
+                createElement('p', { key: 'description', className: 'section-description' }, 
+                    'Manage your account details and login information.'
+                ),
+                
+                createElement('div', { className: 'account-fields', key: 'account-fields' }, [
+                    createElement('div', { className: 'form-group', key: 'username' }, [
+                        createElement('label', { htmlFor: 'username' }, 'Username'),
+                        createElement('input', {
+                            type: 'text',
+                            id: 'username',
+                            value: formData.username || '',
+                            disabled: true,
+                            className: 'readonly-field'
+                        }),
+                        createElement('small', { className: 'field-hint' }, 'Usernames cannot be changed.')
+                    ]),
+                    createElement('div', { className: 'form-group', key: 'firstName' }, [
+                        createElement('label', { htmlFor: 'firstName' }, 'First Name'),
+                        createElement('input', {
+                            type: 'text',
+                            id: 'firstName',
+                            name: 'firstName',
+                            value: formData.firstName || '',
+                            onChange: handleInputChange
+                        })
+                    ]),
+                    createElement('div', { className: 'form-group', key: 'lastName' }, [
+                        createElement('label', { htmlFor: 'lastName' }, 'Last Name'),
+                        createElement('input', {
+                            type: 'text',
+                            id: 'lastName',
+                            name: 'lastName',
+                            value: formData.lastName || '',
+                            onChange: handleInputChange
+                        })
+                    ]),
+                    createElement('div', { className: 'form-group', key: 'email' }, [
+                        createElement('label', { htmlFor: 'email' }, 'Email'),
+                        createElement('input', {
+                            type: 'email',
+                            id: 'email',
+                            name: 'email',
+                            value: formData.email || '',
+                            onChange: handleInputChange
+                        }),
+                        createElement('small', { className: 'field-hint' }, 
+                            'If you change this, an email will be sent to confirm the new address.'
+                        )
+                    ]),
+                    createElement('div', { className: 'form-group', key: 'displayName' }, [
+                        createElement('label', { htmlFor: 'displayName' }, 'Display Name'),
+                        createElement('input', {
+                            type: 'text',
+                            id: 'displayName',
+                            name: 'displayName',
+                            value: formData.displayName || '',
+                            onChange: handleInputChange
+                        }),
+                        createElement('small', { className: 'field-hint' }, 
+                            'This is how your name will appear publicly.'
+                        )
+                    ])
+                ])
+            ])
         ])
     ]);
 }; 

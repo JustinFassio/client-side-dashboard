@@ -1,7 +1,7 @@
 import { createElement } from '@wordpress/element';
 import { Feature, FeatureContext } from '../../dashboard/contracts/Feature';
 import { Events } from '../../dashboard/core/events';
-import { UserCircle2, Dumbbell, Heart, FileWarning } from 'lucide-react';
+import { UserCircle2, Dumbbell, Heart, FileWarning, User } from 'lucide-react';
 import { ProfileData } from './types/profile';
 import { PROFILE_EVENTS, ProfileEventPayloads } from './events';
 import { ProfileService } from './services/ProfileService';
@@ -46,6 +46,11 @@ export class ProfileFeature implements Feature {
             title: 'Injuries & Limitations',
             icon: FileWarning,
             component: InjuryTracker
+        },
+        {
+            id: 'account',
+            title: 'Account Info',
+            icon: User,
         }
     ];
 
