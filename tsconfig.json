@@ -17,7 +17,9 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@dashboard/*": ["dashboard/*"]
+      "@dashboard/*": ["dashboard/*"],
+      "@features/*": ["features/*"],
+      "@assets/*": ["assets/src/*"]
     },
     "typeRoots": [
       "./node_modules/@types",

@@ -2,10 +2,11 @@ import { createElement } from '@wordpress/element';
 import { Feature, FeatureContext } from '../../dashboard/contracts/Feature';
 import { Events } from '../../dashboard/core/events';
 import { UserCircle2, Dumbbell, Heart, FileWarning } from 'lucide-react';
-import { PROFILE_EVENTS, ProfileData, ProfileEventPayloads } from './events';
+import { ProfileData } from './types/profile';
+import { PROFILE_EVENTS, ProfileEventPayloads } from './events';
+import { profileService } from './assets/js/profileService';
 import { ProfileForm } from './components/ProfileForm';
 import { InjuryTracker } from './components/InjuryTracker';
-import { profileService } from './assets/js/profileService';
 
 export class ProfileFeature implements Feature {
     public readonly identifier = 'profile';

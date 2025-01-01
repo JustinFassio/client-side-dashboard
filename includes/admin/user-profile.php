@@ -21,6 +21,7 @@ function add_athlete_profile_fields($user) {
     // Default values
     $defaults = [
         'phone' => '',
+        'age' => '',
         'date_of_birth' => '',
         'height' => '',
         'weight' => '',
@@ -51,6 +52,19 @@ function add_athlete_profile_fields($user) {
                                id="phone" 
                                value="<?php echo esc_attr($profile_data['phone']); ?>" 
                                class="regular-text" />
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="age"><?php _e('Age', 'athlete-dashboard'); ?></label></th>
+                    <td>
+                        <input type="number" 
+                               name="athlete_profile[age]" 
+                               id="age" 
+                               value="<?php echo esc_attr($profile_data['age']); ?>" 
+                               class="regular-text"
+                               min="13"
+                               max="120" />
+                        <p class="description"><?php _e('Age must be between 13 and 120', 'athlete-dashboard'); ?></p>
                     </td>
                 </tr>
                 <tr>
@@ -281,6 +295,7 @@ function save_athlete_profile_fields($user_id) {
         // Sanitize the data
         $sanitized_data = [
             'phone' => sanitize_text_field($profile_data['phone']),
+            'age' => isset($profile_data['age']) ? absint($profile_data['age']) : '',
             'date_of_birth' => sanitize_text_field($profile_data['date_of_birth']),
             'height' => absint($profile_data['height']),
             'weight' => floatval($profile_data['weight']),
@@ -304,6 +319,7 @@ function save_athlete_profile_fields($user_id) {
             }
         }
 
+        error_log('Saving profile data: ' . json_encode($sanitized_data));
         update_user_meta($user_id, '_athlete_profile_data', $sanitized_data);
     }
 }

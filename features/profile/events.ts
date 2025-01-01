@@ -4,6 +4,7 @@
  */
 
 import { Injury } from './components/InjuryTracker/types';
+import { ProfileData } from './types/profile';
 
 export const PROFILE_EVENTS = {
     PROFILE_LOADING: 'profile_loading',
@@ -13,15 +14,6 @@ export const PROFILE_EVENTS = {
     INJURY_UPDATED: 'profile_injury_updated',
     INJURY_REMOVED: 'profile_injury_removed'
 } as const;
-
-export interface ProfileData {
-    age?: number;
-    gender?: string;
-    height?: number;
-    weight?: number;
-    medicalConditions?: string;
-    injuries: Injury[];
-}
 
 export interface ProfileEventPayloads {
     [PROFILE_EVENTS.PROFILE_LOADING]: undefined;

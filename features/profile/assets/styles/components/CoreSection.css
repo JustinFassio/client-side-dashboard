@@ -1,0 +1,126 @@
+.core-section {
+    padding: 1.5rem;
+    background: var(--wp-admin-theme-color-darker-10);
+    border-radius: 8px;
+}
+
+.core-section.loading,
+.core-section.error {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 2rem;
+    justify-content: center;
+    background: var(--wp-admin-theme-color-darker-20);
+}
+
+.core-section .fields-container {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.core-section .profile-field {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.core-section label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-weight: 500;
+    color: var(--wp-admin-theme-color);
+}
+
+.core-section .field-updated {
+    font-size: 0.875rem;
+    color: var(--wp-admin-theme-color-darker-20);
+    font-weight: normal;
+}
+
+.core-section .field-display {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem;
+    background: white;
+    border-radius: 4px;
+    min-height: 40px;
+}
+
+.core-section .field-value {
+    flex: 1;
+}
+
+.core-section .field-edit {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.core-section input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--wp-admin-theme-color-darker-10);
+    border-radius: 4px;
+}
+
+.core-section input.has-error {
+    border-color: #cc1818;
+}
+
+.core-section .field-error {
+    color: #cc1818;
+    font-size: 0.875rem;
+}
+
+.core-section .field-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.core-section .action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--wp-admin-theme-color);
+    transition: all 0.2s ease;
+}
+
+.core-section .action-button:hover {
+    background: var(--wp-admin-theme-color-darker-10);
+    color: white;
+}
+
+.core-section .action-button.save {
+    background: var(--wp-admin-theme-color);
+    color: white;
+}
+
+.core-section .action-button.save:hover {
+    background: var(--wp-admin-theme-color-darker-20);
+}
+
+.core-section .action-button.cancel {
+    border: 1px solid var(--wp-admin-theme-color-darker-10);
+}
+
+.core-section .retry-button {
+    padding: 0.5rem 1rem;
+    background: var(--wp-admin-theme-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.core-section .retry-button:hover {
+    background: var(--wp-admin-theme-color-darker-20);
+} 

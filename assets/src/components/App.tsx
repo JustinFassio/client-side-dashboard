@@ -1,25 +1,19 @@
-import { createElement, useState, useEffect } from '@wordpress/element';
+import React from 'react';
+import { UserProvider, RequireAuth } from '@features/user/context/UserContext';
+import { ProfileProvider } from '@features/profile/context/ProfileContext';
 import { DashboardShell } from '@dashboard/components/DashboardShell';
+import { Config } from '@dashboard/core/config';
 
-export default function App() {
-    const [isLoading, setIsLoading] = useState(true);
+export function App() {
+    Config.log('Initializing App', 'core');
 
-    useEffect(() => {
-        // Simulate initialization
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 500);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    if (isLoading) {
-        return (
-            <div className="athlete-dashboard loading">
-                <div>Loading...</div>
-            </div>
-        );
-    }
-
-    return <DashboardShell />;
+    return (
+        <UserProvider>
+            <RequireAuth>
+                <ProfileProvider>
+                    <DashboardShell />
+                </ProfileProvider>
+            </RequireAuth>
+        </UserProvider>
+    );
 }

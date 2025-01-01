@@ -2,6 +2,7 @@ import { createElement, useState } from '@wordpress/element';
 import { LucideIcon } from 'lucide-react';
 import { InjuryTracker } from '../InjuryTracker';
 import { Injury } from '../InjuryTracker/types';
+import { ProfileData, PROFILE_CONFIG } from '../../types/profile';
 import '../../assets/styles/components/ProfileForm.css';
 
 interface Section {
@@ -12,29 +13,44 @@ interface Section {
 }
 
 interface ProfileFormProps {
-    onSave: (data: any) => void;
+    onSave: (data: Partial<ProfileData>) => void;
     sections: Section[];
 }
 
 export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
     const [activeSection, setActiveSection] = useState(sections[0].id);
-    const [formData, setFormData] = useState({
-        age: '',
-        gender: '',
-        height: '',
-        weight: '',
-        medicalConditions: '',
-        injuries: [] as Injury[]
-    });
+    const [formData, setFormData] = useState<Partial<ProfileData>>(PROFILE_CONFIG.validation.getDefaultProfile());
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validate form data
+        const validation = PROFILE_CONFIG.validation.validateProfile(formData);
+        if (!validation.isValid) {
+            console.error('Form validation failed:', validation.errors);
+            return;
+        }
+
         onSave(formData);
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type } = e.target;
+        
+        // Handle numeric fields
+        if (type === 'number') {
+            const numValue = value === '' ? null : Number(value);
+            setFormData(prev => ({
+                ...prev,
+                [name]: numValue
+            }));
+            return;
+        }
+        
+        setFormData(prev => ({
+            ...prev,
+            [name]: value
+        }));
     };
 
     const handleInjuriesChange = (injuries: Injury[]) => {
@@ -58,36 +74,45 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
         createElement('form', { onSubmit: handleSubmit, className: 'profile-form', key: 'form' }, [
             activeSection === 'basic' && createElement('div', { className: 'form-section', key: 'basic' }, [
                 createElement('h2', { key: 'title' }, 'Basic Information'),
-                createElement('div', { className: 'form-group', key: 'age' }, [
-                    createElement('label', { htmlFor: 'age', key: 'label' }, 'Age'),
-                    createElement('input', {
-                        key: 'input',
-                        type: 'number',
-                        id: 'age',
-                        name: 'age',
-                        value: formData.age,
-                        onChange: handleInputChange,
-                        min: '0',
-                        max: '120'
-                    })
-                ]),
-                createElement('div', { className: 'form-group', key: 'gender' }, [
-                    createElement('label', { htmlFor: 'gender', key: 'label' }, 'Gender'),
-                    createElement('select', {
-                        key: 'select',
-                        id: 'gender',
-                        name: 'gender',
-                        value: formData.gender,
-                        onChange: handleInputChange,
-                        className: 'form-control'
-                    }, [
-                        createElement('option', { value: '', key: 'default' }, 'Select gender'),
-                        createElement('option', { value: 'male', key: 'male' }, 'Male'),
-                        createElement('option', { value: 'female', key: 'female' }, 'Female'),
-                        createElement('option', { value: 'other', key: 'other' }, 'Other'),
-                        createElement('option', { value: 'prefer-not-to-say', key: 'prefer' }, 'Prefer not to say')
-                    ])
-                ])
+                ...Object.entries(PROFILE_CONFIG.fields)
+                    .filter(([_, field]) => field.type !== 'select')
+                    .map(([fieldName, field]) => 
+                        createElement('div', { className: 'form-group', key: fieldName }, [
+                            createElement('label', { htmlFor: fieldName, key: 'label' }, field.label),
+                            createElement('input', {
+                                key: 'input',
+                                type: field.type,
+                                id: fieldName,
+                                name: fieldName,
+                                value: formData[fieldName as keyof ProfileData] || '',
+                                onChange: handleInputChange,
+                                required: field.required,
+                                min: field.validation?.min,
+                                max: field.validation?.max
+                            })
+                        ])
+                    ),
+                ...Object.entries(PROFILE_CONFIG.fields)
+                    .filter(([_, field]) => field.type === 'select')
+                    .map(([fieldName, field]) =>
+                        createElement('div', { className: 'form-group', key: fieldName }, [
+                            createElement('label', { htmlFor: fieldName, key: 'label' }, field.label),
+                            createElement('select', {
+                                key: 'select',
+                                id: fieldName,
+                                name: fieldName,
+                                value: formData[fieldName as keyof ProfileData] || '',
+                                onChange: handleInputChange,
+                                required: field.required,
+                                className: 'form-control'
+                            }, field.options?.map(option =>
+                                createElement('option', {
+                                    value: option.value,
+                                    key: option.value
+                                }, option.label)
+                            ))
+                        ])
+                    )
             ]),
 
             activeSection === 'physical' && createElement('div', { className: 'form-section', key: 'physical' }, [
@@ -99,7 +124,7 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
                         type: 'number',
                         id: 'height',
                         name: 'height',
-                        value: formData.height,
+                        value: formData.height || '',
                         onChange: handleInputChange,
                         min: '0',
                         max: '300'
@@ -112,7 +137,7 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
                         type: 'number',
                         id: 'weight',
                         name: 'weight',
-                        value: formData.weight,
+                        value: formData.weight || '',
                         onChange: handleInputChange,
                         min: '0',
                         max: '500'
@@ -123,12 +148,12 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
             activeSection === 'medical' && createElement('div', { className: 'form-section', key: 'medical' }, [
                 createElement('h2', { key: 'title' }, 'Medical Information'),
                 createElement('div', { className: 'form-group', key: 'conditions' }, [
-                    createElement('label', { htmlFor: 'medicalConditions', key: 'label' }, 'Medical Conditions'),
+                    createElement('label', { htmlFor: 'medicalNotes', key: 'label' }, 'Medical Conditions'),
                     createElement('textarea', {
                         key: 'textarea',
-                        id: 'medicalConditions',
-                        name: 'medicalConditions',
-                        value: formData.medicalConditions,
+                        id: 'medicalNotes',
+                        name: 'medicalNotes',
+                        value: formData.medicalNotes || '',
                         onChange: handleInputChange,
                         rows: 4,
                         placeholder: 'List any medical conditions that may affect your training...'
@@ -140,7 +165,7 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
                 createElement('h2', { key: 'title' }, 'Injuries & Limitations'),
                 createElement(InjuryTracker, {
                     key: 'tracker',
-                    injuries: formData.injuries,
+                    injuries: formData.injuries || [],
                     onChange: handleInjuriesChange
                 })
             ]),
