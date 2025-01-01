@@ -76,40 +76,59 @@ export class ProfileService {
             this.debugEndpoint();
             console.log('Fetching profile data...');
             
-            const response = await fetch(this.endpoint, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce': window.athleteDashboardData.nonce
-                }
-            });
+            // Fetch both WordPress user data and custom profile data
+            const [userResponse, profileResponse] = await Promise.all([
+                fetch(`${this.endpoint}/user`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': window.athleteDashboardData.nonce
+                    }
+                }),
+                fetch(this.endpoint, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': window.athleteDashboardData.nonce
+                    }
+                })
+            ]);
 
-            if (!response.ok) {
+            if (!userResponse.ok || !profileResponse.ok) {
                 console.error('Profile fetch failed:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    url: response.url
+                    userStatus: userResponse.status,
+                    profileStatus: profileResponse.status
                 });
-                throw await this.handleError(response);
+                throw await this.handleError(userResponse.ok ? profileResponse : userResponse);
             }
 
-            const result = await response.json();
-            console.log('Raw profile response:', result);
+            const [userData, profileData] = await Promise.all([
+                userResponse.json(),
+                profileResponse.json()
+            ]);
 
-            // Handle the new response structure
-            if (!result.success || !result.data?.profile) {
-                throw new Error('Invalid profile data structure');
-            }
+            console.log('Raw responses:', { userData, profileData });
 
-            const profileData = result.data.profile;
-            
-            // Ensure age is a number
-            if (profileData.age) {
-                profileData.age = Number(profileData.age);
-            }
+            // Combine WordPress user data with custom profile data
+            const combinedData: ProfileData = {
+                // WordPress core fields
+                username: userData.data?.username || '',
+                email: userData.data?.email || '',
+                displayName: userData.data?.display_name || '',
+                firstName: userData.data?.first_name || '',
+                lastName: userData.data?.last_name || '',
+                
+                // Custom profile fields from profile response
+                ...(profileData.data?.profile || {}),
+                
+                // Ensure numeric fields are properly typed
+                age: profileData.data?.profile?.age ? Number(profileData.data.profile.age) : null,
+                height: profileData.data?.profile?.height ? Number(profileData.data.profile.height) : null,
+                weight: profileData.data?.profile?.weight ? Number(profileData.data.profile.weight) : null
+            };
 
-            console.log('Profile data fetched successfully:', profileData);
-            return profileData;
+            console.log('Combined profile data:', combinedData);
+            return combinedData;
         } catch (error) {
             console.error('Error fetching profile:', error);
             throw this.normalizeError(error);
@@ -124,53 +143,60 @@ export class ProfileService {
             this.debugEndpoint();
             console.group('Profile Update');
             console.log('Update data:', data);
-            console.log('Age value:', data.age, typeof data.age);
-            
-            // Ensure age is a number before sending
-            const processedData = {
-                ...data,
-                age: data.age ? Number(data.age) : undefined
-            };
-            
-            const response = await fetch(this.endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce': window.athleteDashboardData.nonce
-                },
-                body: JSON.stringify(processedData)
-            });
 
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-            if (!response.ok) {
-                console.error('Profile update failed:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    url: response.url
+            // Separate WordPress user fields from custom profile fields
+            const { username, email, displayName, firstName, lastName, ...customFields } = data;
+            
+            // Update WordPress user data if any core fields are present
+            if (email || displayName || firstName || lastName) {
+                const userResponse = await fetch(`${this.endpoint}/user`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': window.athleteDashboardData.nonce
+                    },
+                    body: JSON.stringify({
+                        email,
+                        display_name: displayName,
+                        first_name: firstName,
+                        last_name: lastName
+                    })
                 });
-                throw await this.handleError(response);
+
+                if (!userResponse.ok) {
+                    console.error('WordPress user update failed:', {
+                        status: userResponse.status,
+                        statusText: userResponse.statusText
+                    });
+                    throw await this.handleError(userResponse);
+                }
             }
 
-            const result = await response.json();
-            console.log('Raw update response:', result);
+            // Update custom profile fields
+            if (Object.keys(customFields).length > 0) {
+                const profileResponse = await fetch(this.endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-WP-Nonce': window.athleteDashboardData.nonce
+                    },
+                    body: JSON.stringify(customFields)
+                });
 
-            // Handle the new response structure
-            if (!result.success || !result.data?.profile) {
-                throw new Error('Invalid profile data structure');
+                if (!profileResponse.ok) {
+                    console.error('Custom profile update failed:', {
+                        status: profileResponse.status,
+                        statusText: profileResponse.statusText
+                    });
+                    throw await this.handleError(profileResponse);
+                }
             }
 
-            const updatedData = result.data.profile;
-            
-            // Ensure age is a number
-            if (updatedData.age) {
-                updatedData.age = Number(updatedData.age);
-            }
-
-            console.log('Profile updated successfully:', updatedData);
+            // Fetch the updated profile data
+            const updatedProfile = await this.fetchProfile();
+            console.log('Profile updated successfully:', updatedProfile);
             console.groupEnd();
-            return updatedData;
+            return updatedProfile;
         } catch (error) {
             console.error('Error updating profile:', error);
             console.groupEnd();
@@ -246,11 +272,27 @@ export class ProfileService {
      */
     public static getDefaultProfile(): ProfileData {
         return {
-            userId: 0,
+            // WordPress core fields
+            username: '',
+            email: '',
+            displayName: '',
             firstName: '',
             lastName: '',
-            age: 0,
-            gender: 'prefer_not_to_say'
+            
+            // Custom profile fields
+            userId: 0,
+            age: null,
+            gender: 'prefer_not_to_say',
+            phone: '',
+            dateOfBirth: '',
+            height: undefined,
+            weight: undefined,
+            dominantSide: undefined,
+            medicalClearance: false,
+            medicalNotes: '',
+            emergencyContactName: '',
+            emergencyContactPhone: '',
+            injuries: []
         };
     }
 } 

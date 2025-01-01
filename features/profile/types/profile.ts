@@ -2,6 +2,12 @@
  * Core profile data interface
  */
 export interface ProfileData {
+    // WordPress core user fields
+    username: string;
+    email: string;
+    displayName: string;
+    
+    // Custom profile fields
     userId: number;
     firstName: string;
     lastName: string;
@@ -81,6 +87,39 @@ export interface ProfileField {
  */
 export const PROFILE_CONFIG = {
     fields: {
+        // WordPress core user fields
+        username: {
+            name: 'username',
+            label: 'Username',
+            type: 'text',
+            required: true,
+            editable: false, // Username cannot be changed
+            validation: {
+                pattern: /^[a-zA-Z0-9_-]+$/,
+                message: 'Username can only contain letters, numbers, underscores, and hyphens'
+            }
+        },
+        email: {
+            name: 'email',
+            label: 'Email Address',
+            type: 'email',
+            required: true,
+            validation: {
+                pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                message: 'Please enter a valid email address'
+            }
+        },
+        displayName: {
+            name: 'displayName',
+            label: 'Display Name',
+            type: 'text',
+            required: true,
+            validation: {
+                pattern: /^[a-zA-Z0-9\s-']+$/,
+                message: 'Display name can only contain letters, numbers, spaces, hyphens, and apostrophes'
+            }
+        },
+        // Custom profile fields
         firstName: {
             name: 'firstName',
             label: 'First Name',

@@ -4,7 +4,7 @@ import { Events } from '../../dashboard/core/events';
 import { UserCircle2, Dumbbell, Heart, FileWarning } from 'lucide-react';
 import { ProfileData } from './types/profile';
 import { PROFILE_EVENTS, ProfileEventPayloads } from './events';
-import { profileService } from './assets/js/profileService';
+import { ProfileService } from './services/ProfileService';
 import { ProfileForm } from './components/ProfileForm';
 import { InjuryTracker } from './components/InjuryTracker';
 
@@ -51,16 +51,15 @@ export class ProfileFeature implements Feature {
 
     async register(context: FeatureContext): Promise<void> {
         this.context = context;
-        profileService.configure({
-            nonce: context.nonce,
-            apiUrl: context.apiUrl
-        });
     }
 
     async init(): Promise<void> {
         if (this.isInitialized) {
             return;
         }
+
+        // Load initial profile data
+        await this.loadProfileData();
 
         // Register event handlers
         Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATED]>(
@@ -113,22 +112,35 @@ export class ProfileFeature implements Feature {
     onNavigate(): void {
         // Refresh profile data when navigating to this feature
         if (this.isInitialized) {
-            Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
+            this.loadProfileData();
         }
     }
 
     onUserChange(userId: number): void {
         // Refresh profile data when user changes
         if (this.isInitialized) {
-            Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
+            this.loadProfileData();
         }
     }
 
-    private handleProfileSave = async (data: ProfileData) => {
+    private async loadProfileData(): Promise<void> {
+        Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
+        try {
+            const profile = await ProfileService.fetchProfile();
+            Events.emit(PROFILE_EVENTS.PROFILE_UPDATED, profile);
+        } catch (error) {
+            Events.emit(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, {
+                error: 'Failed to load profile',
+                profileData: ProfileService.getDefaultProfile()
+            });
+        }
+    }
+
+    private handleProfileSave = async (data: Partial<ProfileData>): Promise<void> => {
         Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
         
         try {
-            const updatedProfile = await profileService.updateProfile(data);
+            const updatedProfile = await ProfileService.updateProfile(data);
             Events.emit(PROFILE_EVENTS.PROFILE_UPDATED, updatedProfile);
         } catch (error) {
             Events.emit(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, {

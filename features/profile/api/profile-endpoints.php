@@ -87,6 +87,24 @@ class ProfileEndpoints {
             ]
         );
 
+        // Add user data endpoint
+        register_rest_route(
+            self::NAMESPACE,
+            '/' . self::ROUTE . '/user',
+            [
+                [
+                    'methods' => WP_REST_Server::READABLE,
+                    'callback' => [self::class, 'get_user_data'],
+                    'permission_callback' => [self::class, 'check_auth'],
+                ],
+                [
+                    'methods' => WP_REST_Server::CREATABLE,
+                    'callback' => [self::class, 'update_user_data'],
+                    'permission_callback' => [self::class, 'check_auth'],
+                ]
+            ]
+        );
+
         error_log('Profile endpoints registered successfully');
     }
 
@@ -314,6 +332,114 @@ class ProfileEndpoints {
         }
 
         return true;
+    }
+
+    /**
+     * Get WordPress user data
+     */
+    public static function get_user_data() {
+        $user_id = get_current_user_id();
+        error_log("Fetching WordPress user data for user: $user_id");
+
+        try {
+            $user = get_userdata($user_id);
+            if (!$user) {
+                return new WP_Error(
+                    'user_not_found',
+                    'User not found',
+                    ['status' => 404]
+                );
+            }
+
+            return rest_ensure_response([
+                'success' => true,
+                'data' => [
+                    'username' => $user->user_login,
+                    'email' => $user->user_email,
+                    'display_name' => $user->display_name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name
+                ]
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error fetching user data: " . $e->getMessage());
+            return new WP_Error(
+                'user_fetch_error',
+                'Failed to fetch user data',
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Update WordPress user data
+     */
+    public static function update_user_data(WP_REST_Request $request) {
+        $user_id = get_current_user_id();
+        $data = $request->get_json_params();
+        error_log("Updating WordPress user data for user: $user_id");
+        error_log("Update data: " . json_encode($data));
+
+        try {
+            $update_data = [
+                'ID' => $user_id
+            ];
+
+            // Map fields to WordPress user data
+            if (isset($data['email'])) {
+                $update_data['user_email'] = sanitize_email($data['email']);
+            }
+            if (isset($data['display_name'])) {
+                $update_data['display_name'] = sanitize_text_field($data['display_name']);
+            }
+            if (isset($data['first_name'])) {
+                $update_data['first_name'] = sanitize_text_field($data['first_name']);
+            }
+            if (isset($data['last_name'])) {
+                $update_data['last_name'] = sanitize_text_field($data['last_name']);
+            }
+
+            // Update user data
+            $result = wp_update_user($update_data);
+
+            if (is_wp_error($result)) {
+                error_log("Error updating user: " . $result->get_error_message());
+                return new WP_Error(
+                    'user_update_error',
+                    $result->get_error_message(),
+                    ['status' => 500]
+                );
+            }
+
+            // Get updated user data
+            $user = get_userdata($user_id);
+            if (!$user) {
+                return new WP_Error(
+                    'user_not_found',
+                    'User not found after update',
+                    ['status' => 404]
+                );
+            }
+
+            return rest_ensure_response([
+                'success' => true,
+                'data' => [
+                    'username' => $user->user_login,
+                    'email' => $user->user_email,
+                    'display_name' => $user->display_name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name
+                ],
+                'message' => 'User data updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error updating user data: " . $e->getMessage());
+            return new WP_Error(
+                'user_update_error',
+                'Failed to update user data',
+                ['status' => 500]
+            );
+        }
     }
 }
 
