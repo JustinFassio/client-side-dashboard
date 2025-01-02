@@ -41,7 +41,7 @@ export const InjuryTracker = ({ injuries, onChange, className = '' }: InjuryTrac
             createElement('select', {
                 key: 'predefined',
                 value: selectedPredefined,
-                onChange: (e) => {
+                onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
                     setSelectedPredefined(e.target.value);
                     if (e.target.value) addInjury(e.target.value, false);
                 },
@@ -94,7 +94,7 @@ export const InjuryTracker = ({ injuries, onChange, className = '' }: InjuryTrac
                         createElement('label', { key: 'details-label' }, 'Details'),
                         createElement('textarea', {
                             value: injury.details,
-                            onChange: (e) => updateInjury(injury.id, { details: e.target.value }),
+                            onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => updateInjury(injury.id, { details: e.target.value }),
                             placeholder: 'Add details about this injury...',
                             className: 'form-control'
                         })
@@ -104,7 +104,7 @@ export const InjuryTracker = ({ injuries, onChange, className = '' }: InjuryTrac
                             createElement('label', { key: 'severity-label' }, 'Severity'),
                             createElement('select', {
                                 value: injury.severity,
-                                onChange: (e) => updateInjury(injury.id, { 
+                                onChange: (e: React.ChangeEvent<HTMLSelectElement>) => updateInjury(injury.id, { 
                                     severity: e.target.value as Injury['severity']
                                 }),
                                 className: 'form-control'
@@ -118,7 +118,7 @@ export const InjuryTracker = ({ injuries, onChange, className = '' }: InjuryTrac
                             createElement('label', { key: 'status-label' }, 'Status'),
                             createElement('select', {
                                 value: injury.status,
-                                onChange: (e) => updateInjury(injury.id, {
+                                onChange: (e: React.ChangeEvent<HTMLSelectElement>) => updateInjury(injury.id, {
                                     status: e.target.value as Injury['status']
                                 }),
                                 className: 'form-control'

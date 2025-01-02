@@ -2,7 +2,7 @@ import React, { useReducer, useCallback, useEffect } from 'react';
 import { ProfileData } from '../../types/profile';
 import { ValidationService } from '../../services/ValidationService';
 import { FormValidationResult } from '../../types/validation';
-import { Events } from '../../../dashboard/core/events';
+import { Events } from '../../../../dashboard/core/events';
 import { PROFILE_EVENTS } from '../../types/events';
 import BasicSection from './sections/BasicSection';
 import PhysicalSection from './sections/PhysicalSection';
@@ -20,16 +20,19 @@ type SectionId = typeof SECTIONS[number]['id'];
 
 // Initial form state
 const initialState: Partial<ProfileData> = {
-    displayName: '',
+    username: '',
     email: '',
-    age: undefined,
-    height: undefined,
-    weight: undefined,
+    displayName: '',
+    firstName: '',
+    lastName: '',
+    age: null,
     gender: '',
-    fitnessLevel: '',
-    activityLevel: '',
-    medicalConditions: '',
-    exerciseLimitations: '',
+    height: null,
+    weight: null,
+    fitnessLevel: null,
+    activityLevel: null,
+    medicalConditions: [],
+    exerciseLimitations: [],
     medications: ''
 };
 
@@ -140,27 +143,14 @@ export const ProfileForm: React.FC = () => {
         };
     }, []);
 
-    const handleFieldChange = useCallback((field: keyof ProfileData, value: any) => {
-        dispatch({ type: 'UPDATE_FIELD', field, value });
+    const handleFieldChange = useCallback((name: string, value: any) => {
+        dispatch({ type: 'UPDATE_FIELD', field: name as keyof ProfileData, value });
         dispatch({ type: 'RESET_SAVE_STATUS' });
 
-        // Validate the updated field
-        const fieldValidation = validationService.validateField(value, validationService.getValidationConfig(field));
-        const updatedFieldErrors = {
-            ...state.validation.fieldErrors,
-            [field]: fieldValidation.errors
-        };
-
-        // Revalidate the entire form for cross-field validations
-        const formValidation = validationService.validateForm({ ...state.data, [field]: value });
-        dispatch({
-            type: 'SET_VALIDATION',
-            validation: { 
-                ...formValidation, 
-                fieldErrors: { ...formValidation.fieldErrors, ...updatedFieldErrors }
-            }
-        });
-    }, [state.data, state.validation.fieldErrors]);
+        // Validate the form after field update
+        const formValidation = validationService.validateForm({ ...state.data, [name]: value });
+        dispatch({ type: 'SET_VALIDATION', validation: formValidation });
+    }, [state.data]);
 
     const handleSubmit = useCallback(async () => {
         dispatch({ type: 'RESET_SAVE_STATUS' });
@@ -262,7 +252,7 @@ export const ProfileForm: React.FC = () => {
                 </div>
             )}
 
-            <style jsx>{`
+            <style>{`
                 .profile-form {
                     max-width: 800px;
                     margin: 0 auto;

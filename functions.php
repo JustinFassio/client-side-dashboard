@@ -4,6 +4,7 @@ if (!defined('ABSPATH')) exit;
 // Load core configurations
 require_once get_stylesheet_directory() . '/dashboard/core/config/debug.php';
 require_once get_stylesheet_directory() . '/dashboard/core/config/environment.php';
+require_once get_stylesheet_directory() . '/dashboard/core/dashboardbridge.php';
 
 // Load feature configurations
 require_once get_stylesheet_directory() . '/features/profile/config.php';
@@ -13,7 +14,15 @@ require_once get_stylesheet_directory() . '/features/profile/api/profile-endpoin
 
 use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
+use AthleteDashboard\Core\DashboardBridge;
 use AthleteDashboard\Features\Profile\Config as ProfileConfig;
+
+// Add dashboard feature query var
+function athlete_dashboard_add_query_vars($vars) {
+    $vars[] = 'dashboard_feature';
+    return $vars;
+}
+add_filter('query_vars', 'athlete_dashboard_add_query_vars');
 
 // Debug logging function
 function athlete_dashboard_debug_log($message) {
@@ -66,6 +75,11 @@ function enqueue_athlete_dashboard_scripts() {
             'profile' => ProfileConfig::get_settings()
         ]]
     ));
+
+    // Initialize feature data
+    $current_feature = DashboardBridge::get_current_feature();
+    $feature_data = DashboardBridge::get_feature_data($current_feature);
+    wp_localize_script('athlete-dashboard', 'athleteDashboardFeature', $feature_data);
 
     // Styles
     wp_enqueue_style(
