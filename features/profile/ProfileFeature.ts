@@ -1,177 +1,114 @@
-import { createElement } from '@wordpress/element';
+import { createElement, lazy, Suspense } from '@wordpress/element';
 import { Feature, FeatureContext } from '../../dashboard/contracts/Feature';
 import { Events } from '../../dashboard/core/events';
-import { UserCircle2, Dumbbell, Heart, FileWarning, User } from 'lucide-react';
-import { ProfileData } from './types/profile';
 import { PROFILE_EVENTS, ProfileEventPayloads } from './events';
 import { ProfileService } from './services/ProfileService';
-import { ProfileForm } from './components/ProfileForm';
-import { InjuryTracker } from './components/InjuryTracker';
+import { ProfileData } from './types/profile';
+import { LucideIcon } from 'lucide-react';
+
+// Define Section interface
+interface Section {
+    id: string;
+    title: string;
+    icon: LucideIcon;
+    component?: React.ComponentType<any>;
+}
+
+// Lazy load icons and cast them to LucideIcon type
+const Icons = {
+    UserCircle2: lazy(() => import('lucide-react').then(mod => ({ default: mod.UserCircle2 }))) as unknown as LucideIcon,
+    Dumbbell: lazy(() => import('lucide-react').then(mod => ({ default: mod.Dumbbell }))) as unknown as LucideIcon,
+    Heart: lazy(() => import('lucide-react').then(mod => ({ default: mod.Heart }))) as unknown as LucideIcon,
+    FileWarning: lazy(() => import('lucide-react').then(mod => ({ default: mod.FileWarning }))) as unknown as LucideIcon,
+    User: lazy(() => import('lucide-react').then(mod => ({ default: mod.User }))) as unknown as LucideIcon
+};
+
+// Lazy load section components
+const ProfileForm = lazy(() => import('./components/ProfileForm').then(module => ({ default: module.ProfileForm })));
+const InjuryTracker = lazy(() => import('./components/InjuryTracker').then(module => ({ default: module.InjuryTracker })));
 
 export class ProfileFeature implements Feature {
     public readonly identifier = 'profile';
     public readonly metadata = {
         name: 'Profile',
         description: 'Manage your athlete profile',
-        icon: createElement(UserCircle2, {
-            size: 36,
-            strokeWidth: 1.5,
-            className: 'nav-feature-icon',
-            color: '#ddff0e'
-        }),
+        icon: createElement(Suspense, { fallback: null }, 
+            createElement(Icons.UserCircle2, {
+                size: 36,
+                strokeWidth: 1.5,
+                className: 'nav-feature-icon',
+                color: '#ddff0e'
+            })
+        ),
         order: 1
     };
 
-    private isInitialized = false;
-    private context: FeatureContext | null = null;
+    private sections: Section[];
 
-    sections = [
-        {
-            id: 'basic',
-            title: 'Basic Information',
-            icon: UserCircle2,
-        },
-        {
-            id: 'physical',
-            title: 'Physical Information',
-            icon: Dumbbell,
-        },
-        {
-            id: 'medical',
-            title: 'Medical Information',
-            icon: Heart,
-        },
-        {
-            id: 'injuries',
-            title: 'Injuries & Limitations',
-            icon: FileWarning,
-            component: InjuryTracker
-        },
-        {
-            id: 'account',
-            title: 'Account Info',
-            icon: User,
-        }
-    ];
-
-    async register(context: FeatureContext): Promise<void> {
-        this.context = context;
+    constructor() {
+        this.sections = [
+            {
+                id: 'basic',
+                title: 'Basic Information',
+                icon: Icons.UserCircle2
+            },
+            {
+                id: 'physical',
+                title: 'Physical Information',
+                icon: Icons.Dumbbell
+            },
+            {
+                id: 'medical',
+                title: 'Medical Information',
+                icon: Icons.Heart
+            },
+            {
+                id: 'injuries',
+                title: 'Injuries & Limitations',
+                icon: Icons.FileWarning
+            },
+            {
+                id: 'account',
+                title: 'Account Settings',
+                icon: Icons.User
+            }
+        ];
     }
 
-    async init(): Promise<void> {
-        if (this.isInitialized) {
-            return;
-        }
-
-        // Load initial profile data
-        await this.loadProfileData();
-
-        // Register event handlers
-        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATED]>(
-            PROFILE_EVENTS.PROFILE_UPDATED,
-            this.handleProfileUpdated
-        );
-        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATE_FAILED]>(
-            PROFILE_EVENTS.PROFILE_UPDATE_FAILED,
-            this.handleProfileUpdateFailed
-        );
-        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_ADDED]>(
-            PROFILE_EVENTS.INJURY_ADDED,
-            this.handleInjuryAdded
-        );
-        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_UPDATED]>(
-            PROFILE_EVENTS.INJURY_UPDATED,
-            this.handleInjuryUpdated
-        );
-        Events.on<ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_REMOVED]>(
-            PROFILE_EVENTS.INJURY_REMOVED,
-            this.handleInjuryRemoved
-        );
-
-        this.isInitialized = true;
+    public async register(context: FeatureContext): Promise<void> {
+        // Register feature with context
     }
 
-    cleanup(): void {
-        // Unregister event handlers
-        Events.off(PROFILE_EVENTS.PROFILE_UPDATED, this.handleProfileUpdated);
-        Events.off(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, this.handleProfileUpdateFailed);
-        Events.off(PROFILE_EVENTS.INJURY_ADDED, this.handleInjuryAdded);
-        Events.off(PROFILE_EVENTS.INJURY_UPDATED, this.handleInjuryUpdated);
-        Events.off(PROFILE_EVENTS.INJURY_REMOVED, this.handleInjuryRemoved);
-
-        this.isInitialized = false;
-        this.context = null;
+    public async init(): Promise<void> {
+        // Initialize feature
+        await ProfileService.fetchProfile();
     }
 
-    isEnabled(): boolean {
+    public cleanup(): void {
+        // Clean up any resources
+    }
+
+    public isEnabled(): boolean {
         return true; // Profile feature is always enabled
     }
 
-    render(): JSX.Element {
-        return createElement(ProfileForm, {
-            onSave: this.handleProfileSave,
-            sections: this.sections
-        });
-    }
-
-    onNavigate(): void {
-        // Refresh profile data when navigating to this feature
-        if (this.isInitialized) {
-            this.loadProfileData();
-        }
-    }
-
-    onUserChange(userId: number): void {
-        // Refresh profile data when user changes
-        if (this.isInitialized) {
-            this.loadProfileData();
-        }
-    }
-
-    private async loadProfileData(): Promise<void> {
-        Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
-        try {
-            const profile = await ProfileService.fetchProfile();
-            Events.emit(PROFILE_EVENTS.PROFILE_UPDATED, profile);
-        } catch (error) {
-            Events.emit(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, {
-                error: 'Failed to load profile',
-                profileData: ProfileService.getDefaultProfile()
-            });
-        }
+    public render(): JSX.Element {
+        return createElement(Suspense, { fallback: 'Loading...' },
+            createElement(ProfileForm, {
+                sections: this.sections,
+                onSave: this.handleProfileSave
+            })
+        );
     }
 
     private handleProfileSave = async (data: Partial<ProfileData>): Promise<void> => {
-        Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
-        
         try {
+            Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
             const updatedProfile = await ProfileService.updateProfile(data);
             Events.emit(PROFILE_EVENTS.PROFILE_UPDATED, updatedProfile);
         } catch (error) {
-            Events.emit(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, {
-                error: 'Failed to update profile',
-                profileData: data
-            });
+            console.error('Failed to save profile:', error);
+            Events.emit(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, undefined);
         }
-    };
-
-    private handleProfileUpdated = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATED]) => {
-        console.log('Profile updated successfully:', payload);
-    };
-
-    private handleProfileUpdateFailed = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.PROFILE_UPDATE_FAILED]) => {
-        console.error('Profile update failed:', payload.error);
-    };
-
-    private handleInjuryAdded = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_ADDED]) => {
-        console.log('Injury added:', payload.injury);
-    };
-
-    private handleInjuryUpdated = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_UPDATED]) => {
-        console.log('Injury updated:', payload.injury);
-    };
-
-    private handleInjuryRemoved = (payload: ProfileEventPayloads[typeof PROFILE_EVENTS.INJURY_REMOVED]) => {
-        console.log('Injury removed:', payload.injuryId);
     };
 } 

@@ -105,6 +105,28 @@ class ProfileEndpoints {
             ]
         );
 
+        // Add combined data endpoint
+        register_rest_route(
+            self::NAMESPACE,
+            '/' . self::ROUTE . '/full',
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [self::class, 'get_combined_data'],
+                'permission_callback' => [self::class, 'check_auth'],
+            ]
+        );
+
+        // Add basic data endpoint
+        register_rest_route(
+            self::NAMESPACE,
+            '/' . self::ROUTE . '/basic',
+            [
+                'methods' => WP_REST_Server::READABLE,
+                'callback' => [self::class, 'get_basic_data'],
+                'permission_callback' => [self::class, 'check_auth'],
+            ]
+        );
+
         error_log('Profile endpoints registered successfully');
     }
 
@@ -437,6 +459,99 @@ class ProfileEndpoints {
             return new WP_Error(
                 'user_update_error',
                 'Failed to update user data',
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Get combined user and profile data
+     */
+    public static function get_combined_data() {
+        $user_id = get_current_user_id();
+        $user = get_userdata($user_id);
+
+        if (!$user) {
+            return new WP_Error(
+                'user_not_found',
+                'User not found',
+                ['status' => 404]
+            );
+        }
+
+        try {
+            $profile_data = self::get_profile_data($user_id);
+            
+            $combined_data = [
+                // WordPress core fields
+                'username' => $user->user_login,
+                'email' => $user->user_email,
+                'displayName' => $user->display_name,
+                'firstName' => $user->first_name,
+                'lastName' => $user->last_name,
+                
+                // Profile data
+                ...$profile_data
+            ];
+
+            return rest_ensure_response([
+                'success' => true,
+                'data' => $combined_data
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error fetching combined data: " . $e->getMessage());
+            return new WP_Error(
+                'fetch_error',
+                'Failed to fetch user data',
+                ['status' => 500]
+            );
+        }
+    }
+
+    /**
+     * Get basic profile data for initial render
+     */
+    public static function get_basic_data() {
+        $user_id = get_current_user_id();
+        $user = get_userdata($user_id);
+
+        if (!$user) {
+            return new WP_Error(
+                'user_not_found',
+                'User not found',
+                ['status' => 404]
+            );
+        }
+
+        try {
+            // Get only essential profile fields
+            $profile_data = self::get_profile_data($user_id);
+            
+            $basic_data = [
+                // Essential user fields
+                'username' => $user->user_login,
+                'displayName' => $user->display_name,
+                'firstName' => $user->first_name,
+                'lastName' => $user->last_name,
+                
+                // Essential profile fields
+                'userId' => $profile_data['user_id'],
+                'email' => $user->user_email
+            ];
+
+            // Add cache headers
+            header('Cache-Control: private, max-age=60'); // 1 minute cache
+            header('ETag: "' . md5(json_encode($basic_data)) . '"');
+
+            return rest_ensure_response([
+                'success' => true,
+                'data' => $basic_data
+            ]);
+        } catch (\Exception $e) {
+            error_log("Error fetching basic data: " . $e->getMessage());
+            return new WP_Error(
+                'fetch_error',
+                'Failed to fetch basic user data',
                 ['status' => 500]
             );
         }

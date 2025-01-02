@@ -36,8 +36,8 @@ Is Dashboard Template: <?php echo is_page_template('dashboard/templates/dashboar
 WP_DEBUG: <?php echo WP_DEBUG ? 'Enabled' : 'Disabled'; ?>
 Current Template: <?php echo get_page_template(); ?>
 Theme Directory: <?php echo get_stylesheet_directory(); ?>
-Script Path: <?php echo get_stylesheet_directory_uri() . '/build/main.js'; ?>
-Script Exists: <?php echo file_exists(get_stylesheet_directory() . '/build/main.js') ? 'Yes' : 'No'; ?>
+Script Path: <?php echo get_stylesheet_directory_uri() . '/assets/build/main.js'; ?>
+Script Exists: <?php echo file_exists(get_stylesheet_directory() . '/assets/build/main.js') ? 'Yes' : 'No'; ?>
 Current Feature: <?php echo $current_feature; ?>
 Feature Data: <?php echo wp_json_encode($feature_data); ?>
 athleteDashboardData: <?php echo wp_json_encode(array(
@@ -70,8 +70,8 @@ athleteDashboardData: <?php echo wp_json_encode(array(
         wpData: window.wp?.data,
         athleteDashboardData: window.athleteDashboardData,
         athleteDashboardFeature: window.athleteDashboardFeature,
-        scriptPath: '<?php echo get_stylesheet_directory_uri() . '/build/main.js' ?>',
-        scriptExists: <?php echo file_exists(get_stylesheet_directory() . '/build/main.js') ? 'true' : 'false' ?>
+        scriptPath: '<?php echo get_stylesheet_directory_uri() . '/assets/build/main.js' ?>',
+        scriptExists: <?php echo file_exists(get_stylesheet_directory() . '/assets/build/main.js') ? 'true' : 'false' ?>
     });
 </script>
 <?php endif; ?>

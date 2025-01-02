@@ -7,7 +7,7 @@ module.exports = {
     main: './assets/src/main.tsx'
   },
   output: {
-    path: path.resolve(__dirname, 'build'),
+    path: path.resolve(__dirname, 'assets/build'),
     filename: '[name].js'
   },
   resolve: {

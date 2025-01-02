@@ -52,9 +52,9 @@ function enqueue_athlete_dashboard_scripts() {
     // Main dashboard script
     wp_enqueue_script(
         'athlete-dashboard',
-        get_stylesheet_directory_uri() . '/build/main.js',
+        get_stylesheet_directory_uri() . '/assets/build/main.js',
         ['wp-element', 'wp-data', 'wp-api-fetch', 'wp-i18n', 'wp-hooks'],
-        filemtime(get_stylesheet_directory() . '/build/main.js'),
+        filemtime(get_stylesheet_directory() . '/assets/build/main.js'),
         true
     );
 
@@ -84,9 +84,9 @@ function enqueue_athlete_dashboard_scripts() {
     // Styles
     wp_enqueue_style(
         'athlete-dashboard',
-        get_stylesheet_directory_uri() . '/build/main.css',
+        get_stylesheet_directory_uri() . '/assets/build/main.css',
         array(),
-        filemtime(get_stylesheet_directory() . '/build/main.css')
+        filemtime(get_stylesheet_directory() . '/assets/build/main.css')
     );
 
     Debug::log('Dashboard scripts enqueued');
@@ -96,7 +96,7 @@ add_action('wp_enqueue_scripts', 'enqueue_athlete_dashboard_scripts');
 // Add support for editor styles
 function athlete_dashboard_setup() {
     add_theme_support('editor-styles');
-    add_editor_style('build/main.css');
+    add_editor_style('assets/build/main.css');
 }
 add_action('after_setup_theme', 'athlete_dashboard_setup');
 

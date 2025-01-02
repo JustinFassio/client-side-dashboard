@@ -2,37 +2,35 @@ import { ProfileData, ProfileError, ProfileErrorCode } from '../types/profile';
 import { Events } from '../../../dashboard/core/events';
 import { PROFILE_EVENTS } from '../types/events';
 
+const DEBUG = window.athleteDashboardData?.debug || false;
+const CACHE_TIMEOUT = 2 * 60 * 1000; // 2 minutes
+
 /**
  * Service for managing profile data and physical metrics
  */
 export class ProfileService {
-    private static debugEndpoint(): void {
-        console.group('ProfileService Endpoint Debug');
-        console.log('Raw API URL:', window.athleteDashboardData?.apiUrl || 'MISSING');
-        console.log('Nonce:', window.athleteDashboardData?.nonce ? 'Present' : 'MISSING');
-        console.log('Final Endpoint:', this.endpoint);
-        console.groupEnd();
+    private static debugLog(message: string, data?: unknown): void {
+        if (DEBUG) {
+            console.log(`[ProfileService] ${message}`, data);
+        }
     }
 
     private static getEndpoint(): string {
         if (!window.athleteDashboardData?.apiUrl) {
-            console.error('athleteDashboardData.apiUrl is not defined!');
             throw new Error('API URL is not configured');
         }
 
         const baseUrl = window.athleteDashboardData.apiUrl.replace(/\/+$/, '');
         const hasWpJson = baseUrl.includes('/wp-json');
         const wpJsonBase = hasWpJson ? baseUrl : `${baseUrl}/wp-json`;
-        const endpoint = `${wpJsonBase}/athlete-dashboard/v1/profile`;
-        
-        return endpoint;
+        return `${wpJsonBase}/athlete-dashboard/v1/profile`;
     }
 
     private static endpoint = ProfileService.getEndpoint();
 
     // Cache management
     private static cache = new Map<string, any>();
-    private static cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    private static loadingPromises = new Map<string, Promise<any>>();
 
     private static getCacheKey(userId: number, dataType: string): string {
         return `profile_${userId}_${dataType}`;
@@ -49,7 +47,7 @@ export class ProfileService {
         const item = this.cache.get(key);
         if (!item) return null;
 
-        if (Date.now() - item.timestamp > this.cacheTimeout) {
+        if (Date.now() - item.timestamp > CACHE_TIMEOUT) {
             this.cache.delete(key);
             return null;
         }
@@ -67,79 +65,136 @@ export class ProfileService {
     }
 
     /**
-     * Fetch profile data for the current user
+     * Fetch basic profile data for initial render
      */
-    public static async fetchProfile(): Promise<ProfileData> {
+    public static async fetchBasicProfile(): Promise<Partial<ProfileData>> {
+        try {
+            const userId = window.athleteDashboardData?.userId;
+            const cacheKey = this.getCacheKey(userId, 'basic');
+            const cachedData = this.getCacheItem(cacheKey);
+
+            if (cachedData) {
+                this.debugLog('Using cached basic profile data');
+                return cachedData;
+            }
+
+            this.debugLog('Fetching basic profile data');
+            
+            const response = await fetch(`${this.endpoint}/basic`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': window.athleteDashboardData.nonce
+                }
+            });
+
+            if (!response.ok) {
+                throw await this.handleError(response);
+            }
+
+            const result = await response.json();
+            const basicData = result.data;
+
+            this.setCacheItem(cacheKey, basicData);
+            this.debugLog('Basic profile data fetched and cached', basicData);
+            
+            // Start loading full profile data in the background
+            this.prefetchFullProfile();
+
+            return basicData;
+        } catch (error) {
+            this.debugLog('Error fetching basic profile:', error);
+            throw this.normalizeError(error);
+        }
+    }
+
+    /**
+     * Prefetch full profile data in the background
+     */
+    private static async prefetchFullProfile(): Promise<void> {
+        const userId = window.athleteDashboardData?.userId;
+        const cacheKey = this.getCacheKey(userId, 'profile');
+
+        // Check if already loading
+        if (this.loadingPromises.has(cacheKey)) {
+            return;
+        }
+
+        try {
+            const loadingPromise = this.fetchFullProfile();
+            this.loadingPromises.set(cacheKey, loadingPromise);
+            await loadingPromise;
+        } finally {
+            this.loadingPromises.delete(cacheKey);
+        }
+    }
+
+    /**
+     * Fetch full profile data
+     */
+    private static async fetchFullProfile(): Promise<ProfileData> {
         try {
             const userId = window.athleteDashboardData?.userId;
             const cacheKey = this.getCacheKey(userId, 'profile');
             const cachedData = this.getCacheItem(cacheKey);
 
             if (cachedData) {
+                this.debugLog('Using cached full profile data');
                 return cachedData;
             }
 
-            this.debugEndpoint();
-            console.log('Fetching profile data...');
+            this.debugLog('Fetching full profile data');
             
-            const [userResponse, profileResponse] = await Promise.all([
-                fetch(`${this.endpoint}/user`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-WP-Nonce': window.athleteDashboardData.nonce
-                    }
-                }),
-                fetch(this.endpoint, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-WP-Nonce': window.athleteDashboardData.nonce
-                    }
-                })
-            ]);
+            const response = await fetch(`${this.endpoint}/full`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': window.athleteDashboardData.nonce
+                }
+            });
 
-            if (!userResponse.ok || !profileResponse.ok) {
-                throw await this.handleError(userResponse.ok ? profileResponse : userResponse);
+            if (!response.ok) {
+                throw await this.handleError(response);
             }
 
-            const [userData, profileData] = await Promise.all([
-                userResponse.json(),
-                profileResponse.json()
-            ]);
+            const result = await response.json();
+            const profileData = result.data;
 
-            const combinedData: ProfileData = {
-                // WordPress core fields
-                username: userData.data?.username || '',
-                email: userData.data?.email || '',
-                displayName: userData.data?.display_name || '',
-                firstName: userData.data?.first_name || '',
-                lastName: userData.data?.last_name || '',
-                
-                // Custom profile fields
-                ...(profileData.data?.profile || {}),
-                
-                // Physical metrics
-                height: profileData.data?.profile?.height ? Number(profileData.data.profile.height) : null,
-                weight: profileData.data?.profile?.weight ? Number(profileData.data.profile.weight) : null,
-                age: profileData.data?.profile?.age ? Number(profileData.data.profile.age) : null,
-                
-                // Activity metrics
-                activityLevel: profileData.data?.profile?.activityLevel || null,
-                fitnessLevel: profileData.data?.profile?.fitnessLevel || null,
-                
-                // Medical information
-                medicalConditions: profileData.data?.profile?.medicalConditions || [],
-                exerciseLimitations: profileData.data?.profile?.exerciseLimitations || [],
-                medications: profileData.data?.profile?.medications || ''
+            // Ensure numeric fields are properly typed
+            const normalizedData: ProfileData = {
+                ...profileData,
+                height: profileData.height ? Number(profileData.height) : null,
+                weight: profileData.weight ? Number(profileData.weight) : null,
+                age: profileData.age ? Number(profileData.age) : null,
+                medicalConditions: profileData.medicalConditions || [],
+                exerciseLimitations: profileData.exerciseLimitations || [],
+                medications: profileData.medications || ''
             };
 
-            this.setCacheItem(cacheKey, combinedData);
-            return combinedData;
+            this.setCacheItem(cacheKey, normalizedData);
+            this.debugLog('Full profile data fetched and cached', normalizedData);
+            return normalizedData;
         } catch (error) {
-            console.error('Error fetching profile:', error);
+            this.debugLog('Error fetching full profile:', error);
             throw this.normalizeError(error);
         }
+    }
+
+    /**
+     * Get complete profile data, waiting for full data if necessary
+     */
+    public static async fetchProfile(): Promise<ProfileData> {
+        const userId = window.athleteDashboardData?.userId;
+        const cacheKey = this.getCacheKey(userId, 'profile');
+
+        // If already loading, wait for that promise
+        const loadingPromise = this.loadingPromises.get(cacheKey);
+        if (loadingPromise) {
+            return loadingPromise;
+        }
+
+        // Otherwise, load full profile
+        return this.fetchFullProfile();
     }
 
     /**
@@ -147,12 +202,11 @@ export class ProfileService {
      */
     public static async updateProfile(data: Partial<ProfileData>): Promise<ProfileData> {
         try {
-            this.debugEndpoint();
-            console.group('Profile Update');
-            console.log('Update data:', data);
+            this.debugLog('Updating profile data', data);
 
             const { username, email, displayName, firstName, lastName, ...customFields } = data;
             
+            // Update user data if provided
             if (email || displayName || firstName || lastName) {
                 const userResponse = await fetch(`${this.endpoint}/user`, {
                     method: 'POST',
@@ -173,6 +227,7 @@ export class ProfileService {
                 }
             }
 
+            // Update custom fields if provided
             if (Object.keys(customFields).length > 0) {
                 const profileResponse = await fetch(this.endpoint, {
                     method: 'POST',
@@ -193,10 +248,8 @@ export class ProfileService {
 
             // Fetch and return the updated profile
             const updatedProfile = await this.fetchProfile();
-            console.log('Profile updated successfully:', updatedProfile);
-            console.groupEnd();
+            this.debugLog('Profile updated successfully');
 
-            // Emit profile updated event
             Events.emit(PROFILE_EVENTS.UPDATE_SUCCESS, {
                 type: PROFILE_EVENTS.UPDATE_SUCCESS,
                 payload: updatedProfile
@@ -204,10 +257,8 @@ export class ProfileService {
 
             return updatedProfile;
         } catch (error) {
-            console.error('Error updating profile:', error);
-            console.groupEnd();
+            this.debugLog('Error updating profile:', error);
 
-            // Emit error event
             Events.emit(PROFILE_EVENTS.UPDATE_ERROR, {
                 type: PROFILE_EVENTS.UPDATE_ERROR,
                 error: this.normalizeError(error)
