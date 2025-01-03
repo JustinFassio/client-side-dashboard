@@ -1,5 +1,4 @@
 import { createElement } from '@wordpress/element';
-import type { Dispatch } from '@wordpress/data';
 
 export interface FeatureMetadata {
   name: string;
@@ -9,7 +8,7 @@ export interface FeatureMetadata {
 }
 
 export interface FeatureContext {
-  dispatch: Dispatch;
+  dispatch: (storeName: string) => any;
   userId: number;
   nonce: string;
   apiUrl: string;

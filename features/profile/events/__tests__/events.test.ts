@@ -37,8 +37,8 @@ describe('Profile Events', () => {
                     gender: 'prefer_not_to_say',
                     height: 175,
                     weight: 70,
-                    fitnessLevel: 'intermediate',
-                    activityLevel: 'moderately_active',
+                    fitnessLevel: 'intermediate' as const,
+                    activityLevel: 'moderately_active' as const,
                     medicalConditions: [],
                     exerciseLimitations: [],
                     medications: ''
@@ -107,8 +107,8 @@ describe('Profile Events', () => {
                         gender: 'prefer_not_to_say',
                         height: 175,
                         weight: 70,
-                        fitnessLevel: 'intermediate',
-                        activityLevel: 'moderately_active',
+                        fitnessLevel: 'intermediate' as const,
+                        activityLevel: 'moderately_active' as const,
                         medicalConditions: [],
                         exerciseLimitations: [],
                         medications: ''

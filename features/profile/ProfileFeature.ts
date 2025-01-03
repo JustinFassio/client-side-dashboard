@@ -4,27 +4,27 @@ import { Events } from '../../dashboard/core/events';
 import { PROFILE_EVENTS, ProfileEventPayloads } from './events';
 import { ProfileService } from './services/ProfileService';
 import { ProfileData } from './types/profile';
-import { LucideIcon } from 'lucide-react';
+import { UserCircle2, Dumbbell, Heart, FileWarning, User } from 'lucide-react';
 
 // Define Section interface
 interface Section {
     id: string;
     title: string;
-    icon: LucideIcon;
+    icon: typeof UserCircle2;
     component?: React.ComponentType<any>;
 }
 
-// Lazy load icons and cast them to LucideIcon type
+// Define icons
 const Icons = {
-    UserCircle2: lazy(() => import('lucide-react').then(mod => ({ default: mod.UserCircle2 }))) as unknown as LucideIcon,
-    Dumbbell: lazy(() => import('lucide-react').then(mod => ({ default: mod.Dumbbell }))) as unknown as LucideIcon,
-    Heart: lazy(() => import('lucide-react').then(mod => ({ default: mod.Heart }))) as unknown as LucideIcon,
-    FileWarning: lazy(() => import('lucide-react').then(mod => ({ default: mod.FileWarning }))) as unknown as LucideIcon,
-    User: lazy(() => import('lucide-react').then(mod => ({ default: mod.User }))) as unknown as LucideIcon
+    UserCircle2,
+    Dumbbell,
+    Heart,
+    FileWarning,
+    User
 };
 
 // Lazy load section components
-const ProfileForm = lazy(() => import('./components/ProfileForm').then(module => ({ default: module.ProfileForm })));
+const ProfileForm = lazy(() => import('./components/form/ProfileForm').then(module => ({ default: module.ProfileForm })));
 const InjuryTracker = lazy(() => import('./components/InjuryTracker').then(module => ({ default: module.InjuryTracker })));
 
 export class ProfileFeature implements Feature {
