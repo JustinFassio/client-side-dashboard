@@ -1,6 +1,5 @@
 import { ProfileData, ProfileError, ProfileErrorCode } from '../types/profile';
-import { Events } from '../../../dashboard/core/events';
-import { PROFILE_EVENTS } from '../types/events';
+import { PROFILE_EVENTS, emitProfileEvent } from '../events';
 
 const DEBUG = window.athleteDashboardData?.debug || false;
 const CACHE_TIMEOUT = 2 * 60 * 1000; // 2 minutes
@@ -203,6 +202,9 @@ export class ProfileService {
     public static async updateProfile(data: Partial<ProfileData>): Promise<ProfileData> {
         try {
             this.debugLog('Updating profile data', data);
+            
+            // Emit update request event
+            emitProfileEvent(PROFILE_EVENTS.UPDATE_REQUEST, data);
 
             const { username, email, displayName, firstName, lastName, ...customFields } = data;
             
@@ -250,19 +252,15 @@ export class ProfileService {
             const updatedProfile = await this.fetchProfile();
             this.debugLog('Profile updated successfully');
 
-            Events.emit(PROFILE_EVENTS.UPDATE_SUCCESS, {
-                type: PROFILE_EVENTS.UPDATE_SUCCESS,
-                payload: updatedProfile
-            });
+            // Emit success event
+            emitProfileEvent(PROFILE_EVENTS.UPDATE_SUCCESS, updatedProfile);
 
             return updatedProfile;
         } catch (error) {
             this.debugLog('Error updating profile:', error);
 
-            Events.emit(PROFILE_EVENTS.UPDATE_ERROR, {
-                type: PROFILE_EVENTS.UPDATE_ERROR,
-                error: this.normalizeError(error)
-            });
+            // Emit error event
+            emitProfileEvent(PROFILE_EVENTS.UPDATE_ERROR, this.normalizeError(error));
 
             throw this.normalizeError(error);
         }

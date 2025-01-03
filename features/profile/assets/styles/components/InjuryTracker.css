@@ -1,4 +1,4 @@
-@import '../../../../../dashboard/styles/variables.css';
+@import '@styles/variables.css';
 @import '../forms.css';
 
 .custom-injury-input {

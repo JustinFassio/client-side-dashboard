@@ -7,15 +7,15 @@ import {
 describe('Profile Events', () => {
     describe('Event Types', () => {
         it('should define all required event types', () => {
-            expect(PROFILE_EVENTS.FETCH_REQUEST).toBe('profile:fetch-request');
-            expect(PROFILE_EVENTS.FETCH_SUCCESS).toBe('profile:fetch-success');
-            expect(PROFILE_EVENTS.FETCH_ERROR).toBe('profile:fetch-error');
-            expect(PROFILE_EVENTS.UPDATE_REQUEST).toBe('profile:update-request');
-            expect(PROFILE_EVENTS.UPDATE_SUCCESS).toBe('profile:update-success');
-            expect(PROFILE_EVENTS.UPDATE_ERROR).toBe('profile:update-error');
-            expect(PROFILE_EVENTS.SECTION_CHANGE).toBe('profile:section-change');
-            expect(PROFILE_EVENTS.VALIDATION_ERROR).toBe('profile:validation-error');
-            expect(PROFILE_EVENTS.FORM_RESET).toBe('profile:form-reset');
+            expect(PROFILE_EVENTS.FETCH_REQUEST).toBe('profile_fetch_request');
+            expect(PROFILE_EVENTS.FETCH_SUCCESS).toBe('profile_fetch_success');
+            expect(PROFILE_EVENTS.FETCH_ERROR).toBe('profile_fetch_error');
+            expect(PROFILE_EVENTS.UPDATE_REQUEST).toBe('profile_update_request');
+            expect(PROFILE_EVENTS.UPDATE_SUCCESS).toBe('profile_update_success');
+            expect(PROFILE_EVENTS.UPDATE_ERROR).toBe('profile_update_error');
+            expect(PROFILE_EVENTS.SECTION_CHANGE).toBe('profile_section_change');
+            expect(PROFILE_EVENTS.VALIDATION_ERROR).toBe('profile_validation_error');
+            expect(PROFILE_EVENTS.FORM_RESET).toBe('profile_form_reset');
         });
     });
 

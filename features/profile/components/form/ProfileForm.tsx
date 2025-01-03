@@ -35,14 +35,14 @@ export const ProfileForm = ({ onSave, sections }: ProfileFormProps) => {
         loadProfileData();
 
         // Subscribe to profile updates
-        Events.on(PROFILE_EVENTS.PROFILE_UPDATED, handleProfileUpdated);
-        Events.on(PROFILE_EVENTS.PROFILE_LOADING, handleProfileLoading);
-        Events.on(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, handleProfileUpdateFailed);
+        Events.on(PROFILE_EVENTS.UPDATE_SUCCESS, handleProfileUpdated);
+        Events.on(PROFILE_EVENTS.FETCH_REQUEST, handleProfileLoading);
+        Events.on(PROFILE_EVENTS.UPDATE_ERROR, handleProfileUpdateFailed);
 
         return () => {
-            Events.off(PROFILE_EVENTS.PROFILE_UPDATED, handleProfileUpdated);
-            Events.off(PROFILE_EVENTS.PROFILE_LOADING, handleProfileLoading);
-            Events.off(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, handleProfileUpdateFailed);
+            Events.off(PROFILE_EVENTS.UPDATE_SUCCESS, handleProfileUpdated);
+            Events.off(PROFILE_EVENTS.FETCH_REQUEST, handleProfileLoading);
+            Events.off(PROFILE_EVENTS.UPDATE_ERROR, handleProfileUpdateFailed);
         };
     }, []);
 

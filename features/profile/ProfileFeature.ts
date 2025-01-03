@@ -103,12 +103,12 @@ export class ProfileFeature implements Feature {
 
     private handleProfileSave = async (data: Partial<ProfileData>): Promise<void> => {
         try {
-            Events.emit(PROFILE_EVENTS.PROFILE_LOADING, undefined);
+            Events.emit(PROFILE_EVENTS.FETCH_REQUEST, undefined);
             const updatedProfile = await ProfileService.updateProfile(data);
-            Events.emit(PROFILE_EVENTS.PROFILE_UPDATED, updatedProfile);
+            Events.emit(PROFILE_EVENTS.UPDATE_SUCCESS, updatedProfile);
         } catch (error) {
             console.error('Failed to save profile:', error);
-            Events.emit(PROFILE_EVENTS.PROFILE_UPDATE_FAILED, undefined);
+            Events.emit(PROFILE_EVENTS.UPDATE_ERROR, error);
         }
     };
 } 

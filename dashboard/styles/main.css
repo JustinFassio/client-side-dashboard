@@ -1,5 +1,12 @@
+/* Global Imports */
+@import '@styles/variables.css';
+@import '../components/DashboardShell/DashboardShell.css';
+
 /* Core Dashboard Styles */
-@import './variables.css';
+:root {
+  --dashboard-header-height: 60px;
+  --dashboard-sidebar-width: 250px;
+}
 
 /* Reset */
 *, *::before, *::after {
@@ -24,9 +31,6 @@ body {
 #wpbody-content {
     padding-bottom: 0;
 }
-
-/* Import Component Styles */
-@import './components/DashboardShell.css'; 
 
 /* Loading State */
 .feature-loading {

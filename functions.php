@@ -34,6 +34,10 @@ add_action('rest_api_init', function() {
     Debug::log('REST API initialized', 'core');
 }, 1);
 
+function get_asset_version($file_path) {
+    return file_exists($file_path) ? filemtime($file_path) : '1.0.0';
+}
+
 // Enqueue scripts and styles
 function enqueue_athlete_dashboard_scripts() {
     if (!is_page_template('dashboard/templates/dashboard.php')) {
@@ -54,7 +58,7 @@ function enqueue_athlete_dashboard_scripts() {
         'athlete-dashboard',
         get_stylesheet_directory_uri() . '/assets/build/main.js',
         ['wp-element', 'wp-data', 'wp-api-fetch', 'wp-i18n', 'wp-hooks'],
-        filemtime(get_stylesheet_directory() . '/assets/build/main.js'),
+        get_asset_version(get_stylesheet_directory() . '/assets/build/main.js'),
         true
     );
 
@@ -84,9 +88,9 @@ function enqueue_athlete_dashboard_scripts() {
     // Styles
     wp_enqueue_style(
         'athlete-dashboard',
-        get_stylesheet_directory_uri() . '/assets/build/main.css',
+        get_stylesheet_directory_uri() . '/assets/build/styles.css',
         array(),
-        filemtime(get_stylesheet_directory() . '/assets/build/main.css')
+        get_asset_version(get_stylesheet_directory() . '/assets/build/styles.css')
     );
 
     Debug::log('Dashboard scripts enqueued');
