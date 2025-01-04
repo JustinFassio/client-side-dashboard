@@ -1,11 +1,14 @@
 import React from 'react';
 import { FeatureContext } from '../../../../dashboard/contracts/Feature';
+import { useUser } from '../../../../dashboard/hooks/useUser';
 
 interface OverviewLayoutProps {
     context: FeatureContext;
 }
 
 export const OverviewLayout: React.FC<OverviewLayoutProps> = ({ context }) => {
+    const { user } = useUser(context);
+
     return (
         <div className="overview-layout">
             <header className="overview-header">
@@ -20,7 +23,7 @@ export const OverviewLayout: React.FC<OverviewLayoutProps> = ({ context }) => {
                     <section className="overview-debug">
                         <h3>Debug Information</h3>
                         <pre>
-                            {JSON.stringify({ userId: context.userId }, null, 2)}
+                            {JSON.stringify({ userId: user?.id }, null, 2)}
                         </pre>
                     </section>
                 )}

@@ -3,6 +3,7 @@ import { createElement } from '@wordpress/element';
 export interface FeatureMetadata {
   name: string;
   description: string;
+  order?: number;
 }
 
 export interface FeatureContext {
