@@ -1,0 +1,12 @@
+/* Profile Feature Styles */
+@import '../../../../dashboard/styles/variables.css';
+
+/* Base Styles */
+@import './base/forms.css';
+@import './base/layout.css';
+
+/* Components */
+@import './components/ProfileForm.css';
+@import './components/InjuryTracker.css';
+@import './components/CoreSection.css';
+@import './components/PhysicalMetrics.css'; 

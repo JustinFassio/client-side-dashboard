@@ -11,6 +11,7 @@ export interface ValidationConfig {
     max?: number;
     pattern?: RegExp;
     custom?: ValidationRule[];
+    message?: string;
 }
 
 export interface FieldValidation {
@@ -35,4 +36,13 @@ export interface ValidationService {
     validateField: <T>(value: T, config: ValidationConfig) => ValidationResult;
     validateForm: (data: Partial<ProfileData>) => FormValidationResult;
     getFieldValidators: (field: keyof ProfileData) => ValidatorFn[];
-} 
+}
+
+export const DEFAULT_VALIDATION_CONFIG: ValidationConfig = {
+    required: false,
+    min: undefined,
+    max: undefined,
+    pattern: undefined,
+    custom: undefined,
+    message: undefined
+}; 

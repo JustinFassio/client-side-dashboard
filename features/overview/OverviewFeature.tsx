@@ -1,54 +1,38 @@
 import React from 'react';
-import { createElement } from '@wordpress/element';
-import { Feature, FeatureContext } from '../../dashboard/contracts/Feature';
-import { Home } from 'lucide-react';
-
-const OverviewComponent: React.FC = () => {
-    return (
-        <div className="overview-feature">
-            <h1>Welcome to Your Dashboard</h1>
-            <p>Select a feature from the navigation to get started.</p>
-        </div>
-    );
-};
+import { Feature, FeatureContext, FeatureMetadata } from '../../dashboard/contracts/Feature';
+import { OverviewLayout } from './components/layout';
 
 export class OverviewFeature implements Feature {
     public readonly identifier = 'overview';
-    public readonly metadata = {
+    public readonly metadata: FeatureMetadata = {
         name: 'Overview',
-        description: 'Dashboard Overview',
-        icon: createElement(Home, {
-            size: 36,
-            strokeWidth: 1.5,
-            className: 'nav-feature-icon',
-            color: '#ddff0e'
-        }),
+        description: 'Dashboard overview and summary',
         order: 0
     };
 
     private context: FeatureContext | null = null;
 
-    async register(context: FeatureContext): Promise<void> {
+    public async register(context: FeatureContext): Promise<void> {
         this.context = context;
     }
 
-    async init(): Promise<void> {
-        // No initialization needed
+    public async init(): Promise<void> {
+        // Initialize overview data
     }
 
-    cleanup(): void {
+    public async cleanup(): Promise<void> {
         this.context = null;
     }
 
-    isEnabled(): boolean {
+    public isEnabled(): boolean {
         return true;
     }
 
-    render(): JSX.Element {
-        return createElement(OverviewComponent);
-    }
+    public render(): JSX.Element | null {
+        if (!this.context) {
+            return null;
+        }
 
-    onNavigate(): void {
-        // No navigation handling needed
+        return React.createElement(OverviewLayout, { context: this.context });
     }
 } 

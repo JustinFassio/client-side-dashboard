@@ -60,18 +60,89 @@ export interface RegistrationValidation {
 /**
  * Registration field configuration
  */
-export interface RegistrationField {
-    name: keyof RegistrationData;
+export interface RegistrationFieldConfig {
+    name: string;
     label: string;
-    type: 'text' | 'email' | 'password' | 'checkbox';
+    type: string;
     required: boolean;
     validation?: {
         pattern?: RegExp;
         message?: string;
-        minLength?: number;
-        maxLength?: number;
+        min?: number;
+        max?: number;
     };
 }
+
+export type RegistrationFields = {
+    username: {
+        name: 'username';
+        label: 'Username';
+        type: 'text';
+        required: true;
+        validation: {
+            pattern: RegExp;
+            message: string;
+            min: number;
+            max: number;
+        };
+    };
+    email: {
+        name: 'email';
+        label: 'Email';
+        type: 'email';
+        required: true;
+        validation: {
+            pattern: RegExp;
+            message: string;
+        };
+    };
+    password: {
+        name: 'password';
+        label: 'Password';
+        type: 'password';
+        required: true;
+        validation: {
+            min: number;
+            max: number;
+            pattern: RegExp;
+            message: string;
+        };
+    };
+    firstName: {
+        name: 'firstName';
+        label: 'First Name';
+        type: 'text';
+        required: true;
+        validation: {
+            pattern: RegExp;
+            message: string;
+            min: number;
+            max: number;
+        };
+    };
+    lastName: {
+        name: 'lastName';
+        label: 'Last Name';
+        type: 'text';
+        required: true;
+        validation: {
+            pattern: RegExp;
+            message: string;
+            min: number;
+            max: number;
+        };
+    };
+    agreeToTerms: {
+        name: 'agreeToTerms';
+        label: 'I agree to the Terms and Conditions';
+        type: 'checkbox';
+        required: true;
+        validation: {
+            pattern: RegExp;
+            message: string;
+        };
+    };
+};
 
 /**
  * Registration configuration
@@ -85,7 +156,9 @@ export const REGISTRATION_CONFIG = {
             required: true,
             validation: {
                 pattern: /^[a-zA-Z0-9_-]{3,20}$/,
-                message: 'Username must be between 3 and 20 characters and can only contain letters, numbers, underscores, and hyphens'
+                message: 'Username must be between 3 and 20 characters and can only contain letters, numbers, underscores, and hyphens',
+                min: 3,
+                max: 20
             }
         },
         email: {
@@ -104,9 +177,10 @@ export const REGISTRATION_CONFIG = {
             type: 'password',
             required: true,
             validation: {
-                minLength: 8,
-                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-                message: 'Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+                min: 8,
+                max: 50,
+                pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/,
+                message: 'Password must be at least 8 characters and contain at least one uppercase letter, one lowercase letter, and one number'
             }
         },
         firstName: {
@@ -116,7 +190,9 @@ export const REGISTRATION_CONFIG = {
             required: true,
             validation: {
                 pattern: /^[a-zA-Z\s-]{2,30}$/,
-                message: 'First name must be between 2 and 30 characters and can only contain letters, spaces, and hyphens'
+                message: 'First name must be between 2 and 30 characters and can only contain letters, spaces, and hyphens',
+                min: 2,
+                max: 30
             }
         },
         lastName: {
@@ -126,16 +202,22 @@ export const REGISTRATION_CONFIG = {
             required: true,
             validation: {
                 pattern: /^[a-zA-Z\s-]{2,30}$/,
-                message: 'Last name must be between 2 and 30 characters and can only contain letters, spaces, and hyphens'
+                message: 'Last name must be between 2 and 30 characters and can only contain letters, spaces, and hyphens',
+                min: 2,
+                max: 30
             }
         },
         agreeToTerms: {
             name: 'agreeToTerms',
             label: 'I agree to the Terms and Conditions',
             type: 'checkbox',
-            required: true
+            required: true,
+            validation: {
+                pattern: /^true$/,
+                message: 'You must agree to the Terms and Conditions'
+            }
         }
-    } as const,
+    } as RegistrationFields,
 
     validation: {
         validateField: (field: keyof RegistrationData, value: any): string[] => {
@@ -152,15 +234,17 @@ export const REGISTRATION_CONFIG = {
             const validation = config.validation;
             if (!validation) return errors;
 
-            if (validation.minLength && value.length < validation.minLength) {
-                errors.push(`${config.label} must be at least ${validation.minLength} characters`);
+            if (typeof value === 'string') {
+                if ('min' in validation && value.length < validation.min) {
+                    errors.push(`${config.label} must be at least ${validation.min} characters`);
+                }
+
+                if ('max' in validation && value.length > validation.max) {
+                    errors.push(`${config.label} must be no more than ${validation.max} characters`);
+                }
             }
 
-            if (validation.maxLength && value.length > validation.maxLength) {
-                errors.push(`${config.label} must be no more than ${validation.maxLength} characters`);
-            }
-
-            if (validation.pattern && !validation.pattern.test(value)) {
+            if (validation.pattern && !validation.pattern.test(String(value))) {
                 errors.push(validation.message || `${config.label} is invalid`);
             }
 
@@ -191,4 +275,4 @@ export const REGISTRATION_CONFIG = {
             return { isValid, errors };
         }
     }
-}; 
+} as const; 

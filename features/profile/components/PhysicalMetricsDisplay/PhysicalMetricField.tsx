@@ -1,116 +1,88 @@
-import React, { useState } from 'react';
-import { PhysicalMetricFieldProps, DEFAULT_UNITS } from '../../types/physical-metrics';
-import { formatDate } from '@dashboard/utils/date';
+import React from 'react';
+import { PhysicalMetric } from '../../types/profile';
+
+export interface PhysicalMetricFieldProps {
+    metricId: string;
+    metric: PhysicalMetric;
+    label: string;
+    onUpdate: (value: number, unit: string) => Promise<void>;
+    isLoading?: boolean;
+    error?: Error | null;
+}
 
 export const PhysicalMetricField: React.FC<PhysicalMetricFieldProps> = ({
     metricId,
     metric,
     label,
     onUpdate,
-    isLoading,
-    error
+    isLoading = false,
+    error = null
 }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [value, setValue] = useState(metric.value.toString());
-    const [unit, setUnit] = useState(metric.unit || DEFAULT_UNITS[metricId as keyof typeof DEFAULT_UNITS]);
-
-    const handleEdit = () => {
-        setIsEditing(true);
-        setValue(metric.value.toString());
-        setUnit(metric.unit);
-    };
-
-    const handleCancel = () => {
-        setIsEditing(false);
-        setValue(metric.value.toString());
-        setUnit(metric.unit);
-    };
+    const [value, setValue] = React.useState(metric?.value?.toString() || '');
+    const [unit, setUnit] = React.useState(metric?.unit || '');
+    const [isUpdating, setIsUpdating] = React.useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const numericValue = parseFloat(value);
-        
-        if (isNaN(numericValue)) {
-            return;
-        }
+        if (!value || isUpdating) return;
 
+        setIsUpdating(true);
         try {
-            await onUpdate(numericValue, unit);
-            setIsEditing(false);
-        } catch (err) {
-            console.error('Error updating metric:', err);
+            await onUpdate(parseFloat(value), unit);
+        } finally {
+            setIsUpdating(false);
         }
     };
 
     return (
-        <div className="physical-metric-field">
+        <div className="metric-card">
             <div className="metric-header">
-                <label>{label}</label>
-                {!isEditing && (
-                    <button
-                        type="button"
-                        className="edit-button"
-                        onClick={handleEdit}
-                        disabled={isLoading}
-                    >
-                        Edit
-                    </button>
+                <span className="metric-label">{label}</span>
+                {metric?.date && (
+                    <span className="metric-date">
+                        Last updated: {new Date(metric.date).toLocaleDateString()}
+                    </span>
                 )}
             </div>
 
-            {isEditing ? (
-                <form onSubmit={handleSubmit} className="metric-form">
-                    <div className="input-group">
-                        <input
-                            type="number"
-                            value={value}
-                            onChange={(e) => setValue(e.target.value)}
-                            step="0.1"
-                            disabled={isLoading}
-                            required
-                        />
-                        <select
-                            value={unit}
-                            onChange={(e) => setUnit(e.target.value)}
-                            disabled={isLoading}
-                        >
-                            <option value={DEFAULT_UNITS[metricId as keyof typeof DEFAULT_UNITS]}>
-                                {DEFAULT_UNITS[metricId as keyof typeof DEFAULT_UNITS]}
-                            </option>
-                            {/* Add alternative units if needed */}
-                        </select>
-                    </div>
+            <div className="metric-value">
+                {metric?.value} <span className="metric-unit">{metric?.unit}</span>
+            </div>
 
-                    <div className="button-group">
-                        <button
-                            type="submit"
-                            className="save-button"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? 'Saving...' : 'Save'}
-                        </button>
-                        <button
-                            type="button"
-                            className="cancel-button"
-                            onClick={handleCancel}
-                            disabled={isLoading}
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </form>
-            ) : (
-                <div className="metric-display">
-                    <span className="metric-value">
-                        {metric.value} {metric.unit}
-                    </span>
-                    <span className="metric-timestamp">
-                        Last updated: {formatDate(metric.timestamp)}
-                    </span>
+            <form className="metric-update-form" onSubmit={handleSubmit}>
+                <div className="metric-input-group">
+                    <input
+                        type="number"
+                        className="metric-input"
+                        value={value}
+                        onChange={(e) => setValue(e.target.value)}
+                        placeholder="Enter new value"
+                        disabled={isLoading || isUpdating}
+                    />
+                    <select
+                        className="metric-unit-select"
+                        value={unit}
+                        onChange={(e) => setUnit(e.target.value)}
+                        disabled={isLoading || isUpdating}
+                    >
+                        <option value="kg">kg</option>
+                        <option value="lbs">lbs</option>
+                        <option value="cm">cm</option>
+                        <option value="in">in</option>
+                        <option value="%">%</option>
+                    </select>
                 </div>
-            )}
 
-            {error && <div className="error-message">{error}</div>}
+                {error && <div className="metric-error">{error.message}</div>}
+
+                <button
+                    type="submit"
+                    className="metric-update-button"
+                    disabled={!value || isLoading || isUpdating}
+                >
+                    {isUpdating ? 'Updating...' : 'Update'}
+                </button>
+            </form>
         </div>
     );
 }; 

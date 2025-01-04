@@ -1,5 +1,5 @@
 import { Config } from '@dashboard/core/config';
-import { ProfileError } from '../services/ProfileService';
+import { ProfileError } from '../types/profile';
 
 interface RequestDebugInfo {
     url: string;
@@ -146,11 +146,10 @@ export class ProfileDebug {
         const errorInfo = {
             message,
             timestamp: new Date().toISOString(),
-            error: error instanceof ProfileError ? {
+            error: error instanceof Error ? {
                 name: error.name,
                 message: error.message,
-                code: error.code,
-                status: error.status
+                ...(error as Partial<ProfileError>)
             } : error.toString(),
             context: {
                 url: window.location.href,

@@ -1,66 +1,25 @@
-import { createHooks } from '@wordpress/hooks';
+import { EventEmitter } from 'events';
 
-export type EventCallback<T = any> = (data: T) => void;
+export class DashboardEvents extends EventEmitter {
+    public emit<T extends string>(type: T, payload?: any): boolean {
+        return super.emit(type, payload);
+    }
 
-class DashboardEvents {
-  private hooks = createHooks();
-  private namespace = 'athlete-dashboard';
+    public on<T extends string>(type: T, handler: (payload: any) => void): this {
+        return super.on(type, handler);
+    }
 
-  /**
-   * Add an event listener
-   */
-  on<T = any>(event: string, callback: EventCallback<T>, priority = 10): void {
-    this.hooks.addAction(
-      `${this.namespace}.${event}`,
-      this.namespace,
-      callback,
-      priority
-    );
-  }
+    public off<T extends string>(type: T, handler: (payload: any) => void): this {
+        return super.off(type, handler);
+    }
 
-  /**
-   * Remove an event listener
-   */
-  off<T = any>(event: string, callback: EventCallback<T>): void {
-    this.hooks.removeAction(
-      `${this.namespace}.${event}`,
-      this.namespace,
-      callback
-    );
-  }
+    public removeAllListeners<T extends string>(type?: T): this {
+        return super.removeAllListeners(type);
+    }
 
-  /**
-   * Emit an event
-   */
-  emit<T = any>(event: string, data: T): void {
-    this.hooks.doAction(`${this.namespace}.${event}`, data);
-  }
-
-  /**
-   * Add a filter
-   */
-  addFilter<T = any>(
-    name: string,
-    callback: (value: T) => T,
-    priority = 10
-  ): void {
-    this.hooks.addFilter(
-      `${this.namespace}.${name}`,
-      this.namespace,
-      callback,
-      priority
-    );
-  }
-
-  /**
-   * Apply filters to a value
-   */
-  applyFilters<T = any>(name: string, value: T): T {
-    return this.hooks.applyFilters(
-      `${this.namespace}.${name}`,
-      value
-    ) as T;
-  }
+    public removeListener<T extends string>(type: T, handler: (payload: any) => void): this {
+        return super.removeListener(type, handler);
+    }
 }
 
 export const Events = new DashboardEvents(); 

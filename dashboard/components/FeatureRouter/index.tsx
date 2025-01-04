@@ -1,70 +1,14 @@
-import React, { useEffect, Suspense, lazy } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { FeatureRegistry } from '../../core/FeatureRegistry';
+import { LoadingState } from '../LoadingState';
+import { ErrorBoundary } from '../ErrorBoundary';
+import { FeatureData } from '../../types/feature';
 
-interface FeatureData {
-    name: string;
-    label: string;
-    timestamp: number;
-}
+const MIN_LOADING_TIME = 500; // ms
 
 interface FeatureRouterProps {
     registry: FeatureRegistry;
 }
-
-interface LoadingProps {
-    label?: string;
-}
-
-const MIN_LOADING_TIME = 500; // Minimum time to show loading state in ms
-
-const LoadingState: React.FC<LoadingProps> = ({ label }) => {
-    React.useEffect(() => {
-        performance.mark('feature-loading-start');
-        return () => {
-            performance.mark('feature-loading-end');
-            performance.measure('feature-loading-duration', 
-                'feature-loading-start', 
-                'feature-loading-end'
-            );
-        };
-    }, []);
-
-    return (
-        <div className="feature-loading">
-            <div className="loading-spinner"></div>
-            <p>{label || 'Loading...'}</p>
-        </div>
-    );
-};
-
-const ErrorBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [hasError, setHasError] = React.useState(false);
-    const [error, setError] = React.useState<Error | null>(null);
-
-    React.useEffect(() => {
-        const handleError = (event: ErrorEvent) => {
-            setHasError(true);
-            setError(event.error);
-        };
-
-        window.addEventListener('error', handleError);
-        return () => window.removeEventListener('error', handleError);
-    }, []);
-
-    if (hasError) {
-        return (
-            <div className="feature-error">
-                <h2>Something went wrong</h2>
-                <p>{error?.message || 'An unexpected error occurred.'}</p>
-                <button onClick={() => window.location.reload()}>
-                    Reload Page
-                </button>
-            </div>
-        );
-    }
-
-    return <>{children}</>;
-};
 
 declare global {
     interface Window {
@@ -79,7 +23,6 @@ export const FeatureRouter: React.FC<FeatureRouterProps> = ({ registry }) => {
 
     useEffect(() => {
         let loadingTimer: NodeJS.Timeout;
-        performance.mark('feature-init-start');
 
         const initFeature = async () => {
             if (!featureData) {
@@ -104,10 +47,7 @@ export const FeatureRouter: React.FC<FeatureRouterProps> = ({ registry }) => {
                     return;
                 }
 
-                if (!feature.isInitialized) {
-                    await feature.init();
-                }
-
+                await feature.init();
                 feature.onNavigate?.();
 
                 // Ensure loading state shows for at least MIN_LOADING_TIME

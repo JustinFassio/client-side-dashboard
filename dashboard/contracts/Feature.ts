@@ -3,34 +3,27 @@ import { createElement } from '@wordpress/element';
 export interface FeatureMetadata {
   name: string;
   description: string;
-  icon?: string | JSX.Element;
-  order?: number;
 }
 
 export interface FeatureContext {
-  dispatch: (storeName: string) => any;
-  userId: number;
-  nonce: string;
+  dispatch: (scope: string) => (action: any) => void;
   apiUrl: string;
+  nonce: string;
+  debug?: boolean;
+}
+
+export interface FeatureRenderProps {
+  userId: number;
 }
 
 export interface Feature {
-  // Required properties
   readonly identifier: string;
   readonly metadata: FeatureMetadata;
-  
-  // Lifecycle methods
-  register(context: FeatureContext): Promise<void> | void;
-  init(): Promise<void> | void;
-  cleanup(): Promise<void> | void;
-  
-  // State methods
+  register(context: FeatureContext): Promise<void>;
+  init(): Promise<void>;
   isEnabled(): boolean;
-  
-  // Rendering
-  render(): JSX.Element | null;
-  
-  // Optional methods
+  render(props: FeatureRenderProps): JSX.Element | null;
+  cleanup(): Promise<void>;
   onNavigate?(): void;
   onUserChange?(userId: number): void;
 } 

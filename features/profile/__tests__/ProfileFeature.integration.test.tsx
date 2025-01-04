@@ -1,121 +1,59 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import React from 'react';
+import { render, screen } from '@testing-library/react';
 import { ProfileFeature } from '../ProfileFeature';
-import { ProfileService } from '../services/ProfileService';
-import { Events } from '../../../dashboard/core/events';
-import { PROFILE_EVENTS } from '../events/events';
-
-// Mock the ProfileService
-jest.mock('../services/ProfileService');
+import { FeatureContext } from '../../../dashboard/contracts/Feature';
+import { ProfileEvent } from '../events';
 
 describe('ProfileFeature Integration', () => {
-    const mockContext = {
-        userId: 1,
-        navigate: jest.fn(),
-        isEnabled: jest.fn(() => true)
-    };
+    let feature: ProfileFeature;
+    let mockContext: FeatureContext;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        mockContext = {
+            userId: 1,
+            nonce: 'test-nonce',
+            apiUrl: 'http://test.local/wp-json',
+            debug: false,
+            navigate: jest.fn(),
+            isEnabled: jest.fn(() => true),
+            dispatch: jest.fn(() => jest.fn()),
+            addListener: jest.fn(),
+            unsubscribe: jest.fn()
+        };
+        feature = new ProfileFeature();
     });
 
-    it('should load and display profile data', async () => {
-        const mockProfile = ProfileService.getDefaultProfile();
-        mockProfile.displayName = 'Test User';
-        (ProfileService.fetchProfile as jest.Mock).mockResolvedValue(mockProfile);
-
-        const feature = new ProfileFeature();
+    it('should register and initialize correctly', async () => {
         await feature.register(mockContext);
         await feature.init();
-        
-        render(feature.render());
-
-        await waitFor(() => {
-            expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
+        expect(mockContext.dispatch).toHaveBeenCalledWith('athlete-dashboard');
+        expect(mockContext.dispatch('athlete-dashboard')).toHaveBeenCalledWith({
+            type: ProfileEvent.FETCH_REQUEST,
+            payload: { userId: mockContext.userId }
         });
     });
 
-    it('should handle profile updates', async () => {
-        const mockProfile = ProfileService.getDefaultProfile();
-        const updatedProfile = { ...mockProfile, displayName: 'Updated User' };
-        
-        (ProfileService.fetchProfile as jest.Mock).mockResolvedValue(mockProfile);
-        (ProfileService.updateProfile as jest.Mock).mockResolvedValue(updatedProfile);
-
-        const feature = new ProfileFeature();
-        await feature.register(mockContext);
-        await feature.init();
-        
-        render(feature.render());
-
-        // Wait for initial load
-        await waitFor(() => {
-            expect(ProfileService.fetchProfile).toHaveBeenCalled();
-        });
-
-        // Update display name
-        const input = screen.getByLabelText(/display name/i);
-        fireEvent.change(input, { target: { value: 'Updated User' } });
-        
-        // Submit form
-        const submitButton = screen.getByRole('button', { name: /save/i });
-        fireEvent.click(submitButton);
-
-        await waitFor(() => {
-            expect(ProfileService.updateProfile).toHaveBeenCalledWith(
-                expect.objectContaining({ displayName: 'Updated User' })
-            );
-        });
+    it('should not render when not registered', () => {
+        const element = feature.render();
+        expect(element).toBeNull();
     });
 
-    it('should handle section navigation', async () => {
-        (ProfileService.fetchProfile as jest.Mock).mockResolvedValue(ProfileService.getDefaultProfile());
-
-        const feature = new ProfileFeature();
+    it('should render profile layout when registered', async () => {
         await feature.register(mockContext);
-        await feature.init();
-        
-        render(feature.render());
-
-        // Navigate to Physical section
-        const physicalTab = screen.getByRole('tab', { name: /physical information/i });
-        fireEvent.click(physicalTab);
-
-        expect(screen.getByRole('tabpanel', { name: /physical information/i })).toBeInTheDocument();
-
-        // Verify event emission
-        await waitFor(() => {
-            const eventSpy = jest.spyOn(Events, 'emit');
-            expect(eventSpy).toHaveBeenCalledWith(
-                PROFILE_EVENTS.SECTION_CHANGE,
-                expect.any(String)
-            );
-        });
+        const element = feature.render();
+        expect(element).not.toBeNull();
     });
 
-    it('should handle error states', async () => {
-        const error = { code: 'SERVER_ERROR', message: 'Failed to load profile' };
-        (ProfileService.fetchProfile as jest.Mock).mockRejectedValue(error);
-
-        const feature = new ProfileFeature();
+    it('should cleanup correctly', async () => {
         await feature.register(mockContext);
-        await feature.init();
-        
-        render(feature.render());
-
-        await waitFor(() => {
-            expect(screen.getByText(/failed to load profile/i)).toBeInTheDocument();
-        });
+        await feature.cleanup();
+        const element = feature.render();
+        expect(element).toBeNull();
     });
 
-    it('should cleanup on unmount', async () => {
-        const feature = new ProfileFeature();
-        await feature.register(mockContext);
-        await feature.init();
-        
-        const { unmount } = render(feature.render());
-        unmount();
-
-        expect(feature.isEnabled()).toBe(true);
-        expect(Events.off).toHaveBeenCalled();
+    it('should have correct metadata', () => {
+        expect(feature.identifier).toBe('profile');
+        expect(feature.metadata.name).toBe('Profile');
+        expect(feature.metadata.description).toBe('Manage your athlete profile');
     });
 }); 

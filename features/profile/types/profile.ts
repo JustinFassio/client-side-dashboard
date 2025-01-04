@@ -1,28 +1,40 @@
 /**
+ * Physical metrics interface
+ */
+export interface PhysicalMetric {
+    type: 'height' | 'weight' | 'bodyFat' | 'muscleMass';
+    value: number;
+    unit: string;
+    date: string;
+}
+
+export interface PhysicalMetrics {
+    height: PhysicalMetric;
+    weight: PhysicalMetric;
+    bodyFat?: PhysicalMetric;
+    muscleMass?: PhysicalMetric;
+}
+
+/**
  * Core profile data interface
  */
 export interface ProfileData {
-    // WordPress core fields
+    id: number;
     username: string;
     email: string;
     displayName: string;
     firstName: string;
     lastName: string;
-
-    // Basic profile fields
-    age: number | null;
+    age: number;
     gender: string;
-    height: number | null;  // in centimeters
-    weight: number | null;  // in kilograms
-
-    // Physical metrics
-    fitnessLevel: 'beginner' | 'intermediate' | 'advanced' | 'expert' | null;
-    activityLevel: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active' | null;
-
-    // Medical information
+    height: number;
+    weight: number;
+    fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
+    activityLevel: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active';
     medicalConditions: string[];
     exerciseLimitations: string[];
     medications: string;
+    physicalMetrics: PhysicalMetric[];
 }
 
 /**
@@ -48,6 +60,7 @@ export interface ProfileError {
     code: ProfileErrorCode;
     message: string;
     details?: Record<string, string[]>;
+    status?: number;
 }
 
 /**
@@ -61,35 +74,65 @@ export interface ProfileValidation {
 /**
  * Profile form field configuration
  */
+export interface ProfileFieldValidation {
+    pattern?: RegExp;
+    message?: string;
+    min?: number;
+    max?: number;
+}
+
 export interface ProfileField {
     name: keyof ProfileData;
     label: string;
     type: 'text' | 'number' | 'select' | 'date' | 'tel' | 'checkbox' | 'textarea';
     required: boolean;
-    validation?: {
-        min?: number;
-        max?: number;
-        pattern?: RegExp;
-        message?: string;
-    };
+    editable?: boolean;
+    validation?: ProfileFieldValidation;
     options?: Array<{
         value: string;
         label: string;
     }>;
 }
 
+export interface ProfileFieldConfig {
+    name: string;
+    label: string;
+    type: string;
+    required: boolean;
+    editable?: boolean;
+    options?: Array<{
+        value: string;
+        label: string;
+    }>;
+    validation?: {
+        pattern?: RegExp;
+        message?: string;
+        min?: number;
+        max?: number;
+    };
+}
+
+export interface ProfileConfig {
+    fields: Record<string, ProfileFieldConfig>;
+    validation: {
+        validateField: (field: keyof ProfileData, value: any) => string[];
+        validateProfile: (data: Partial<ProfileData>) => {
+            errors: Record<string, string[]>;
+        };
+    };
+}
+
 /**
  * Profile configuration
  */
-export const PROFILE_CONFIG = {
+export const PROFILE_CONFIG: ProfileConfig = {
     fields: {
-        // WordPress core user fields
         username: {
             name: 'username',
             label: 'Username',
             type: 'text',
             required: true,
-            editable: false, // Username cannot be changed
+            editable: false,
             validation: {
                 pattern: /^[a-zA-Z0-9_-]+$/,
                 message: 'Username can only contain letters, numbers, underscores, and hyphens'
@@ -97,8 +140,8 @@ export const PROFILE_CONFIG = {
         },
         email: {
             name: 'email',
-            label: 'Email Address',
-            type: 'email',
+            label: 'Email',
+            type: 'text',
             required: true,
             validation: {
                 pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -111,30 +154,22 @@ export const PROFILE_CONFIG = {
             type: 'text',
             required: true,
             validation: {
-                pattern: /^[a-zA-Z0-9\s-']+$/,
-                message: 'Display name can only contain letters, numbers, spaces, hyphens, and apostrophes'
+                min: 2,
+                max: 50,
+                message: 'Display name must be between 2 and 50 characters'
             }
         },
-        // Custom profile fields
         firstName: {
             name: 'firstName',
             label: 'First Name',
             type: 'text',
-            required: true,
-            validation: {
-                pattern: /^[a-zA-Z\s-]+$/,
-                message: 'First name can only contain letters, spaces, and hyphens'
-            }
+            required: true
         },
         lastName: {
             name: 'lastName',
             label: 'Last Name',
             type: 'text',
-            required: true,
-            validation: {
-                pattern: /^[a-zA-Z\s-]+$/,
-                message: 'Last name can only contain letters, spaces, and hyphens'
-            }
+            required: true
         },
         age: {
             name: 'age',
@@ -153,49 +188,11 @@ export const PROFILE_CONFIG = {
             type: 'select',
             required: true,
             options: [
-                { value: 'prefer_not_to_say', label: 'Prefer not to say' },
                 { value: 'male', label: 'Male' },
                 { value: 'female', label: 'Female' },
-                { value: 'other', label: 'Other' }
+                { value: 'other', label: 'Other' },
+                { value: 'prefer_not_to_say', label: 'Prefer not to say' }
             ]
-        },
-        phone: {
-            name: 'phone',
-            label: 'Phone',
-            type: 'tel',
-            required: false,
-            validation: {
-                pattern: /^[0-9+\-\(\)\s]*$/,
-                message: 'Invalid phone number format'
-            }
-        },
-        dateOfBirth: {
-            name: 'dateOfBirth',
-            label: 'Date of Birth',
-            type: 'date',
-            required: false
-        },
-        height: {
-            name: 'height',
-            label: 'Height (cm)',
-            type: 'number',
-            required: false,
-            validation: {
-                min: 0,
-                max: 300,
-                message: 'Height must be between 0 and 300 cm'
-            }
-        },
-        weight: {
-            name: 'weight',
-            label: 'Weight (kg)',
-            type: 'number',
-            required: false,
-            validation: {
-                min: 0,
-                max: 500,
-                message: 'Weight must be between 0 and 500 kg'
-            }
         },
         fitnessLevel: {
             name: 'fitnessLevel',
@@ -205,8 +202,7 @@ export const PROFILE_CONFIG = {
             options: [
                 { value: 'beginner', label: 'Beginner' },
                 { value: 'intermediate', label: 'Intermediate' },
-                { value: 'advanced', label: 'Advanced' },
-                { value: 'expert', label: 'Expert' }
+                { value: 'advanced', label: 'Advanced' }
             ]
         },
         activityLevel: {
@@ -219,19 +215,20 @@ export const PROFILE_CONFIG = {
                 { value: 'lightly_active', label: 'Lightly Active' },
                 { value: 'moderately_active', label: 'Moderately Active' },
                 { value: 'very_active', label: 'Very Active' },
-                { value: 'extremely_active', label: 'Extremely Active' }
+                { value: 'extra_active', label: 'Extra Active' }
             ]
         },
         medicalConditions: {
             name: 'medicalConditions',
             label: 'Medical Conditions',
             type: 'select',
+            required: false,
             options: [
                 { value: 'none', label: 'None' },
                 { value: 'heart_condition', label: 'Heart Condition' },
                 { value: 'asthma', label: 'Asthma' },
                 { value: 'diabetes', label: 'Diabetes' },
-                { value: 'hypertension', label: 'Hypertension' },
+                { value: 'arthritis', label: 'Arthritis' },
                 { value: 'other', label: 'Other' }
             ]
         },
@@ -239,19 +236,42 @@ export const PROFILE_CONFIG = {
             name: 'exerciseLimitations',
             label: 'Exercise Limitations',
             type: 'select',
+            required: false,
             options: [
                 { value: 'none', label: 'None' },
                 { value: 'joint_pain', label: 'Joint Pain' },
                 { value: 'back_pain', label: 'Back Pain' },
                 { value: 'limited_mobility', label: 'Limited Mobility' },
-                { value: 'balance_issues', label: 'Balance Issues' },
                 { value: 'other', label: 'Other' }
             ]
         },
         medications: {
             name: 'medications',
-            label: 'Current Medications',
-            type: 'text'
+            label: 'Medications',
+            type: 'textarea',
+            required: false
+        },
+        height: {
+            name: 'height',
+            label: 'Height (cm)',
+            type: 'number',
+            required: true,
+            validation: {
+                min: 100,
+                max: 250,
+                message: 'Height must be between 100cm and 250cm'
+            }
+        },
+        weight: {
+            name: 'weight',
+            label: 'Weight (kg)',
+            type: 'number',
+            required: true,
+            validation: {
+                min: 30,
+                max: 300,
+                message: 'Weight must be between 30kg and 300kg'
+            }
         }
     } as const,
     
@@ -267,85 +287,31 @@ export const PROFILE_CONFIG = {
                 return errors;
             }
 
-            if (value === null || value === undefined || value === '') return errors;
-
-            const validation = config.validation;
-            if (!validation) return errors;
-
-            if (validation.min !== undefined && value < validation.min) {
-                errors.push(`${config.label} must be at least ${validation.min}`);
-            }
-
-            if (validation.max !== undefined && value > validation.max) {
-                errors.push(`${config.label} must be no more than ${validation.max}`);
-            }
-
-            if (validation.pattern && !validation.pattern.test(value)) {
-                errors.push(validation.message || `${config.label} is invalid`);
+            if (config.validation && value !== null && value !== undefined && value !== '') {
+                const { validation } = config;
+                if (validation.min !== undefined && value < validation.min) {
+                    errors.push(validation.message || `${config.label} must be at least ${validation.min}`);
+                }
+                if (validation.max !== undefined && value > validation.max) {
+                    errors.push(validation.message || `${config.label} must be at most ${validation.max}`);
+                }
+                if (validation.pattern && !validation.pattern.test(String(value))) {
+                    errors.push(validation.message || `${config.label} is invalid`);
+                }
             }
 
             return errors;
         },
 
-        validateProfile: (data: Partial<ProfileData>): ProfileValidation => {
-            const errors: Record<keyof ProfileData, string[]> = {
-                userId: [],
-                firstName: [],
-                lastName: [],
-                age: [],
-                gender: [],
-                phone: [],
-                dateOfBirth: [],
-                height: [],
-                weight: [],
-                dominantSide: [],
-                medicalClearance: [],
-                medicalNotes: [],
-                emergencyContactName: [],
-                emergencyContactPhone: [],
-                injuries: [],
-                fitnessLevel: [],
-                activityLevel: [],
-                medicalConditions: [],
-                exerciseLimitations: [],
-                medications: []
-            };
-
-            let isValid = true;
-
+        validateProfile: (data: Partial<ProfileData>) => {
+            const errors: Record<string, string[]> = {};
             Object.keys(PROFILE_CONFIG.fields).forEach((field) => {
-                const fieldErrors = PROFILE_CONFIG.validation.validateField(
+                errors[field] = PROFILE_CONFIG.validation.validateField(
                     field as keyof ProfileData,
                     data[field as keyof ProfileData]
                 );
-                errors[field as keyof ProfileData] = fieldErrors;
-                if (fieldErrors.length > 0) isValid = false;
             });
-
-            return { isValid, errors };
-        },
-
-        getDefaultProfile: (): ProfileData => ({
-            userId: 0,
-            firstName: '',
-            lastName: '',
-            age: null,
-            gender: 'prefer_not_to_say',
-            phone: '',
-            dateOfBirth: '',
-            height: undefined,
-            weight: undefined,
-            dominantSide: undefined,
-            medicalClearance: false,
-            medicalNotes: '',
-            emergencyContactName: '',
-            emergencyContactPhone: '',
-            injuries: [],
-            fitnessLevel: null,
-            activityLevel: null,
-            medicalConditions: [],
-            exerciseLimitations: [],
-            medications: ''
-        })
+            return { errors };
+        }
     }
-} as const; 
+}; 

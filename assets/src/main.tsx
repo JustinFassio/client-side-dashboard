@@ -1,62 +1,51 @@
-import { createElement } from '@wordpress/element';
-import { createRoot } from '@wordpress/element';
-import { DashboardShell } from '../../dashboard/components/DashboardShell/index';
+import { createElement, render } from '@wordpress/element';
+import { DashboardShell } from '../../dashboard/components/DashboardShell';
 import { FeatureRegistry } from '../../dashboard/core/FeatureRegistry';
-import features from './features';
+import { FeatureContext } from '../../dashboard/contracts/Feature';
+import { ProfileFeature } from '../../features/profile/ProfileFeature';
 import '../../dashboard/styles/main.css';
 
+declare global {
+    interface Window {
+        athleteDashboardData: {
+            nonce: string;
+            apiUrl: string;
+            debug?: boolean;
+        };
+        athleteDashboardFeature?: {
+            name: string;
+        };
+    }
+}
+
+// Create the feature context with required properties
+const context: FeatureContext = {
+    dispatch: (scope: string) => (action: any) => {
+        // Implement dispatch logic if needed
+        console.log(`Dispatching action to ${scope}:`, action);
+    },
+    apiUrl: window.athleteDashboardData.apiUrl,
+    nonce: window.athleteDashboardData.nonce,
+    debug: window.athleteDashboardData.debug || false
+};
+
+// Initialize registry with context
+const registry = new FeatureRegistry(context);
+
+// Initialize the dashboard
 const initializeDashboard = async () => {
-    // Wait for WordPress and dashboard data to be ready
-    if (!window.wp?.data?.dispatch || !window.athleteDashboardData) {
-        console.warn('Waiting for WordPress data to be available...');
-        setTimeout(initializeDashboard, 100);
-        return;
-    }
-
-    // Verify feature data
-    if (!window.athleteDashboardFeature) {
-        console.error('Feature data not available. Check wp_localize_script initialization.');
-        return;
-    }
-
-    console.log('Initializing dashboard with feature:', window.athleteDashboardFeature.name);
-
-    const context = {
-        dispatch: window.wp.data.dispatch,
-        userId: window.athleteDashboardData.userId,
-        nonce: window.athleteDashboardData.nonce,
-        apiUrl: window.athleteDashboardData.apiUrl
-    };
-
     try {
-        // Initialize feature registry
-        const registry = new FeatureRegistry(context);
-
-        // Register all features
-        for (const feature of features) {
-            await registry.register(feature);
-        }
-
-        // Verify the current feature exists
-        const currentFeature = registry.getFeature(window.athleteDashboardFeature.name);
-        if (!currentFeature) {
-            console.warn(`Feature "${window.athleteDashboardFeature.name}" not found in registry.`);
-        }
-
-        // Log available features for debugging
-        console.log('Registered features:', registry.getEnabledFeatures().map(f => f.identifier));
+        // Register the profile feature
+        await registry.register(new ProfileFeature());
 
         // Render the dashboard
-        const root = document.getElementById('dashboard-root');
-        if (root) {
-            createRoot(root).render(<DashboardShell registry={registry} />);
-        } else {
-            console.error('Dashboard root element not found');
+        const container = document.getElementById('athlete-dashboard');
+        if (container) {
+            render(createElement(DashboardShell, { registry, context }), container);
         }
     } catch (error) {
         console.error('Failed to initialize dashboard:', error);
     }
 };
 
-// Start initialization
 initializeDashboard();

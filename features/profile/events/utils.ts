@@ -1,50 +1,36 @@
-import { ProfileEvent, ProfileEventType, ProfileEventPayloads } from './types';
-import { PROFILE_EVENTS } from './constants';
+import { ProfileEvent, ProfileEventPayloads } from './types';
 
-/**
- * Event Utilities for Profile Feature
- */
-export const ProfileEventUtils = {
-    /**
-     * Creates a strongly typed event with payload
-     */
-    createEvent<T extends ProfileEventType>(
-        type: T,
-        payload?: ProfileEventPayloads[T]
-    ): { type: T; payload?: ProfileEventPayloads[T] } {
-        return { type, payload };
-    },
+export const PROFILE_EVENT_TYPES = {
+    FETCH_REQUEST: 'profile:fetch-request',
+    FETCH_SUCCESS: 'profile:fetch-success',
+    FETCH_ERROR: 'profile:fetch-error',
+    UPDATE_REQUEST: 'profile:update-request',
+    UPDATE_SUCCESS: 'profile:update-success',
+    UPDATE_ERROR: 'profile:update-error',
+    SECTION_CHANGE: 'profile:section-change'
+} as const;
 
-    /**
-     * Type guard to check if an event is a specific type
-     */
-    isEventType<T extends ProfileEventType>(
-        event: ProfileEvent,
-        type: T
-    ): event is Extract<ProfileEvent, { type: T }> {
-        return event.type === type;
-    },
+export type ProfileEventType = typeof PROFILE_EVENT_TYPES[keyof typeof PROFILE_EVENT_TYPES];
 
-    /**
-     * Type guard to check if an event has a payload
-     */
-    hasPayload<T extends ProfileEventType>(
-        event: ProfileEvent & { type: T }
-    ): event is Extract<ProfileEvent, { type: T; payload: any }> {
-        return 'payload' in event;
-    },
+export function createProfileEvent<T extends keyof typeof PROFILE_EVENT_TYPES>(
+    event: T,
+    payload: ProfileEventPayloads[typeof PROFILE_EVENT_TYPES[T]]
+): { type: typeof PROFILE_EVENT_TYPES[T]; payload: ProfileEventPayloads[typeof PROFILE_EVENT_TYPES[T]] } {
+    return { type: PROFILE_EVENT_TYPES[event], payload };
+}
 
-    /**
-     * Logs event for debugging purposes
-     */
-    debugEvent<T extends ProfileEventType>(
-        type: T,
-        payload?: ProfileEventPayloads[T]
-    ): void {
-        if (process.env.NODE_ENV === 'development') {
-            console.group(`Profile Event: ${type}`);
-            if (payload) console.log('Payload:', payload);
-            console.groupEnd();
-        }
-    }
-}; 
+export function isProfileEvent(event: any): event is { type: ProfileEventType } {
+    return event && typeof event === 'object' && 'type' in event && 
+        Object.values(PROFILE_EVENT_TYPES).includes(event.type);
+}
+
+export function getEventType(event: { type: ProfileEventType }): ProfileEventType {
+    return event.type;
+}
+
+export function createEventHandler<T extends keyof typeof PROFILE_EVENT_TYPES>(
+    event: T,
+    handler: (payload: ProfileEventPayloads[typeof PROFILE_EVENT_TYPES[T]]) => void
+): (event: { type: typeof PROFILE_EVENT_TYPES[T]; payload: ProfileEventPayloads[typeof PROFILE_EVENT_TYPES[T]] }) => void {
+    return (e) => handler(e.payload);
+} 

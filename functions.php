@@ -12,6 +12,9 @@ require_once get_stylesheet_directory() . '/features/profile/config.php';
 // Load feature endpoints
 require_once get_stylesheet_directory() . '/features/profile/api/profile-endpoints.php';
 
+// Load REST API file
+require_once get_stylesheet_directory() . '/includes/rest-api.php';
+
 use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
 use AthleteDashboard\Core\DashboardBridge;
@@ -34,8 +37,22 @@ add_action('rest_api_init', function() {
     Debug::log('REST API initialized', 'core');
 }, 1);
 
+// Get asset filename from manifest
+function get_asset_filename($entry_name, $extension = 'css') {
+    $manifest_path = get_stylesheet_directory() . '/assets/build/manifest.json';
+    if (file_exists($manifest_path)) {
+        $manifest = json_decode(file_get_contents($manifest_path), true);
+        return $manifest["{$entry_name}.{$extension}"] ?? "{$entry_name}.{$extension}";
+    }
+    return "{$entry_name}.{$extension}";
+}
+
+// Get asset version with fallback
 function get_asset_version($file_path) {
-    return file_exists($file_path) ? filemtime($file_path) : '1.0.0';
+    if (file_exists($file_path)) {
+        return filemtime($file_path);
+    }
+    return wp_get_theme()->get('Version');
 }
 
 // Enqueue scripts and styles
@@ -53,12 +70,13 @@ function enqueue_athlete_dashboard_scripts() {
     wp_enqueue_script('wp-i18n');
     wp_enqueue_script('wp-hooks');
     
-    // Main dashboard script
+    // Main application script
+    $app_js = get_asset_filename('app', 'js');
     wp_enqueue_script(
         'athlete-dashboard',
-        get_stylesheet_directory_uri() . '/assets/build/main.js',
+        get_stylesheet_directory_uri() . "/assets/build/{$app_js}",
         ['wp-element', 'wp-data', 'wp-api-fetch', 'wp-i18n', 'wp-hooks'],
-        get_asset_version(get_stylesheet_directory() . '/assets/build/main.js'),
+        get_asset_version(get_stylesheet_directory() . "/assets/build/{$app_js}"),
         true
     );
 
@@ -70,11 +88,8 @@ function enqueue_athlete_dashboard_scripts() {
             'apiUrl' => rest_url(),
             'userId' => get_current_user_id()
         ],
-        // Add environment settings
         ['environment' => Environment::get_settings()],
-        // Add debug settings
         ['debug' => Debug::get_settings()],
-        // Add feature configurations
         ['features' => [
             'profile' => ProfileConfig::get_settings()
         ]]
@@ -85,12 +100,13 @@ function enqueue_athlete_dashboard_scripts() {
     $feature_data = DashboardBridge::get_feature_data($current_feature);
     wp_localize_script('athlete-dashboard', 'athleteDashboardFeature', $feature_data);
 
-    // Styles
+    // Enqueue main styles
+    $app_css = get_asset_filename('app', 'css');
     wp_enqueue_style(
         'athlete-dashboard',
-        get_stylesheet_directory_uri() . '/assets/build/styles.css',
+        get_stylesheet_directory_uri() . "/assets/build/{$app_css}",
         array(),
-        get_asset_version(get_stylesheet_directory() . '/assets/build/styles.css')
+        get_asset_version(get_stylesheet_directory() . "/assets/build/{$app_css}")
     );
 
     Debug::log('Dashboard scripts enqueued');
@@ -100,7 +116,8 @@ add_action('wp_enqueue_scripts', 'enqueue_athlete_dashboard_scripts');
 // Add support for editor styles
 function athlete_dashboard_setup() {
     add_theme_support('editor-styles');
-    add_editor_style('assets/build/main.css');
+    $dashboard_css = get_asset_filename('dashboard', 'css');
+    add_editor_style("assets/build/{$dashboard_css}");
 }
 add_action('after_setup_theme', 'athlete_dashboard_setup');
 

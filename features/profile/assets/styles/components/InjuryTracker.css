@@ -1,9 +1,9 @@
-@import '@styles/variables.css';
+@import '../../../../../dashboard/styles/variables.css';
 @import '../forms.css';
 
 .custom-injury-input {
     display: flex;
-    gap: 1rem;
+    gap: var(--spacing-md);
     align-items: center;
     width: 100%;
 }
@@ -14,18 +14,18 @@
 }
 
 .add-injury-btn {
-    padding: 0.75rem 1.5rem;
-    background-color: var(--primary-color);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    background-color: var(--color-primary);
     border: none;
-    border-radius: 6px;
-    color: var(--background-dark);
-    font-size: 1rem;
-    font-weight: 600;
+    border-radius: var(--border-radius-sm);
+    color: var(--color-text-inverse);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-bold);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: var(--spacing-sm);
 }
 
 .add-injury-btn:disabled {
@@ -34,7 +34,7 @@
 }
 
 .add-injury-btn:hover:not(:disabled) {
-    background-color: var(--primary-hover);
+    background-color: var(--color-primary-dark);
     transform: translateY(-1px);
 }
 
@@ -44,44 +44,44 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: var(--spacing-lg);
 }
 
 .injury-item {
-    margin-bottom: 1.5rem;
+    margin-bottom: var(--spacing-lg);
 }
 
 .injury-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: var(--spacing-md);
 }
 
 .injury-header h5 {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 500;
-    color: var(--primary-color);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-primary);
 }
 
 .remove-injury-btn {
     background: none;
     border: none;
-    padding: 4px;
-    color: var(--text-dim);
+    padding: var(--spacing-xs);
+    color: var(--color-text-disabled);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
 }
 
 .remove-injury-btn:hover {
-    color: var(--error-color);
+    color: var(--color-error);
 }
 
 .injury-controls {
     display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
 }
 
 .injury-controls .form-group {
@@ -92,11 +92,11 @@
 @media (max-width: 768px) {
     .custom-injury-input {
         flex-direction: column;
-        gap: 0.75rem;
+        gap: var(--spacing-sm);
     }
 
     .injury-controls {
         flex-direction: column;
-        gap: 0.75rem;
+        gap: var(--spacing-sm);
     }
 } 

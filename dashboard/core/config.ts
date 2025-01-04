@@ -8,7 +8,10 @@ export class Config {
      * Get debug configuration
      */
     static getDebug(): DebugConfig {
-        return window.athleteDashboardData.debug;
+        return {
+            enabled: window.athleteDashboardData.debug.enabled ?? false,
+            log_enabled: window.athleteDashboardData.debug.log_enabled ?? false
+        };
     }
 
     /**

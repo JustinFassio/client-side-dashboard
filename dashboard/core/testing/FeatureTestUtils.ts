@@ -1,55 +1,54 @@
-import { Feature } from '../../contracts/Feature';
+import React from 'react';
+import { Feature } from '../Feature';
+import { FeatureContext } from '../types';
 
 export class ErrorFeature implements Feature {
-    public identifier = 'error-test';
+    public readonly id = 'error';
+    public readonly name = 'Error';
+    public readonly description = 'Error Feature';
     public isInitialized = false;
 
-    constructor(private errorType: 'init' | 'render' = 'render') {}
-
-    async init(): Promise<void> {
-        if (this.errorType === 'init') {
-            throw new Error('Simulated initialization error');
-        }
-        this.isInitialized = true;
+    public async initialize(): Promise<void> {
+        throw new Error('Feature initialization failed');
     }
 
-    render(): React.ReactNode {
-        if (this.errorType === 'render') {
-            throw new Error('Simulated render error');
-        }
+    public render(): React.ReactElement | null {
         return null;
     }
 
-    cleanup(): void {}
-    
-    isEnabled(): boolean {
-        return true;
+    public cleanup(): void {
+        // No cleanup needed
     }
-
-    onNavigate(): void {}
 }
 
 export class DisabledFeature implements Feature {
-    public identifier = 'disabled-test';
+    public readonly id = 'disabled';
+    public readonly name = 'Disabled';
+    public readonly description = 'Disabled Feature';
     public isInitialized = false;
 
-    async init(): Promise<void> {
+    public async initialize(context: FeatureContext): Promise<void> {
         this.isInitialized = true;
     }
 
-    render(): React.ReactNode {
+    public render(): React.ReactElement | null {
         return null;
     }
 
-    cleanup(): void {}
-    
-    isEnabled(): boolean {
-        return false;
+    public cleanup(): void {
+        this.isInitialized = false;
     }
-
-    onNavigate(): void {}
 }
 
-export const simulateSlowFeature = async (duration: number = 2000): Promise<void> => {
-    return new Promise(resolve => setTimeout(resolve, duration));
-}; 
+export const createMockContext = (overrides: Partial<FeatureContext> = {}): FeatureContext => ({
+    userId: 1,
+    nonce: 'test-nonce',
+    apiUrl: 'http://test.local/wp-json',
+    debug: false,
+    navigate: jest.fn(),
+    isEnabled: jest.fn(() => true),
+    dispatch: jest.fn(() => jest.fn()),
+    addListener: jest.fn(),
+    unsubscribe: jest.fn(),
+    ...overrides
+}); 

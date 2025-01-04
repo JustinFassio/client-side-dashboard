@@ -1,13 +1,26 @@
 import React, { createContext, useContext } from 'react';
-import { ProfileData } from '../types/profile';
+import { FeatureContext } from '../../../dashboard/contracts/Feature';
 
-export interface ProfileContextType {
-    profileData: ProfileData | null;
-    updateProfile: (data: Partial<ProfileData>) => Promise<void>;
-    isLoading: boolean;
+interface ProfileContextValue {
+    context: FeatureContext;
 }
 
-const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
+export const ProfileContext = createContext<ProfileContextValue | null>(null);
+
+interface ProfileProviderProps {
+    context: FeatureContext;
+    children: React.ReactNode;
+}
+
+export const ProfileProvider: React.FC<ProfileProviderProps> = ({ context, children }) => {
+    const value = { context };
+
+    return (
+        <ProfileContext.Provider value={value}>
+            {children}
+        </ProfileContext.Provider>
+    );
+};
 
 export const useProfile = () => {
     const context = useContext(ProfileContext);
@@ -15,9 +28,4 @@ export const useProfile = () => {
         throw new Error('useProfile must be used within a ProfileProvider');
     }
     return context;
-};
-
-export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    // Implementation here...
-    return <ProfileContext.Provider value={/* your value here */}>{children}</ProfileContext.Provider>;
 }; 

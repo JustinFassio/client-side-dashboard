@@ -5,22 +5,22 @@
  */
 export const PROFILE_EVENTS = {
     // Data fetching events
-    FETCH_REQUEST: 'profile_fetch_request',
-    FETCH_SUCCESS: 'profile_fetch_success',
-    FETCH_ERROR: 'profile_fetch_error',
+    FETCH_REQUEST: 'profile:fetch-request',
+    FETCH_SUCCESS: 'profile:fetch-success',
+    FETCH_ERROR: 'profile:fetch-error',
 
     // Update events
-    UPDATE_REQUEST: 'profile_update_request',
-    UPDATE_SUCCESS: 'profile_update_success',
-    UPDATE_ERROR: 'profile_update_error',
+    UPDATE_REQUEST: 'profile:update-request',
+    UPDATE_SUCCESS: 'profile:update-success',
+    UPDATE_ERROR: 'profile:update-error',
 
     // UI events
-    SECTION_CHANGE: 'profile_section_change',
-    VALIDATION_ERROR: 'profile_validation_error',
-    FORM_RESET: 'profile_form_reset',
+    SECTION_CHANGE: 'profile:section-change',
+    VALIDATION_ERROR: 'profile:validation-error',
+    FORM_RESET: 'profile:form-reset',
 
     // Injury tracking events
-    INJURY_ADDED: 'profile_injury_added',
-    INJURY_UPDATED: 'profile_injury_updated',
-    INJURY_REMOVED: 'profile_injury_removed'
+    INJURY_ADDED: 'profile:injury-added',
+    INJURY_UPDATED: 'profile:injury-updated',
+    INJURY_REMOVED: 'profile:injury-removed'
 } as const; 

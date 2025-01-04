@@ -1,5 +1,5 @@
 import { Events } from '../../../../dashboard/core/events';
-import { ProfileEvents } from '../../events';
+import { ProfileEvent } from '../../events';
 import { ProfileData } from '../../types/profile';
 
 describe('Profile Events', () => {
@@ -10,22 +10,48 @@ describe('Profile Events', () => {
     describe('fetch events', () => {
         it('emits fetch request event', () => {
             const listener = jest.fn();
-            Events.on(ProfileEvents.FETCH_REQUEST, listener);
+            Events.on(ProfileEvent.FETCH_REQUEST, listener);
 
-            Events.emit(ProfileEvents.FETCH_REQUEST, { userId: 1 });
+            Events.emit(ProfileEvent.FETCH_REQUEST, { userId: 1 });
             expect(listener).toHaveBeenCalledWith({ userId: 1 });
         });
 
         it('emits fetch success event with profile data', () => {
             const listener = jest.fn();
             const mockProfile: ProfileData = {
-                userId: 1,
+                id: 1,
+                username: 'johndoe',
+                email: 'john@example.com',
+                displayName: 'John Doe',
                 firstName: 'John',
-                lastName: 'Doe'
+                lastName: 'Doe',
+                age: 30,
+                gender: 'male',
+                height: 180,
+                weight: 80,
+                fitnessLevel: 'intermediate',
+                activityLevel: 'moderately_active',
+                medicalConditions: [],
+                exerciseLimitations: [],
+                medications: '',
+                physicalMetrics: [
+                    {
+                        type: 'height',
+                        value: 180,
+                        unit: 'cm',
+                        date: '2023-01-01'
+                    },
+                    {
+                        type: 'weight',
+                        value: 80,
+                        unit: 'kg',
+                        date: '2023-01-01'
+                    }
+                ]
             };
 
-            Events.on(ProfileEvents.FETCH_SUCCESS, listener);
-            Events.emit(ProfileEvents.FETCH_SUCCESS, { profile: mockProfile });
+            Events.on(ProfileEvent.FETCH_SUCCESS, listener);
+            Events.emit(ProfileEvent.FETCH_SUCCESS, { profile: mockProfile });
 
             expect(listener).toHaveBeenCalledWith({ profile: mockProfile });
         });
@@ -34,8 +60,8 @@ describe('Profile Events', () => {
             const listener = jest.fn();
             const error = new Error('Fetch failed');
 
-            Events.on(ProfileEvents.FETCH_ERROR, listener);
-            Events.emit(ProfileEvents.FETCH_ERROR, { error });
+            Events.on(ProfileEvent.FETCH_ERROR, listener);
+            Events.emit(ProfileEvent.FETCH_ERROR, { error });
 
             expect(listener).toHaveBeenCalledWith({ error });
         });
@@ -46,8 +72,8 @@ describe('Profile Events', () => {
             const listener = jest.fn();
             const updateData = { firstName: 'Jane' };
 
-            Events.on(ProfileEvents.UPDATE_REQUEST, listener);
-            Events.emit(ProfileEvents.UPDATE_REQUEST, { 
+            Events.on(ProfileEvent.UPDATE_REQUEST, listener);
+            Events.emit(ProfileEvent.UPDATE_REQUEST, { 
                 userId: 1, 
                 data: updateData 
             });
@@ -60,14 +86,40 @@ describe('Profile Events', () => {
 
         it('emits update success event', () => {
             const listener = jest.fn();
-            const mockProfile = {
-                userId: 1,
+            const mockProfile: ProfileData = {
+                id: 1,
+                username: 'janedoe',
+                email: 'jane@example.com',
+                displayName: 'Jane Doe',
                 firstName: 'Jane',
-                lastName: 'Doe'
+                lastName: 'Doe',
+                age: 28,
+                gender: 'female',
+                height: 165,
+                weight: 60,
+                fitnessLevel: 'intermediate',
+                activityLevel: 'moderately_active',
+                medicalConditions: [],
+                exerciseLimitations: [],
+                medications: '',
+                physicalMetrics: [
+                    {
+                        type: 'height',
+                        value: 165,
+                        unit: 'cm',
+                        date: '2023-01-01'
+                    },
+                    {
+                        type: 'weight',
+                        value: 60,
+                        unit: 'kg',
+                        date: '2023-01-01'
+                    }
+                ]
             };
 
-            Events.on(ProfileEvents.UPDATE_SUCCESS, listener);
-            Events.emit(ProfileEvents.UPDATE_SUCCESS, { 
+            Events.on(ProfileEvent.UPDATE_SUCCESS, listener);
+            Events.emit(ProfileEvent.UPDATE_SUCCESS, { 
                 profile: mockProfile,
                 updatedFields: ['firstName']
             });
@@ -82,10 +134,10 @@ describe('Profile Events', () => {
     describe('event cleanup', () => {
         it('removes event listeners correctly', () => {
             const listener = jest.fn();
-            Events.on(ProfileEvents.FETCH_REQUEST, listener);
-            Events.removeListener(ProfileEvents.FETCH_REQUEST, listener);
+            Events.on(ProfileEvent.FETCH_REQUEST, listener);
+            Events.removeListener(ProfileEvent.FETCH_REQUEST, listener);
 
-            Events.emit(ProfileEvents.FETCH_REQUEST, { userId: 1 });
+            Events.emit(ProfileEvent.FETCH_REQUEST, { userId: 1 });
             expect(listener).not.toHaveBeenCalled();
         });
     });

@@ -1,114 +1,76 @@
-import { createElement, lazy, Suspense } from '@wordpress/element';
-import { Feature, FeatureContext } from '../../dashboard/contracts/Feature';
-import { Events } from '../../dashboard/core/events';
-import { PROFILE_EVENTS, ProfileEventPayloads } from './events';
-import { ProfileService } from './services/ProfileService';
+import React from 'react';
+import { Feature, FeatureContext, FeatureMetadata, FeatureRenderProps } from '../../dashboard/contracts/Feature';
+import { ProfileEvent } from './events';
 import { ProfileData } from './types/profile';
-import { UserCircle2, Dumbbell, Heart, FileWarning, User } from 'lucide-react';
-
-// Define Section interface
-interface Section {
-    id: string;
-    title: string;
-    icon: typeof UserCircle2;
-    component?: React.ComponentType<any>;
-}
-
-// Define icons
-const Icons = {
-    UserCircle2,
-    Dumbbell,
-    Heart,
-    FileWarning,
-    User
-};
-
-// Lazy load section components
-const ProfileForm = lazy(() => import('./components/form/ProfileForm').then(module => ({ default: module.ProfileForm })));
-const InjuryTracker = lazy(() => import('./components/InjuryTracker').then(module => ({ default: module.InjuryTracker })));
+import { ProfileProvider } from './context/ProfileContext';
+import { ProfileLayout } from './components/layout';
+import { ApiClient } from '../../dashboard/services/api';
+import { API_ROUTES } from '../../dashboard/constants/api';
+import { UserData } from '../../dashboard/types/api';
 
 export class ProfileFeature implements Feature {
     public readonly identifier = 'profile';
-    public readonly metadata = {
+    public readonly metadata: FeatureMetadata = {
         name: 'Profile',
-        description: 'Manage your athlete profile',
-        icon: createElement(Suspense, { fallback: null }, 
-            createElement(Icons.UserCircle2, {
-                size: 36,
-                strokeWidth: 1.5,
-                className: 'nav-feature-icon',
-                color: '#ddff0e'
-            })
-        ),
-        order: 1
+        description: 'Manage your athlete profile'
     };
 
-    private sections: Section[];
-
-    constructor() {
-        this.sections = [
-            {
-                id: 'basic',
-                title: 'Basic Information',
-                icon: Icons.UserCircle2
-            },
-            {
-                id: 'physical',
-                title: 'Physical Information',
-                icon: Icons.Dumbbell
-            },
-            {
-                id: 'medical',
-                title: 'Medical Information',
-                icon: Icons.Heart
-            },
-            {
-                id: 'injuries',
-                title: 'Injuries & Limitations',
-                icon: Icons.FileWarning
-            },
-            {
-                id: 'account',
-                title: 'Account Settings',
-                icon: Icons.User
-            }
-        ];
-    }
+    private context: FeatureContext | null = null;
+    private profile: ProfileData | null = null;
 
     public async register(context: FeatureContext): Promise<void> {
-        // Register feature with context
+        this.context = context;
     }
 
     public async init(): Promise<void> {
-        // Initialize feature
-        await ProfileService.fetchProfile();
-    }
+        if (!this.context) return;
 
-    public cleanup(): void {
-        // Clean up any resources
+        const api = ApiClient.getInstance(this.context);
+        const { data, error } = await api.fetchWithCache<UserData>(API_ROUTES.PROFILE);
+
+        if (error) {
+            this.context.dispatch('athlete-dashboard')({
+                type: ProfileEvent.FETCH_ERROR,
+                payload: { error: error.message }
+            });
+            return;
+        }
+
+        this.context.dispatch('athlete-dashboard')({
+            type: ProfileEvent.FETCH_SUCCESS,
+            payload: data
+        });
     }
 
     public isEnabled(): boolean {
-        return true; // Profile feature is always enabled
+        return true;
     }
 
-    public render(): JSX.Element {
-        return createElement(Suspense, { fallback: 'Loading...' },
-            createElement(ProfileForm, {
-                sections: this.sections,
-                onSave: this.handleProfileSave
-            })
-        );
-    }
-
-    private handleProfileSave = async (data: Partial<ProfileData>): Promise<void> => {
-        try {
-            Events.emit(PROFILE_EVENTS.FETCH_REQUEST, undefined);
-            const updatedProfile = await ProfileService.updateProfile(data);
-            Events.emit(PROFILE_EVENTS.UPDATE_SUCCESS, updatedProfile);
-        } catch (error) {
-            console.error('Failed to save profile:', error);
-            Events.emit(PROFILE_EVENTS.UPDATE_ERROR, error);
+    public render(): JSX.Element | null {
+        if (!this.context) {
+            return null;
         }
-    };
+
+        return React.createElement(ProfileProvider, { 
+            context: this.context,
+            children: React.createElement(ProfileLayout)
+        });
+    }
+
+    public async cleanup(): Promise<void> {
+        this.context = null;
+        this.profile = null;
+    }
+
+    public onNavigate(): void {
+        if (this.context) {
+            this.init();
+        }
+    }
+
+    public onUserChange(): void {
+        if (this.context) {
+            this.init();
+        }
+    }
 } 
