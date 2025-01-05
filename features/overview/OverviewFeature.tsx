@@ -6,7 +6,7 @@ export class OverviewFeature implements Feature {
     public readonly identifier = 'overview';
     public readonly metadata: FeatureMetadata = {
         name: 'Overview',
-        description: 'Dashboard overview and summary',
+        description: 'Goal Compass',
         order: 0
     };
 
