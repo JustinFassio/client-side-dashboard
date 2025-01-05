@@ -11,16 +11,42 @@ interface PhysicalSectionProps {
 
 // Unit conversion utilities
 const convertHeight = {
-    toImperial: (cm: number) => ({
-        feet: Math.floor(cm / 30.48),
-        inches: Math.round((cm % 30.48) / 2.54)
-    }),
-    toCm: (feet: number, inches: number) => (feet * 30.48) + (inches * 2.54)
+    toImperial: (cm: number) => {
+        const totalInches = cm / 2.54;
+        const feet = Math.floor(totalInches / 12);
+        const inches = Math.round(totalInches % 12);
+        console.log('Converting height to imperial:', { cm, totalInches, feet, inches });
+        return { feet, inches: inches === 12 ? 0 : inches }; // Prevent 12 inches
+    },
+    toCm: (feet: number, inches: number) => {
+        // Validate inches range
+        if (inches >= 12) {
+            console.warn('Invalid inches value:', inches);
+            inches = 11;
+        }
+        const cm = Number(((feet * 30.48) + (inches * 2.54)).toFixed(1));
+        console.log('Converting height to cm:', { feet, inches, cm });
+        return cm;
+    }
 };
 
 const convertWeight = {
-    toLbs: (kg: number) => Math.round(kg * 2.205 * 10) / 10,
-    toKg: (lbs: number) => Math.round(lbs / 2.205 * 10) / 10
+    toLbs: (kg: number) => {
+        const lbs = Number((kg * 2.205).toFixed(1));
+        console.log('Converting weight to lbs:', { kg, lbs });
+        return lbs;
+    },
+    toKg: (lbs: number) => {
+        const kg = Number((lbs / 2.205).toFixed(1));
+        console.log('Converting weight to kg:', { lbs, kg });
+        return kg;
+    }
+};
+
+// Weight validation ranges
+const WEIGHT_RANGES = {
+    imperial: { min: 66, max: 440 }, // lbs
+    metric: { min: 30, max: 200 }    // kg
 };
 
 export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
@@ -36,12 +62,13 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
 
     // Initialize imperial height values when component mounts or height changes
     useEffect(() => {
-        if (data.height) {
+        if (data.height && unitSystem === 'imperial') {
             const imperial = convertHeight.toImperial(data.height);
+            console.log('Initializing imperial height:', { cm: data.height, ...imperial });
             setHeightFeet(imperial.feet);
             setHeightInches(imperial.inches);
         }
-    }, [data.height]);
+    }, [data.height, unitSystem]);
 
     // Handle unit system change
     const handleUnitSystemChange = (name: string, value: 'imperial' | 'metric') => {
@@ -51,14 +78,22 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
 
     // Handle imperial height change
     const handleImperialHeightChange = (field: 'feet' | 'inches', value: number) => {
-        const newValues = {
-            feet: field === 'feet' ? value : heightFeet,
-            inches: field === 'inches' ? value : heightInches
-        };
-        setHeightFeet(newValues.feet);
-        setHeightInches(newValues.inches);
+        console.log('Height field change:', { field, value });
         
-        const cm = convertHeight.toCm(newValues.feet, newValues.inches);
+        let newFeet = field === 'feet' ? value : heightFeet;
+        let newInches = field === 'inches' ? value : heightInches;
+
+        // Validate inches range
+        if (newInches >= 12) {
+            console.warn('Correcting inches value:', newInches);
+            newInches = 11;
+        }
+
+        setHeightFeet(newFeet);
+        setHeightInches(newInches);
+        
+        const cm = convertHeight.toCm(newFeet, newInches);
+        console.log('Updated height values:', { feet: newFeet, inches: newInches, cm });
         onChange('height', cm);
     };
 
@@ -119,13 +154,18 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
                         label="Weight (lbs)"
                         type="number"
                         value={data.weight ? convertWeight.toLbs(data.weight) : ''}
-                        onChange={(name, value) => onChange('weight', convertWeight.toKg(value))}
+                        onChange={(name, value) => {
+                            const kg = convertWeight.toKg(value);
+                            console.log('Weight field change:', { inputLbs: value, convertedKg: kg });
+                            onChange('weight', kg);
+                        }}
                         validation={validation?.fieldErrors?.weight && {
                             isValid: false,
                             errors: validation.fieldErrors.weight
                         }}
-                        min={66}
-                        max={440}
+                        min={WEIGHT_RANGES.imperial.min}
+                        max={WEIGHT_RANGES.imperial.max}
+                        step={0.1}
                     />
                 </>
             ) : (
@@ -154,8 +194,9 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
                             isValid: false,
                             errors: validation.fieldErrors.weight
                         }}
-                        min={30}
-                        max={200}
+                        min={WEIGHT_RANGES.metric.min}
+                        max={WEIGHT_RANGES.metric.max}
+                        step={0.1}
                     />
                 </>
             )}
