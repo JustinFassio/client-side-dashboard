@@ -22,6 +22,9 @@ require_once get_stylesheet_directory() . '/includes/rest-api/class-overview-con
 // Load feature endpoints
 require_once get_stylesheet_directory() . '/dashboard/api/profile-endpoint.php';
 
+// Include profile endpoints
+require_once get_stylesheet_directory() . '/includes/rest-api/profile-endpoints.php';
+
 use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
 use AthleteDashboard\Core\DashboardBridge;

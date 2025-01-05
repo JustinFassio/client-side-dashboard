@@ -1,35 +1,47 @@
 import React, { useState } from 'react';
 import { FeatureContext } from '../../../../dashboard/contracts/Feature';
 import { useProfile } from '../../context/ProfileContext';
+import { useUser } from '../../../user/context/UserContext';
+import { LoadingState } from '../../../../dashboard/components/LoadingState';
+import { ErrorBoundary } from '../../../../dashboard/components/ErrorBoundary';
 import { BasicSection } from '../form/sections/BasicSection';
 import { MedicalSection } from '../form/sections/MedicalSection';
 import { PhysicalSection } from '../form/sections/PhysicalSection';
 import { AccountSection } from '../form/sections/AccountSection';
 import { InjuryTracker } from '../InjuryTracker';
 import { validateProfileField } from '../../utils/validation';
+import { ProfileData, Injury } from '../../types/profile';
 import './ProfileLayout.css';
 
 interface ProfileLayoutProps {
-    userId: number;
     context: FeatureContext;
 }
 
 export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
-    userId,
     context
 }) => {
-    const { profile, updateProfile, isLoading, error } = useProfile();
-    const [localProfile, setLocalProfile] = useState(profile);
+    const { user } = useUser();
+    const { profile, updateProfile, refreshProfile, isLoading, error } = useProfile();
+    const [localProfile, setLocalProfile] = useState<ProfileData | null>(profile);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
+    // Update local profile when profile changes
+    React.useEffect(() => {
+        if (profile) {
+            setLocalProfile(profile);
+        }
+    }, [profile]);
+
+    // Refresh profile when user changes
+    React.useEffect(() => {
+        if (user?.id) {
+            refreshProfile();
+        }
+    }, [user?.id, refreshProfile]);
+
     if (isLoading) {
-        return (
-            <div className="profile-loading">
-                <div className="loading-spinner" />
-                <p>Loading profile...</p>
-            </div>
-        );
+        return <LoadingState label="Loading profile..." />;
     }
 
     if (error) {
@@ -37,7 +49,27 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
             <div className="profile-error">
                 <h3>Error Loading Profile</h3>
                 <p>{error}</p>
-                <button onClick={() => window.location.reload()} className="retry-button">
+                <button 
+                    onClick={refreshProfile} 
+                    className="retry-button"
+                    disabled={isLoading}
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    if (!user || !profile || !localProfile) {
+        return (
+            <div className="profile-error">
+                <h3>Profile Not Available</h3>
+                <p>Unable to load profile information. Please ensure you are logged in.</p>
+                <button 
+                    onClick={refreshProfile}
+                    className="retry-button"
+                    disabled={isLoading}
+                >
                     Retry
                 </button>
             </div>
@@ -45,10 +77,24 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
     }
 
     const handleFieldChange = (name: string, value: any) => {
-        setLocalProfile(prev => ({
-            ...prev,
-            [name]: value
-        }));
+        setLocalProfile(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                [name]: value
+            };
+        });
+        setSaveError(null);
+    };
+
+    const handleInjuryChange = (injuries: Injury[]) => {
+        setLocalProfile(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                injuries
+            };
+        });
         setSaveError(null);
     };
 
@@ -56,6 +102,9 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
         try {
             setSaveError(null);
             setIsSaving(true);
+
+            console.group('Profile Save');
+            console.log('Saving profile changes:', localProfile);
 
             // Validate all fields
             const validationErrors: string[] = [];
@@ -82,67 +131,51 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
             }
         } finally {
             setIsSaving(false);
+            console.groupEnd();
         }
     };
 
     return (
-        <div className="profile-layout">
-            <header className="profile-header">
-                <h1>Profile Settings</h1>
-                <p>Manage your athlete profile information</p>
-            </header>
-
-            <div className="profile-content">
-                <AccountSection
-                    data={localProfile}
-                    onChange={handleFieldChange}
-                />
-
-                <BasicSection
-                    data={localProfile}
-                    onChange={handleFieldChange}
-                />
-
-                <MedicalSection
-                    data={localProfile}
-                    onChange={handleFieldChange}
-                />
-
-                <PhysicalSection
-                    data={localProfile}
-                    onChange={handleFieldChange}
-                />
-
-                <InjuryTracker
-                    injuries={localProfile.injuries || []}
-                    onChange={(injuries) => handleFieldChange('injuries', injuries)}
-                />
-            </div>
-
-            {saveError && (
-                <div className="save-error">
-                    <p>{saveError}</p>
+        <ErrorBoundary>
+            <div className="profile-layout">
+                <h1>Welcome, {profile.displayName || profile.username}</h1>
+                <div className="profile-sections">
+                    <BasicSection
+                        data={localProfile}
+                        onChange={handleFieldChange}
+                    />
+                    <PhysicalSection
+                        data={localProfile}
+                        onChange={handleFieldChange}
+                    />
+                    <MedicalSection
+                        data={localProfile}
+                        onChange={handleFieldChange}
+                    />
+                    <AccountSection
+                        data={localProfile}
+                        onChange={handleFieldChange}
+                    />
+                    <InjuryTracker
+                        injuries={localProfile.injuries || []}
+                        onChange={handleInjuryChange}
+                    />
                 </div>
-            )}
-
-            <div className="profile-actions">
-                <button 
-                    className="save-button"
-                    onClick={handleSave}
-                    disabled={isSaving}
-                >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-            </div>
-
-            {context.debug && (
-                <div className="debug-info">
-                    <h3>Debug Information</h3>
-                    <pre>
-                        {JSON.stringify({ userId, profile: localProfile }, null, 2)}
-                    </pre>
+                {saveError && (
+                    <div className="save-error">
+                        <p>{saveError}</p>
+                    </div>
+                )}
+                <div className="profile-actions">
+                    <button 
+                        className="save-button"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                    >
+                        {isSaving ? 'Saving...' : 'Save Changes'}
+                    </button>
                 </div>
-            )}
-        </div>
+            </div>
+        </ErrorBoundary>
     );
 }; 

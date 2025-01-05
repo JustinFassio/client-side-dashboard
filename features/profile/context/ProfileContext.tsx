@@ -1,143 +1,212 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { ProfileData, PROFILE_CONFIG } from '../types/profile';
-import { validateProfileField } from '../utils/validation';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import { ProfileData } from '../types/profile';
+import { useUser } from '../../user/context/UserContext';
+import { ProfileService } from '../services/ProfileService';
 
 interface ProfileContextValue {
-    profile: ProfileData;
+    profile: ProfileData | null;
     updateProfile: (data: Partial<ProfileData>) => Promise<void>;
+    refreshProfile: () => Promise<void>;
     isLoading: boolean;
     error: string | null;
 }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
-interface ProfileProviderProps {
-    userId: number;
-    children: React.ReactNode;
-}
-
 const DEFAULT_PROFILE: Partial<ProfileData> = {
-    age: '',
+    age: 0,
     gender: '',
-    height: '',
-    weight: '',
-    fitnessLevel: '',
-    activityLevel: '',
-    medicalConditions: [],
-    exerciseLimitations: [],
-    medications: '',
+    height: 0,
+    weight: 0,
+    medicalNotes: '',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
     injuries: []
 };
 
-export const ProfileProvider: React.FC<ProfileProviderProps> = ({ userId, children }) => {
-    const [profile, setProfile] = useState<ProfileData>({ ...DEFAULT_PROFILE } as ProfileData);
-    const [isLoading, setIsLoading] = useState(true);
+interface ProfileProviderProps {
+    children: React.ReactNode;
+}
+
+// Create a singleton instance of ProfileService
+const profileService = new ProfileService(
+    window.athleteDashboardData?.apiUrl || '/wp-json',
+    window.athleteDashboardData?.nonce || ''
+);
+
+export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) => {
+    const { user, isAuthenticated, isLoading: userLoading, refreshUser } = useUser();
+    const [profile, setProfile] = useState<ProfileData | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Use refs to prevent duplicate requests
+    const isLoadingRef = useRef(false);
+    const lastLoadTimeRef = useRef(0);
+    const MIN_LOAD_INTERVAL = 1000; // Minimum time between loads in milliseconds
+
+    // Debug log when user changes - throttled
+    const lastUserLogRef = useRef(0);
     useEffect(() => {
-        const loadProfile = async () => {
-            try {
-                setIsLoading(true);
-                setError(null);
+        const now = Date.now();
+        if (now - lastUserLogRef.current < 1000) return;
+        lastUserLogRef.current = now;
 
-                if (window.athleteDashboardData.debug) {
-                    console.log('[ProfileContext] Loading profile for user:', userId);
-                }
+        console.group('ProfileContext: User Change');
+        console.log('Current user:', user);
+        console.log('Is authenticated:', isAuthenticated);
+        console.log('User loading:', userLoading);
+        console.log('Has user ID:', !!user?.id);
+        console.groupEnd();
+    }, [user, isAuthenticated, userLoading]);
 
-                const response = await fetch(`/wp-json/dashboard/v1/profile/${userId}`, {
-                    headers: {
-                        'X-WP-Nonce': window.athleteDashboardData.nonce
-                    }
-                });
+    const loadProfile = async () => {
+        // Don't attempt to load if user context is still loading
+        if (userLoading) {
+            console.log('ProfileContext: User context still loading, waiting...');
+            return;
+        }
 
-                if (!response.ok) {
-                    throw new Error(`Failed to load profile: ${response.status}`);
-                }
+        // Don't attempt to load if not authenticated
+        if (!isAuthenticated || !user?.id) {
+            console.log('ProfileContext: User not authenticated or missing ID, skipping profile load');
+            setProfile(null);
+            setIsLoading(false);
+            return;
+        }
 
-                const data = await response.json();
-                if (window.athleteDashboardData.debug) {
-                    console.log('[ProfileContext] Profile loaded:', data);
-                }
+        // Prevent duplicate loads
+        const now = Date.now();
+        if (isLoadingRef.current || (now - lastLoadTimeRef.current) < MIN_LOAD_INTERVAL) {
+            console.log('ProfileContext: Skipping load - too soon or already in progress');
+            return;
+        }
 
-                // Merge loaded data with default values
-                const mergedProfile = {
-                    ...DEFAULT_PROFILE,
-                    ...data
-                };
+        isLoadingRef.current = true;
+        lastLoadTimeRef.current = now;
 
-                setProfile(mergedProfile as ProfileData);
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
-                if (window.athleteDashboardData.debug) {
-                    console.error('[ProfileContext] Error loading profile:', errorMessage);
-                }
-                setError(errorMessage);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        loadProfile();
-    }, [userId]);
-
-    const updateProfile = async (data: Partial<ProfileData>) => {
         try {
+            console.group('ProfileContext: Loading Profile');
+            console.log('Current user ID:', user.id);
+            console.log('API URL:', window.athleteDashboardData?.apiUrl);
+            console.log('Nonce present:', !!window.athleteDashboardData?.nonce);
+            
+            setIsLoading(true);
             setError(null);
-            if (window.athleteDashboardData.debug) {
-                console.log('[ProfileContext] Updating profile:', data);
+
+            const profileData = await profileService.fetchProfile(user.id);
+            console.log('Profile data received:', profileData);
+
+            if (!profileData) {
+                throw new Error('No profile data received from server');
             }
 
-            // Only validate fields that are being updated
-            const validationErrors: string[] = [];
-            Object.entries(data).forEach(([field, value]) => {
-                const error = validateProfileField(field as keyof ProfileData, value);
-                if (error) {
-                    validationErrors.push(`${field}: ${error}`);
-                    if (window.athleteDashboardData.debug) {
-                        console.warn(`[ProfileContext] Validation error for ${field}:`, error);
-                    }
-                }
-            });
+            // Merge with default values and user data
+            const mergedProfile = {
+                ...DEFAULT_PROFILE,
+                ...profileData,
+                // Ensure core user data is always in sync
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                displayName: user.displayName,
+                firstName: user.firstName,
+                lastName: user.lastName
+            };
 
-            if (validationErrors.length > 0) {
-                throw new Error(validationErrors.join(', '));
-            }
-
-            const response = await fetch(`/wp-json/dashboard/v1/profile/${userId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce': window.athleteDashboardData.nonce
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to update profile: ${response.status}`);
-            }
-
-            const updatedData = await response.json();
-            if (window.athleteDashboardData.debug) {
-                console.log('[ProfileContext] Profile updated:', updatedData);
-            }
-
-            // Merge updated data with existing profile
-            setProfile(prev => ({
-                ...prev,
-                ...updatedData
-            }));
+            console.log('Merged profile data:', mergedProfile);
+            setProfile(mergedProfile as ProfileData);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
-            if (window.athleteDashboardData.debug) {
-                console.error('[ProfileContext] Error updating profile:', errorMessage);
-            }
+            const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+            console.error('Error loading profile:', err);
+            console.error('Error message:', errorMessage);
             setError(errorMessage);
-            throw err;
+            setProfile(null);
+        } finally {
+            setIsLoading(false);
+            isLoadingRef.current = false;
+            console.log('Profile load complete. Loading state set to false.');
+            console.groupEnd();
         }
     };
 
+    // Load profile when user changes - with debounce
+    useEffect(() => {
+        // Skip if user context is still loading
+        if (userLoading) {
+            console.log('ProfileContext: Waiting for user context to complete loading...');
+            return;
+        }
+
+        // Clear profile if not authenticated
+        if (!isAuthenticated || !user?.id) {
+            console.log('ProfileContext: User not authenticated, clearing profile');
+            setProfile(null);
+            setIsLoading(false);
+            return;
+        }
+
+        const timeoutId = setTimeout(() => {
+            console.log('ProfileContext: User authenticated, initiating profile load:', user.id);
+            loadProfile();
+        }, 100); // Small delay to allow for any rapid user changes
+
+        return () => clearTimeout(timeoutId);
+    }, [user?.id, isAuthenticated, userLoading]);
+
+    const refreshProfile = async () => {
+        console.log('ProfileContext: Refreshing profile...');
+        await loadProfile();
+    };
+
+    const updateProfile = async (data: Partial<ProfileData>) => {
+        if (!user?.id || !profile) {
+            const error = 'User not authenticated or profile not loaded';
+            console.error('ProfileContext: Update failed -', error);
+            throw new Error(error);
+        }
+
+        try {
+            console.group('ProfileContext: Updating Profile');
+            console.log('Update data:', data);
+            setError(null);
+
+            const updatedData = await profileService.updateProfile(user.id, data);
+            console.log('Profile update successful:', updatedData);
+
+            // Merge updated data with existing profile
+            const mergedProfile = {
+                ...profile,
+                ...updatedData
+            };
+
+            console.log('Merged updated profile:', mergedProfile);
+            setProfile(mergedProfile);
+            
+            // Refresh user data to ensure consistency
+            console.log('Refreshing user data for consistency');
+            await refreshUser();
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to update profile';
+            console.error('Error updating profile:', err);
+            console.error('Error message:', errorMessage);
+            setError(errorMessage);
+            throw err;
+        } finally {
+            console.groupEnd();
+        }
+    };
+
+    const value = useMemo(() => ({
+        profile,
+        updateProfile,
+        refreshProfile,
+        isLoading,
+        error
+    }), [profile, isLoading, error]);
+
     return (
-        <ProfileContext.Provider value={{ profile, updateProfile, isLoading, error }}>
+        <ProfileContext.Provider value={value}>
             {children}
         </ProfileContext.Provider>
     );
