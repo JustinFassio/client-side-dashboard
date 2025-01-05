@@ -2,7 +2,7 @@
  * Physical metrics interface
  */
 export interface PhysicalMetric {
-    type: 'height' | 'weight' | 'bodyFat' | 'muscleMass';
+    type: 'height' | 'weight';
     value: number;
     unit: string;
     date: string;
@@ -16,21 +16,29 @@ export interface PhysicalMetrics {
 }
 
 /**
- * Core profile data interface
+ * Core profile data interface aligned with WordPress backend
  */
 export interface ProfileData {
+    // Core WordPress fields
     id: number;
-    displayName: string;
+    username: string;
     email: string;
+    displayName: string;
+    firstName: string;
+    lastName: string;
+
+    // Custom profile fields
+    phone: string;
     age: number;
-    gender: string;
+    dateOfBirth: string;
     height: number;
     weight: number;
-    fitnessLevel: string;
-    activityLevel: string;
-    medicalConditions: string[];
-    exerciseLimitations: string[];
-    medications: string;
+    gender: 'male' | 'female' | 'other' | '';
+    dominantSide: 'left' | 'right' | '';
+    medicalClearance: boolean;
+    medicalNotes: string;
+    emergencyContactName: string;
+    emergencyContactPhone: string;
     injuries: Injury[];
 }
 
@@ -112,223 +120,192 @@ export interface ProfileField {
 }
 
 export interface ProfileFieldConfig {
-    name: string;
+    name: keyof ProfileData;
     label: string;
-    type: string;
+    type: 'text' | 'number' | 'tel' | 'date' | 'select' | 'checkbox' | 'textarea';
     required: boolean;
     editable?: boolean;
-    options?: Array<{
-        value: string;
-        label: string;
-    }>;
     validation?: {
         pattern?: RegExp;
         message?: string;
         min?: number;
         max?: number;
     };
-}
-
-export interface ProfileConfig {
-    fields: Record<string, ProfileFieldConfig>;
-    validation: {
-        validateField: (field: keyof ProfileData, value: any) => string[];
-        validateProfile: (data: Partial<ProfileData>) => {
-            errors: Record<string, string[]>;
-        };
-    };
+    options?: Array<{
+        value: string;
+        label: string;
+    }>;
 }
 
 /**
  * Profile configuration
  */
-export const PROFILE_CONFIG: ProfileConfig = {
-    fields: {
-        username: {
-            name: 'username',
-            label: 'Username',
-            type: 'text',
-            required: true,
-            editable: false,
-            validation: {
-                pattern: /^[a-zA-Z0-9_-]+$/,
-                message: 'Username can only contain letters, numbers, underscores, and hyphens'
-            }
-        },
-        email: {
-            name: 'email',
-            label: 'Email',
-            type: 'text',
-            required: true,
-            validation: {
-                pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                message: 'Please enter a valid email address'
-            }
-        },
-        displayName: {
-            name: 'displayName',
-            label: 'Display Name',
-            type: 'text',
-            required: true,
-            validation: {
-                min: 2,
-                max: 50,
-                message: 'Display name must be between 2 and 50 characters'
-            }
-        },
-        firstName: {
-            name: 'firstName',
-            label: 'First Name',
-            type: 'text',
-            required: true
-        },
-        lastName: {
-            name: 'lastName',
-            label: 'Last Name',
-            type: 'text',
-            required: true
-        },
-        age: {
-            name: 'age',
-            label: 'Age',
-            type: 'number',
-            required: true,
-            validation: {
-                min: 13,
-                max: 120,
-                message: 'Age must be between 13 and 120'
-            }
-        },
-        gender: {
-            name: 'gender',
-            label: 'Gender',
-            type: 'select',
-            required: true,
-            options: [
-                { value: 'male', label: 'Male' },
-                { value: 'female', label: 'Female' },
-                { value: 'other', label: 'Other' },
-                { value: 'prefer_not_to_say', label: 'Prefer not to say' }
-            ]
-        },
-        fitnessLevel: {
-            name: 'fitnessLevel',
-            label: 'Fitness Level',
-            type: 'select',
-            required: true,
-            options: [
-                { value: 'beginner', label: 'Beginner' },
-                { value: 'intermediate', label: 'Intermediate' },
-                { value: 'advanced', label: 'Advanced' }
-            ]
-        },
-        activityLevel: {
-            name: 'activityLevel',
-            label: 'Activity Level',
-            type: 'select',
-            required: true,
-            options: [
-                { value: 'sedentary', label: 'Sedentary' },
-                { value: 'lightly_active', label: 'Lightly Active' },
-                { value: 'moderately_active', label: 'Moderately Active' },
-                { value: 'very_active', label: 'Very Active' },
-                { value: 'extra_active', label: 'Extra Active' }
-            ]
-        },
-        medicalConditions: {
-            name: 'medicalConditions',
-            label: 'Medical Conditions',
-            type: 'select',
-            required: false,
-            options: [
-                { value: 'none', label: 'None' },
-                { value: 'heart_condition', label: 'Heart Condition' },
-                { value: 'asthma', label: 'Asthma' },
-                { value: 'diabetes', label: 'Diabetes' },
-                { value: 'arthritis', label: 'Arthritis' },
-                { value: 'other', label: 'Other' }
-            ]
-        },
-        exerciseLimitations: {
-            name: 'exerciseLimitations',
-            label: 'Exercise Limitations',
-            type: 'select',
-            required: false,
-            options: [
-                { value: 'none', label: 'None' },
-                { value: 'joint_pain', label: 'Joint Pain' },
-                { value: 'back_pain', label: 'Back Pain' },
-                { value: 'limited_mobility', label: 'Limited Mobility' },
-                { value: 'other', label: 'Other' }
-            ]
-        },
-        medications: {
-            name: 'medications',
-            label: 'Medications',
-            type: 'textarea',
-            required: false
-        },
-        height: {
-            name: 'height',
-            label: 'Height (cm)',
-            type: 'number',
-            required: true,
-            validation: {
-                min: 100,
-                max: 250,
-                message: 'Height must be between 100cm and 250cm'
-            }
-        },
-        weight: {
-            name: 'weight',
-            label: 'Weight (kg)',
-            type: 'number',
-            required: true,
-            validation: {
-                min: 30,
-                max: 300,
-                message: 'Weight must be between 30kg and 300kg'
-            }
+export const PROFILE_CONFIG: Record<keyof ProfileData, ProfileFieldConfig> = {
+    id: {
+        name: 'id',
+        label: 'ID',
+        type: 'number',
+        required: true,
+        editable: false
+    },
+    username: {
+        name: 'username',
+        label: 'Username',
+        type: 'text',
+        required: true,
+        editable: false,
+        validation: {
+            pattern: /^[a-zA-Z0-9_-]+$/,
+            message: 'Username can only contain letters, numbers, underscores, and hyphens'
         }
-    } as const,
-    
-    validation: {
-        validateField: (field: keyof ProfileData, value: any): string[] => {
-            const errors: string[] = [];
-            const config = PROFILE_CONFIG.fields[field];
-
-            if (!config) return errors;
-
-            if (config.required && (value === null || value === undefined || value === '')) {
-                errors.push(`${config.label} is required`);
-                return errors;
-            }
-
-            if (config.validation && value !== null && value !== undefined && value !== '') {
-                const { validation } = config;
-                if (validation.min !== undefined && value < validation.min) {
-                    errors.push(validation.message || `${config.label} must be at least ${validation.min}`);
-                }
-                if (validation.max !== undefined && value > validation.max) {
-                    errors.push(validation.message || `${config.label} must be at most ${validation.max}`);
-                }
-                if (validation.pattern && !validation.pattern.test(String(value))) {
-                    errors.push(validation.message || `${config.label} is invalid`);
-                }
-            }
-
-            return errors;
-        },
-
-        validateProfile: (data: Partial<ProfileData>) => {
-            const errors: Record<string, string[]> = {};
-            Object.keys(PROFILE_CONFIG.fields).forEach((field) => {
-                errors[field] = PROFILE_CONFIG.validation.validateField(
-                    field as keyof ProfileData,
-                    data[field as keyof ProfileData]
-                );
-            });
-            return { errors };
+    },
+    email: {
+        name: 'email',
+        label: 'Email',
+        type: 'text',
+        required: true,
+        validation: {
+            pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            message: 'Please enter a valid email address'
         }
+    },
+    displayName: {
+        name: 'displayName',
+        label: 'Display Name',
+        type: 'text',
+        required: true,
+        validation: {
+            min: 2,
+            max: 50,
+            message: 'Display name must be between 2 and 50 characters'
+        }
+    },
+    firstName: {
+        name: 'firstName',
+        label: 'First Name',
+        type: 'text',
+        required: true,
+        validation: {
+            min: 2,
+            max: 50,
+            message: 'First name must be between 2 and 50 characters'
+        }
+    },
+    lastName: {
+        name: 'lastName',
+        label: 'Last Name',
+        type: 'text',
+        required: true,
+        validation: {
+            min: 2,
+            max: 50,
+            message: 'Last name must be between 2 and 50 characters'
+        }
+    },
+    phone: {
+        name: 'phone',
+        label: 'Phone Number',
+        type: 'tel',
+        required: false,
+        validation: {
+            pattern: /^\+?[\d\s-()]+$/,
+            message: 'Please enter a valid phone number'
+        }
+    },
+    age: {
+        name: 'age',
+        label: 'Age',
+        type: 'number',
+        required: false,
+        validation: {
+            min: 13,
+            max: 120,
+            message: 'Age must be between 13 and 120'
+        }
+    },
+    dateOfBirth: {
+        name: 'dateOfBirth',
+        label: 'Date of Birth',
+        type: 'date',
+        required: false
+    },
+    height: {
+        name: 'height',
+        label: 'Height (cm)',
+        type: 'number',
+        required: false,
+        validation: {
+            min: 50,
+            max: 250,
+            message: 'Height must be between 50cm and 250cm'
+        }
+    },
+    weight: {
+        name: 'weight',
+        label: 'Weight (kg)',
+        type: 'number',
+        required: false,
+        validation: {
+            min: 30,
+            max: 200,
+            message: 'Weight must be between 30kg and 200kg'
+        }
+    },
+    gender: {
+        name: 'gender',
+        label: 'Gender',
+        type: 'select',
+        required: false,
+        options: [
+            { value: '', label: 'Select Gender' },
+            { value: 'male', label: 'Male' },
+            { value: 'female', label: 'Female' },
+            { value: 'other', label: 'Other' }
+        ]
+    },
+    dominantSide: {
+        name: 'dominantSide',
+        label: 'Dominant Side',
+        type: 'select',
+        required: false,
+        options: [
+            { value: '', label: 'Select Dominant Side' },
+            { value: 'left', label: 'Left' },
+            { value: 'right', label: 'Right' }
+        ]
+    },
+    medicalClearance: {
+        name: 'medicalClearance',
+        label: 'Medical Clearance',
+        type: 'checkbox',
+        required: false
+    },
+    medicalNotes: {
+        name: 'medicalNotes',
+        label: 'Medical Notes',
+        type: 'textarea',
+        required: false
+    },
+    emergencyContactName: {
+        name: 'emergencyContactName',
+        label: 'Emergency Contact Name',
+        type: 'text',
+        required: false
+    },
+    emergencyContactPhone: {
+        name: 'emergencyContactPhone',
+        label: 'Emergency Contact Phone',
+        type: 'tel',
+        required: false,
+        validation: {
+            pattern: /^\+?[\d\s-()]+$/,
+            message: 'Please enter a valid phone number'
+        }
+    },
+    injuries: {
+        name: 'injuries',
+        label: 'Injuries',
+        type: 'text',
+        required: false
     }
 }; 

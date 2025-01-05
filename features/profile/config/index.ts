@@ -9,20 +9,11 @@ export interface FieldMapping {
 
 export const ProfileConfig = {
     endpoints: {
-        // Remove wp-json prefix as it should be part of the base URL
         base: 'athlete-dashboard/v1/profile',
         test: 'athlete-dashboard/v1/profile/test'
     },
-    events: PROFILE_EVENTS,
-    validation: {
-        minAge: 13,
-        maxAge: 120,
-        fields: {
-            required: ['firstName', 'lastName'],
-            optional: ['email', 'age', 'gender', 'height', 'weight', 'bio', 'fitnessGoals', 'preferredWorkoutTypes']
-        }
-    },
     meta: {
+        key: '_athlete_profile_data',
         prefix: 'athlete_',
         // Define explicit mapping between frontend and backend fields
         fields: {
@@ -37,6 +28,15 @@ export const ProfileConfig = {
             fitnessGoals: { frontend: 'fitnessGoals', meta: 'athlete_fitness_goals' },
             preferredWorkoutTypes: { frontend: 'preferredWorkoutTypes', meta: 'athlete_preferred_workout_types' }
         } as Record<string, FieldMapping>
+    },
+    events: PROFILE_EVENTS,
+    validation: {
+        minAge: 13,
+        maxAge: 120,
+        fields: {
+            required: ['firstName', 'lastName'],
+            optional: ['email', 'age', 'gender', 'height', 'weight', 'bio', 'fitnessGoals', 'preferredWorkoutTypes']
+        }
     }
 } as const;
 

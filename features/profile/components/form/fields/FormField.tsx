@@ -5,7 +5,7 @@ import { ProfileData } from '../../../types/profile';
 interface FormFieldProps {
     name: keyof ProfileData;
     label: string;
-    type: 'text' | 'number' | 'email' | 'select';
+    type: 'text' | 'number' | 'email' | 'select' | 'tel';
     value: any;
     onChange: (name: string, value: any) => void;
     validation?: ValidationResult;

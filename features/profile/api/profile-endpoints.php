@@ -253,32 +253,82 @@ class ProfileEndpoints {
      * Get profile data from user meta
      */
     private static function get_profile_data($user_id) {
+        global $wpdb;
+        
+        error_log("=== Profile Data Fetch Debug ===");
+        error_log("Fetching profile data for user ID: {$user_id}");
+        
+        // Fetch core user data
+        $user = get_userdata($user_id);
+        if (!$user) {
+            error_log("ERROR: Failed to fetch user data for ID: {$user_id}");
+            return new WP_Error('user_not_found', 'User not found');
+        }
+        
+        error_log("Core WordPress user data:");
+        error_log(print_r([
+            'user_login' => $user->user_login,
+            'user_email' => $user->user_email,
+            'display_name' => $user->display_name,
+            'first_name' => $user->first_name,
+            'last_name' => $user->last_name
+        ], true));
+        
+        // Get profile meta data
         $profile_data = get_user_meta($user_id, self::META_KEY, true);
+        error_log("Raw profile meta data:");
+        error_log(print_r($profile_data, true));
         
         // If no profile data exists, return default structure
         if (empty($profile_data)) {
-            return [
-                'user_id' => $user_id,
-                'phone' => '',
-                'age' => '',
-                'date_of_birth' => '',
-                'height' => '',
-                'weight' => '',
+            error_log("No existing profile data found, returning default structure");
+            $profile_data = [
+                'id' => $user_id,
+                'username' => $user->user_login,
+                'email' => $user->user_email,
+                'displayName' => $user->display_name,
+                'firstName' => $user->first_name,
+                'lastName' => $user->last_name,
+                'phoneNumber' => '',
+                'age' => 0,
                 'gender' => '',
-                'dominant_side' => '',
-                'medical_clearance' => false,
-                'medical_notes' => '',
-                'emergency_contact_name' => '',
-                'emergency_contact_phone' => '',
-                'injuries' => []
+                'height' => 0,
+                'weight' => 0,
+                'preferredUnits' => 'imperial',
+                'fitnessLevel' => 'beginner',
+                'activityLevel' => 'sedentary',
+                'medicalConditions' => [],
+                'exerciseLimitations' => [],
+                'medications' => '',
+                'injuries' => [],
+                'physicalMetrics' => [
+                    [
+                        'type' => 'height',
+                        'value' => 0,
+                        'unit' => 'cm',
+                        'date' => date('c')
+                    ],
+                    [
+                        'type' => 'weight',
+                        'value' => 0,
+                        'unit' => 'kg',
+                        'date' => date('c')
+                    ]
+                ]
             ];
         }
 
-        // Ensure user_id is included and age is an integer
-        $profile_data['user_id'] = $user_id;
-        if (isset($profile_data['age']) && $profile_data['age'] !== '') {
-            $profile_data['age'] = absint($profile_data['age']);
-        }
+        // Ensure core user data is always included and up to date
+        $profile_data['id'] = $user_id;
+        $profile_data['username'] = $user->user_login;
+        $profile_data['email'] = $user->user_email;
+        $profile_data['displayName'] = $user->display_name;
+        $profile_data['firstName'] = $user->first_name;
+        $profile_data['lastName'] = $user->last_name;
+        
+        error_log("Final profile data structure:");
+        error_log(print_r($profile_data, true));
+        error_log("=== End Profile Data Fetch Debug ===");
         
         return $profile_data;
     }
@@ -289,7 +339,28 @@ class ProfileEndpoints {
     private static function validate_profile_data($data) {
         $errors = [];
 
-        // Age validation (if provided)
+        // Validate height (in cm)
+        if (isset($data['height'])) {
+            $height = floatval($data['height']);
+            if ($height < 50 || $height > 250) {
+                $errors['height'] = 'Height must be between 50cm and 250cm';
+            }
+        }
+
+        // Validate weight (in kg)
+        if (isset($data['weight'])) {
+            $weight = floatval($data['weight']);
+            if ($weight < 30 || $weight > 200) {
+                $errors['weight'] = 'Weight must be between 30kg and 200kg';
+            }
+        }
+
+        // Validate preferred units
+        if (isset($data['preferredUnits']) && !in_array($data['preferredUnits'], ['imperial', 'metric'])) {
+            $errors['preferredUnits'] = 'Invalid unit system';
+        }
+
+        // Validate age
         if (isset($data['age'])) {
             $age = intval($data['age']);
             if ($age < 13 || $age > 120) {
@@ -297,48 +368,40 @@ class ProfileEndpoints {
             }
         }
 
-        // Phone validation (if provided)
-        if (isset($data['phone']) && !empty($data['phone'])) {
-            if (!preg_match('/^[0-9+\-\(\)\s]*$/', $data['phone'])) {
-                $errors['phone'] = 'Invalid phone number format';
-            }
+        // Validate gender
+        if (isset($data['gender']) && !in_array($data['gender'], ['male', 'female', 'other', 'prefer_not_to_say'])) {
+            $errors['gender'] = 'Invalid gender value';
         }
 
-        // Date of birth validation (if provided)
-        if (isset($data['date_of_birth']) && !empty($data['date_of_birth'])) {
-            $date = date_create($data['date_of_birth']);
-            if (!$date) {
-                $errors['date_of_birth'] = 'Invalid date format';
-            }
+        // Validate fitness level
+        if (isset($data['fitnessLevel']) && !in_array($data['fitnessLevel'], ['beginner', 'intermediate', 'advanced', 'expert'])) {
+            $errors['fitnessLevel'] = 'Invalid fitness level';
         }
 
-        // Height validation (if provided)
-        if (isset($data['height'])) {
-            $height = floatval($data['height']);
-            if ($height < 0 || $height > 300) {
-                $errors['height'] = 'Height must be between 0 and 300 cm';
-            }
+        // Validate activity level
+        if (isset($data['activityLevel']) && !in_array($data['activityLevel'], ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active'])) {
+            $errors['activityLevel'] = 'Invalid activity level';
         }
 
-        // Weight validation (if provided)
-        if (isset($data['weight'])) {
-            $weight = floatval($data['weight']);
-            if ($weight < 0 || $weight > 500) {
-                $errors['weight'] = 'Weight must be between 0 and 500 kg';
-            }
-        }
-
-        // Gender validation (if provided)
-        if (isset($data['gender']) && !empty($data['gender'])) {
-            if (!in_array($data['gender'], ['male', 'female', 'other'])) {
-                $errors['gender'] = 'Invalid gender value';
-            }
-        }
-
-        // Dominant side validation (if provided)
-        if (isset($data['dominant_side']) && !empty($data['dominant_side'])) {
-            if (!in_array($data['dominant_side'], ['left', 'right'])) {
-                $errors['dominant_side'] = 'Invalid dominant side value';
+        // Validate physicalMetrics
+        if (isset($data['physicalMetrics'])) {
+            if (!is_array($data['physicalMetrics'])) {
+                $errors['physicalMetrics'] = 'Physical metrics must be an array';
+            } else {
+                foreach ($data['physicalMetrics'] as $index => $metric) {
+                    if (!isset($metric['type']) || !in_array($metric['type'], ['height', 'weight', 'bodyFat', 'muscleMass'])) {
+                        $errors["physicalMetrics.{$index}.type"] = 'Invalid metric type';
+                    }
+                    if (!isset($metric['value']) || !is_numeric($metric['value'])) {
+                        $errors["physicalMetrics.{$index}.value"] = 'Invalid metric value';
+                    }
+                    if (!isset($metric['unit']) || empty($metric['unit'])) {
+                        $errors["physicalMetrics.{$index}.unit"] = 'Invalid metric unit';
+                    }
+                    if (!isset($metric['date']) || !strtotime($metric['date'])) {
+                        $errors["physicalMetrics.{$index}.date"] = 'Invalid metric date';
+                    }
+                }
             }
         }
 
@@ -346,10 +409,7 @@ class ProfileEndpoints {
             return new WP_Error(
                 'validation_error',
                 'Profile validation failed',
-                [
-                    'status' => 400,
-                    'errors' => $errors
-                ]
+                ['status' => 400, 'errors' => $errors]
             );
         }
 

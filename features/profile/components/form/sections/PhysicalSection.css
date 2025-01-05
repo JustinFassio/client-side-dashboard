@@ -1,0 +1,19 @@
+.form-group__row {
+    display: flex;
+    gap: var(--spacing-md);
+    align-items: flex-start;
+}
+
+.form-group__row .form-field {
+    flex: 1;
+}
+
+.form-group__row .form-field input {
+    width: 100%;
+}
+
+.form-error {
+    color: var(--error-color);
+    font-size: var(--font-size-sm);
+    margin-top: var(--spacing-xs);
+} 

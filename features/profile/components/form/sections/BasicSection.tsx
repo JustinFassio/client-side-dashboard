@@ -17,6 +17,9 @@ export const BasicSection: React.FC<BasicSectionProps> = ({
     return (
         <div className="form-section">
             <h2>Basic Information</h2>
+            <p className="form-section__description">
+                Update your personal details and preferences.
+            </p>
             
             <FormField
                 name="displayName"
@@ -27,19 +30,6 @@ export const BasicSection: React.FC<BasicSectionProps> = ({
                 validation={validation?.fieldErrors?.displayName && {
                     isValid: false,
                     errors: validation.fieldErrors.displayName
-                }}
-                required
-            />
-            
-            <FormField
-                name="email"
-                label="Email"
-                type="email"
-                value={data.email}
-                onChange={onChange}
-                validation={validation?.fieldErrors?.email && {
-                    isValid: false,
-                    errors: validation.fieldErrors.email
                 }}
                 required
             />

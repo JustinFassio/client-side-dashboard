@@ -4,6 +4,7 @@ import { useProfile } from '../../context/ProfileContext';
 import { BasicSection } from '../form/sections/BasicSection';
 import { MedicalSection } from '../form/sections/MedicalSection';
 import { PhysicalSection } from '../form/sections/PhysicalSection';
+import { AccountSection } from '../form/sections/AccountSection';
 import { InjuryTracker } from '../InjuryTracker';
 import { validateProfileField } from '../../utils/validation';
 import './ProfileLayout.css';
@@ -92,6 +93,11 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
             </header>
 
             <div className="profile-content">
+                <AccountSection
+                    data={localProfile}
+                    onChange={handleFieldChange}
+                />
+
                 <BasicSection
                     data={localProfile}
                     onChange={handleFieldChange}
