@@ -1,4 +1,4 @@
-import { Feature, FeatureContext } from '../contracts/Feature';
+import { Feature, FeatureContext, FeatureEvents } from '../contracts/Feature';
 import { Events } from './events';
 
 export class FeatureRegistry {
@@ -8,6 +8,27 @@ export class FeatureRegistry {
 
   constructor(context: FeatureContext) {
     this.context = context;
+    this.setupGlobalEvents();
+  }
+
+  private setupGlobalEvents() {
+    // Handle user changes
+    Events.on('user:changed', (userId: number) => {
+      this.features.forEach(feature => {
+        if (feature.onUserChange) {
+          feature.onUserChange(userId);
+        }
+      });
+    });
+
+    // Handle navigation
+    Events.on('navigation:changed', (path: string) => {
+      this.features.forEach(feature => {
+        if (feature.onNavigate) {
+          feature.onNavigate();
+        }
+      });
+    });
   }
 
   /**
@@ -32,6 +53,14 @@ export class FeatureRegistry {
         identifier: feature.identifier,
         metadata: feature.metadata
       });
+
+      // Log registration
+      if (this.context.debug) {
+        console.log(`Registered feature: ${feature.identifier}`, {
+          metadata: feature.metadata,
+          enabled: feature.isEnabled()
+        });
+      }
     } catch (error) {
       Events.emit('feature.error', {
         identifier: feature.identifier,
@@ -59,6 +88,11 @@ export class FeatureRegistry {
       Events.emit('feature.initialized', {
         identifier: feature.identifier
       });
+
+      // Log initialization
+      if (this.context.debug) {
+        console.log(`Initialized feature: ${feature.identifier}`);
+      }
     } catch (error) {
       Events.emit('feature.error', {
         identifier: feature.identifier,
@@ -90,6 +124,13 @@ export class FeatureRegistry {
   }
 
   /**
+   * Check if a feature is initialized
+   */
+  isFeatureInitialized(identifier: string): boolean {
+    return this.initialized.has(identifier);
+  }
+
+  /**
    * Cleanup all features
    */
   async cleanup(): Promise<void> {
@@ -101,5 +142,8 @@ export class FeatureRegistry {
     
     this.features.clear();
     this.initialized.clear();
+
+    // Remove global event listeners
+    Events.removeAllListeners();
   }
 } 

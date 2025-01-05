@@ -46,14 +46,17 @@ export class ProfileFeature implements Feature {
         return true;
     }
 
-    public render(): JSX.Element | null {
+    public render({ userId }: FeatureRenderProps): JSX.Element | null {
         if (!this.context) {
             return null;
         }
 
         return React.createElement(ProfileProvider, { 
-            context: this.context,
-            children: React.createElement(ProfileLayout)
+            userId,
+            children: React.createElement(ProfileLayout, {
+                userId,
+                context: this.context
+            })
         });
     }
 

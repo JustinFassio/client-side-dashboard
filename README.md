@@ -24,7 +24,10 @@ A **React/TypeScript-powered** WordPress child theme designed to help athletes t
    - **Training Persona**: Store preferences (experience level, workout frequency) in user meta.  
    - **Equipment/Environment**: Let users specify gym equipment or environment constraints.  
    - **AI Workout Generator**: Merge user data to generate or iterate workouts, storing them as `workout` posts.  
-   - **Optional Analytics**: In the future, gather insights from the stored workouts to track progress and guide further AI-driven suggestions.
+   - **Centralized User Data**: Management via `useUser` hook.
+   - **Feature-based Routing**: Dynamic feature loading and routing system.
+   - **Debug Mode**: Detailed system information for development.
+   - **Manifest-based Asset Management**: Efficient asset handling and versioning.
 
 ---
 
@@ -34,12 +37,70 @@ This project uses a **Feature-First** architecture described in detail in **[`AR
 
 - **Encapsulation**: Each feature manages its own assets and logic.  
 - **Minimal Shared Files**: Only essential shared resources (like an event bus) live outside feature folders.  
-- **Event-Driven**: Features emit and listen for typed events to coordinate actions between React components and PHP hooks.  
+- **Event-Driven**: Features emit and listen for typed events to coordinate actions.
 - **WordPress Data Model**: 
   - **User meta** for storing Profile, Persona, Equipment/Environment.  
   - **Custom Post Type** (`workout`) for logging and organizing workouts.
 
-Please refer to **[`ARCHITECTURE.md`](./ARCHITECTURE.md)** for a comprehensive architectural breakdown.
+---
+
+## **Data Flow**
+
+1. WordPress Template (`dashboard.php`) → Feature Router
+2. Feature Router → React Initialization
+3. React Components → REST API
+4. User Data Management through `useUser` hook
+
+```mermaid
+graph LR
+    A[dashboard.php] --> B[feature-router.php]
+    B --> C[React Init]
+    C --> D[Feature Components]
+    D --> E[REST API]
+    D --> F[useUser Hook]
+```
+
+---
+
+## **WordPress Integration Details**
+
+- Custom REST API endpoint (`/custom/v1/profile`) for user data
+- Feature routing through `feature-router.php`
+- Script/style enqueuing through manifest-based system
+- WordPress nonce integration for REST API security
+
+---
+
+## **Debugging**
+
+Debug information is available when `WP_DEBUG` is enabled:
+
+- Dashboard template displays debug panel with:
+  - Template information
+  - Current feature data
+  - Script paths and existence
+  - REST API configuration
+- Console logging for React component lifecycle
+- Network request monitoring for API calls
+
+---
+
+## **Common Issues**
+
+1. **Script Loading Issues**
+   - Check manifest.json exists in build directory
+   - Verify build directory permissions
+   - Confirm script enqueuing in functions.php
+
+2. **REST API 404s**
+   - Verify endpoint registration
+   - Check user permissions
+   - Confirm nonce configuration
+
+3. **Feature Not Found**
+   - Verify feature registration
+   - Check routing configuration
+   - Confirm feature name matches registration
 
 ---
 
@@ -149,15 +210,6 @@ Each **feature** has its own:
    ```bash
    npm run test
    ```
-
----
-
-## **WordPress Integration**
-
-- Uses WordPress's built-in React (`wp-element`)
-- Leverages WordPress hooks and filters
-- Follows WordPress coding standards
-- Integrates with WordPress data layer
 
 ---
 

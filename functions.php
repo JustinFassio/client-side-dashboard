@@ -15,6 +15,10 @@ require_once get_stylesheet_directory() . '/features/profile/api/profile-endpoin
 // Load REST API file
 require_once get_stylesheet_directory() . '/includes/rest-api.php';
 
+// Initialize REST API
+require_once get_stylesheet_directory() . '/includes/class-rest-api.php';
+require_once get_stylesheet_directory() . '/includes/rest-api/class-overview-controller.php';
+
 use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
 use AthleteDashboard\Core\DashboardBridge;
@@ -144,3 +148,26 @@ add_action('template_redirect', 'athlete_dashboard_remove_divi_template_parts');
 
 // Include admin user profile integration
 require_once get_stylesheet_directory() . '/includes/admin/user-profile.php';
+
+// Register custom template path
+function athlete_dashboard_register_page_templates($templates) {
+    $templates['dashboard/templates/dashboard.php'] = 'Dashboard';
+    return $templates;
+}
+add_filter('theme_page_templates', 'athlete_dashboard_register_page_templates');
+
+function athlete_dashboard_load_template($template) {
+    if (get_page_template_slug() === 'dashboard/templates/dashboard.php') {
+        $template = get_stylesheet_directory() . '/dashboard/templates/dashboard.php';
+    }
+    return $template;
+}
+add_filter('template_include', 'athlete_dashboard_load_template');
+
+// Add debug logging for template loading
+add_action('template_redirect', function() {
+    Debug::log('Current template: ' . get_page_template_slug());
+    Debug::log('Template file: ' . get_page_template());
+});
+
+add_action('init', ['AthleteDashboard\\Rest_Api', 'init']);

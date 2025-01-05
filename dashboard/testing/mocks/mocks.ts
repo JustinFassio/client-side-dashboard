@@ -1,6 +1,29 @@
-import { ProfileData } from '../../features/profile/types/profile';
-import { DashboardEvents } from '../core/events';
-import { FeatureContext } from '../contracts/Feature';
+import { DashboardEvents } from '../../core/events';
+import { FeatureContext } from '../../contracts/Feature';
+
+export interface ProfileData {
+    id: number;
+    username: string;
+    email: string;
+    displayName: string;
+    firstName: string;
+    lastName: string;
+    age: number;
+    gender: string;
+    height: number;
+    weight: number;
+    fitnessLevel: string;
+    activityLevel: string;
+    medicalConditions: string[];
+    exerciseLimitations: string[];
+    medications: string;
+    physicalMetrics: Array<{
+        type: string;
+        value: number;
+        unit: string;
+        date: string;
+    }>;
+}
 
 export const mockProfileData: ProfileData = {
     id: 1,

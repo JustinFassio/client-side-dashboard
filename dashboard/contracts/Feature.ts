@@ -27,4 +27,13 @@ export interface Feature {
   cleanup(): Promise<void>;
   onNavigate?(): void;
   onUserChange?(userId: number): void;
+}
+
+export interface FeatureEvents {
+  'feature.registered': { identifier: string; metadata: FeatureMetadata };
+  'feature.initialized': { identifier: string };
+  'feature.error': { identifier: string; error: Error };
+  'feature.navigate': { identifier: string };
+  'feature.userChange': { identifier: string; userId: number };
+  [key: string]: any;
 } 

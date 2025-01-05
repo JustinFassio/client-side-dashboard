@@ -1,4 +1,11 @@
 import { addAction, doAction } from '@wordpress/hooks';
+import { EventEmitter } from 'events';
+
+export interface DashboardEvents extends EventEmitter {
+    emit(event: string, payload?: any): boolean;
+    on(event: string, handler: (payload: any) => void): this;
+    off(event: string, handler: (payload: any) => void): this;
+}
 
 // Event types
 export enum DashboardEventType {

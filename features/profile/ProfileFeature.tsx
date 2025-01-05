@@ -1,13 +1,14 @@
 import React from 'react';
 import { Feature, FeatureContext, FeatureMetadata, FeatureRenderProps } from '../../dashboard/contracts/Feature';
-import { OverviewLayout } from './components/layout';
+import { ProfileLayout } from './components/layout';
+import { ProfileProvider } from './context/ProfileContext';
 
-export class OverviewFeature implements Feature {
-    public readonly identifier = 'overview';
+export class ProfileFeature implements Feature {
+    public readonly identifier = 'profile';
     public readonly metadata: FeatureMetadata = {
-        name: 'Overview',
-        description: 'Dashboard overview and summary',
-        order: 0
+        name: 'Profile',
+        description: 'Manage your athlete profile',
+        order: 1
     };
 
     private context: FeatureContext | null = null;
@@ -15,13 +16,13 @@ export class OverviewFeature implements Feature {
     public async register(context: FeatureContext): Promise<void> {
         this.context = context;
         if (context.debug) {
-            console.log('Overview feature registered');
+            console.log('Profile feature registered');
         }
     }
 
     public async init(): Promise<void> {
         if (this.context?.debug) {
-            console.log('Overview feature initialized');
+            console.log('Profile feature initialized');
         }
     }
 
@@ -35,15 +36,17 @@ export class OverviewFeature implements Feature {
 
     public render({ userId }: FeatureRenderProps): JSX.Element | null {
         if (!this.context) {
-            console.error('Overview feature context not initialized');
+            console.error('Profile feature context not initialized');
             return null;
         }
 
         return (
-            <OverviewLayout 
-                userId={userId}
-                context={this.context}
-            />
+            <ProfileProvider userId={userId}>
+                <ProfileLayout 
+                    userId={userId}
+                    context={this.context}
+                />
+            </ProfileProvider>
         );
     }
 } 

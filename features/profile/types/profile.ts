@@ -20,21 +20,38 @@ export interface PhysicalMetrics {
  */
 export interface ProfileData {
     id: number;
-    username: string;
-    email: string;
     displayName: string;
-    firstName: string;
-    lastName: string;
+    email: string;
     age: number;
     gender: string;
     height: number;
     weight: number;
-    fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
-    activityLevel: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extremely_active';
+    fitnessLevel: string;
+    activityLevel: string;
     medicalConditions: string[];
     exerciseLimitations: string[];
     medications: string;
-    physicalMetrics: PhysicalMetric[];
+    injuries: Injury[];
+}
+
+export interface Injury {
+    id: string;
+    name: string;
+    details: string;
+    type: string;
+    description: string;
+    date: string;
+    severity?: 'low' | 'medium' | 'high';
+    isCustom: boolean;
+    status: 'active' | 'recovered';
+}
+
+export interface FormValidationResult {
+    isValid: boolean;
+    generalErrors?: string[];
+    fieldErrors?: {
+        [key: string]: string[];
+    };
 }
 
 /**

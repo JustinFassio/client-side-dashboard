@@ -1,22 +1,62 @@
-import React, { createContext, useContext } from 'react';
-import { FeatureContext } from '../../../dashboard/contracts/Feature';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ProfileData } from '../types/profile';
 
 interface ProfileContextValue {
-    context: FeatureContext;
+    profile: ProfileData;
+    updateProfile: (data: Partial<ProfileData>) => void;
+    isLoading: boolean;
+    error: string | null;
 }
 
-export const ProfileContext = createContext<ProfileContextValue | null>(null);
+const ProfileContext = createContext<ProfileContextValue | null>(null);
 
 interface ProfileProviderProps {
-    context: FeatureContext;
+    userId: number;
     children: React.ReactNode;
 }
 
-export const ProfileProvider: React.FC<ProfileProviderProps> = ({ context, children }) => {
-    const value = { context };
+export const ProfileProvider: React.FC<ProfileProviderProps> = ({ userId, children }) => {
+    const [profile, setProfile] = useState<ProfileData>({} as ProfileData);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadProfile = async () => {
+            try {
+                // TODO: Replace with actual API call
+                const mockProfile: ProfileData = {
+                    id: userId,
+                    displayName: 'Test User',
+                    email: 'test@example.com',
+                    age: 25,
+                    gender: 'male',
+                    height: 180,
+                    weight: 75,
+                    fitnessLevel: 'intermediate',
+                    activityLevel: 'moderately_active',
+                    medicalConditions: [],
+                    exerciseLimitations: [],
+                    medications: '',
+                    injuries: []
+                };
+
+                setProfile(mockProfile);
+                setIsLoading(false);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : 'Failed to load profile');
+                setIsLoading(false);
+            }
+        };
+
+        loadProfile();
+    }, [userId]);
+
+    const updateProfile = (data: Partial<ProfileData>) => {
+        setProfile(prev => ({ ...prev, ...data }));
+    };
 
     return (
-        <ProfileContext.Provider value={value}>
+        <ProfileContext.Provider value={{ profile, updateProfile, isLoading, error }}>
             {children}
         </ProfileContext.Provider>
     );

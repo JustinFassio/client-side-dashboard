@@ -1,6 +1,7 @@
 <?php
 /**
  * Template Name: Dashboard
+ * Template Post Type: page
  * 
  * Main dashboard template that provides the layout structure and coordinates
  * feature integration through React components.
