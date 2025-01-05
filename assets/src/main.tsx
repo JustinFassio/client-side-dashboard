@@ -31,18 +31,27 @@ async function initializeDashboard() {
     };
 
     try {
+        console.log('[Dashboard] Initializing with context:', context);
+        console.log('[Dashboard] Current feature:', window.athleteDashboardData.feature);
+
         const registry = new FeatureRegistry(context);
 
         // Dynamically import features
-        const { ProfileFeature } = await import('../../features/profile/ProfileFeature');
         const { OverviewFeature } = await import('../../features/overview/OverviewFeature');
+        const { ProfileFeature } = await import('../../features/profile/ProfileFeature');
 
-        // Register features
-        await registry.register(new ProfileFeature());
+        // Register features in correct order
         await registry.register(new OverviewFeature());
+        await registry.register(new ProfileFeature());
+
+        console.log('[Dashboard] Registered features:', registry.getAllFeatures().map(f => ({
+            id: f.identifier,
+            enabled: f.isEnabled(),
+            metadata: f.metadata
+        })));
 
         if (context.debug) {
-            console.log('Registered features:', registry.getAllFeatures().map(f => f.identifier));
+            console.log('[Dashboard] Feature registration complete');
         }
 
         // Initialize dashboard
@@ -60,13 +69,14 @@ async function initializeDashboard() {
         wp.element.render(root, container);
 
     } catch (error) {
-        console.error('Failed to initialize dashboard:', error);
+        console.error('[Dashboard] Failed to initialize:', error);
         const container = document.getElementById('athlete-dashboard');
         if (container) {
             container.innerHTML = `
                 <div class="dashboard-error">
                     <h3>Dashboard Error</h3>
                     <p>Failed to initialize the dashboard. Please try refreshing the page.</p>
+                    <pre>${error instanceof Error ? error.message : 'Unknown error'}</pre>
                 </div>
             `;
         }

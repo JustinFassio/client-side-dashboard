@@ -36,6 +36,7 @@ export const MedicalSection: React.FC<MedicalSectionProps> = ({
                     { value: 'hypertension', label: 'Hypertension' },
                     { value: 'other', label: 'Other' }
                 ]}
+                isArray={true}
                 required
             />
             
@@ -57,6 +58,7 @@ export const MedicalSection: React.FC<MedicalSectionProps> = ({
                     { value: 'balance_issues', label: 'Balance Issues' },
                     { value: 'other', label: 'Other' }
                 ]}
+                isArray={true}
             />
             
             <FormField

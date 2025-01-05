@@ -1,24 +1,18 @@
 :root {
-    /* Colors */
-    --color-primary: #4CAF50;
-    --color-primary-dark: #388E3C;
-    --color-primary-light: #81C784;
-    --color-primary-alpha: rgba(76, 175, 80, 0.1);
-
-    --color-surface: #FFFFFF;
-    --color-background: #F5F5F5;
-    --color-background-dark: #1E1E1E;
-    --color-background-darker: #121212;
-
-    --color-border: #E0E0E0;
-    --color-error: #F44336;
-    --color-warning: #FFC107;
-    --color-success: #4CAF50;
-
-    --color-text-primary: #212121;
-    --color-text-secondary: #757575;
-    --color-text-disabled: #9E9E9E;
-    --color-text-inverse: #FFFFFF;
+    /* Dashboard Core Theme Colors */
+    --primary-color: #ddff0e;
+    --primary-hover: #c7e60d;
+    --background-dark: #1a1a1a;
+    --background-darker: #141414;
+    --text-light: #ffffff;
+    --text-dim: #a0a0a0;
+    --border-color: #333333;
+    --input-background: #242424;
+    --error-color: #ff4444;
+    --success-color: #00cc88;
+    --error-background: rgba(255, 68, 68, 0.1);
+    --error-border: rgba(255, 68, 68, 0.3);
+    --error-text: #ff4444;
 
     /* Typography */
     --font-size-xs: 0.75rem;   /* 12px */

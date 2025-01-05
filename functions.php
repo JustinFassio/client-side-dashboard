@@ -19,6 +19,9 @@ require_once get_stylesheet_directory() . '/includes/rest-api.php';
 require_once get_stylesheet_directory() . '/includes/class-rest-api.php';
 require_once get_stylesheet_directory() . '/includes/rest-api/class-overview-controller.php';
 
+// Load feature endpoints
+require_once get_stylesheet_directory() . '/dashboard/api/profile-endpoint.php';
+
 use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
 use AthleteDashboard\Core\DashboardBridge;
@@ -113,6 +116,14 @@ function enqueue_athlete_dashboard_scripts() {
         get_asset_version(get_stylesheet_directory() . "/assets/build/{$app_css}")
     );
 
+    // Enqueue dashboard core styles
+    wp_enqueue_style(
+        'athlete-dashboard-core',
+        get_stylesheet_directory_uri() . '/dashboard/styles/main.css',
+        array(),
+        get_asset_version(get_stylesheet_directory() . '/dashboard/styles/main.css')
+    );
+
     Debug::log('Dashboard scripts enqueued');
 }
 add_action('wp_enqueue_scripts', 'enqueue_athlete_dashboard_scripts');
@@ -171,3 +182,9 @@ add_action('template_redirect', function() {
 });
 
 add_action('init', ['AthleteDashboard\\Rest_Api', 'init']);
+
+// Initialize REST API
+add_action('rest_api_init', function() {
+    (new AthleteDashboard\Api\Profile_Endpoint())->register_routes();
+    Debug::log('Profile endpoint registered', 'api');
+});

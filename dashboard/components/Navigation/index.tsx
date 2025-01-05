@@ -10,6 +10,14 @@ interface NavigationProps {
 
 export const Navigation: React.FC<NavigationProps> = ({ features, currentFeature }) => {
     const handleNavigation = (feature: Feature) => {
+        if (window.athleteDashboardData.debug) {
+            console.log('[Navigation] Navigating to feature:', {
+                from: currentFeature,
+                to: feature.identifier,
+                metadata: feature.metadata
+            });
+        }
+
         // Emit navigation event
         Events.emit('navigation:changed', { identifier: feature.identifier });
         
@@ -26,21 +34,37 @@ export const Navigation: React.FC<NavigationProps> = ({ features, currentFeature
             </div>
             <ul className="nav-list">
                 {features
-                    .sort((a, b) => (a.metadata.order || 0) - (b.metadata.order || 0))
-                    .map(feature => (
-                        <li key={feature.identifier} className="nav-item">
-                            <button
-                                className={`nav-button ${feature.identifier === currentFeature ? 'active' : ''}`}
-                                onClick={() => handleNavigation(feature)}
-                                aria-current={feature.identifier === currentFeature ? 'page' : undefined}
-                            >
-                                <span className="nav-label">{feature.metadata.name}</span>
-                                {feature.metadata.description && (
-                                    <span className="nav-description">{feature.metadata.description}</span>
-                                )}
-                            </button>
-                        </li>
-                    ))}
+                    .sort((a, b) => {
+                        // Ensure Overview is always first
+                        if (a.identifier === 'overview') return -1;
+                        if (b.identifier === 'overview') return 1;
+                        // Then sort by order
+                        return (a.metadata.order || 0) - (b.metadata.order || 0);
+                    })
+                    .map(feature => {
+                        const isActive = feature.identifier === currentFeature;
+                        if (window.athleteDashboardData.debug) {
+                            console.log('[Navigation] Rendering feature:', {
+                                id: feature.identifier,
+                                active: isActive,
+                                metadata: feature.metadata
+                            });
+                        }
+                        return (
+                            <li key={feature.identifier} className="nav-item">
+                                <button
+                                    className={`nav-button ${isActive ? 'active' : ''}`}
+                                    onClick={() => handleNavigation(feature)}
+                                    aria-current={isActive ? 'page' : undefined}
+                                >
+                                    <span className="nav-label">{feature.metadata.name}</span>
+                                    {feature.metadata.description && (
+                                        <span className="nav-description">{feature.metadata.description}</span>
+                                    )}
+                                </button>
+                            </li>
+                        );
+                    })}
             </ul>
         </nav>
     );

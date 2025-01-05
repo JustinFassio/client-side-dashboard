@@ -14,6 +14,7 @@ interface FormFieldProps {
     disabled?: boolean;
     min?: number;
     max?: number;
+    isArray?: boolean;
 }
 
 export const FormField: React.FC<FormFieldProps> = ({
@@ -27,7 +28,8 @@ export const FormField: React.FC<FormFieldProps> = ({
     required,
     disabled,
     min,
-    max
+    max,
+    isArray = false
 }) => {
     const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { value: newValue, type: inputType } = event.target;
@@ -38,12 +40,22 @@ export const FormField: React.FC<FormFieldProps> = ({
             onChange(name, numValue);
             return;
         }
+
+        // Handle array fields (like medical conditions)
+        if (isArray && type === 'select') {
+            const arrayValue = newValue ? [newValue] : [];
+            onChange(name, arrayValue);
+            return;
+        }
         
         onChange(name, newValue);
     };
 
     const hasError = validation?.errors && validation.errors.length > 0;
     const fieldClassName = `form-field ${hasError ? 'has-error' : ''}`;
+
+    // For array fields, get the first value if it exists
+    const displayValue = isArray && Array.isArray(value) ? (value[0] || '') : (value || '');
 
     return (
         <div className={fieldClassName}>
@@ -53,7 +65,7 @@ export const FormField: React.FC<FormFieldProps> = ({
                 <select
                     id={name}
                     name={name}
-                    value={value || ''}
+                    value={displayValue}
                     onChange={handleChange}
                     required={required}
                     disabled={disabled}

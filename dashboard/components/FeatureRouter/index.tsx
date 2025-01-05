@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Feature, FeatureContext } from '../../contracts/Feature';
 import { ErrorBoundary } from '../ErrorBoundary';
 
@@ -13,8 +13,21 @@ export const FeatureRouter: React.FC<FeatureRouterProps> = ({
     context,
     fallbackFeature
 }) => {
+    const [activeFeature, setActiveFeature] = useState<Feature | undefined>(feature || fallbackFeature);
+
+    useEffect(() => {
+        if (context.debug) {
+            console.log('[FeatureRouter] Feature changed:', {
+                feature: feature?.identifier,
+                fallback: fallbackFeature?.identifier
+            });
+        }
+        setActiveFeature(feature || fallbackFeature);
+    }, [feature, fallbackFeature, context.debug]);
+
     // If no feature and no fallback, show error
-    if (!feature && !fallbackFeature) {
+    if (!activeFeature) {
+        console.error('[FeatureRouter] No feature available');
         return (
             <div className="feature-error">
                 <h3>Feature Not Available</h3>
@@ -23,17 +36,19 @@ export const FeatureRouter: React.FC<FeatureRouterProps> = ({
         );
     }
 
-    // Use fallback if main feature is not available
-    const activeFeature = feature || fallbackFeature;
-
     // Verify feature is enabled
-    if (!activeFeature?.isEnabled()) {
+    if (!activeFeature.isEnabled()) {
+        console.error('[FeatureRouter] Feature is disabled:', activeFeature.identifier);
         return (
             <div className="feature-error">
                 <h3>Feature Disabled</h3>
                 <p>This feature is currently disabled.</p>
             </div>
         );
+    }
+
+    if (context.debug) {
+        console.log('[FeatureRouter] Rendering feature:', activeFeature.identifier);
     }
 
     return (
@@ -45,16 +60,9 @@ export const FeatureRouter: React.FC<FeatureRouterProps> = ({
                 </div>
             }
         >
-            <Suspense 
-                fallback={
-                    <div className="feature-loading">
-                        <div className="loading-spinner" />
-                        <p>Loading feature...</p>
-                    </div>
-                }
-            >
+            <div className="feature-container">
                 {activeFeature.render({ userId: context.userId })}
-            </Suspense>
+            </div>
         </ErrorBoundary>
     );
 }; 

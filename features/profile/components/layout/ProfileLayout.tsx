@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FeatureContext } from '../../../../dashboard/contracts/Feature';
 import { useProfile } from '../../context/ProfileContext';
 import { BasicSection } from '../form/sections/BasicSection';
 import { MedicalSection } from '../form/sections/MedicalSection';
 import { PhysicalSection } from '../form/sections/PhysicalSection';
 import { InjuryTracker } from '../InjuryTracker';
+import { validateProfileField } from '../../utils/validation';
 import './ProfileLayout.css';
 
 interface ProfileLayoutProps {
@@ -17,6 +18,9 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
     context
 }) => {
     const { profile, updateProfile, isLoading, error } = useProfile();
+    const [localProfile, setLocalProfile] = useState(profile);
+    const [saveError, setSaveError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     if (isLoading) {
         return (
@@ -40,7 +44,44 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
     }
 
     const handleFieldChange = (name: string, value: any) => {
-        updateProfile({ ...profile, [name]: value });
+        setLocalProfile(prev => ({
+            ...prev,
+            [name]: value
+        }));
+        setSaveError(null);
+    };
+
+    const handleSave = async () => {
+        try {
+            setSaveError(null);
+            setIsSaving(true);
+
+            // Validate all fields
+            const validationErrors: string[] = [];
+            Object.entries(localProfile).forEach(([field, value]) => {
+                const error = validateProfileField(field as keyof typeof localProfile, value);
+                if (error) {
+                    validationErrors.push(`${field}: ${error}`);
+                }
+            });
+
+            if (validationErrors.length > 0) {
+                throw new Error(validationErrors.join(', '));
+            }
+
+            await updateProfile(localProfile);
+
+            if (context.debug) {
+                console.log('[ProfileLayout] Profile saved successfully:', localProfile);
+            }
+        } catch (err) {
+            setSaveError(err instanceof Error ? err.message : 'Failed to save profile');
+            if (context.debug) {
+                console.error('[ProfileLayout] Error saving profile:', err);
+            }
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -52,31 +93,47 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
 
             <div className="profile-content">
                 <BasicSection
-                    data={profile}
+                    data={localProfile}
                     onChange={handleFieldChange}
                 />
 
                 <MedicalSection
-                    data={profile}
+                    data={localProfile}
                     onChange={handleFieldChange}
                 />
 
                 <PhysicalSection
-                    data={profile}
+                    data={localProfile}
                     onChange={handleFieldChange}
                 />
 
                 <InjuryTracker
-                    injuries={profile.injuries || []}
+                    injuries={localProfile.injuries || []}
                     onChange={(injuries) => handleFieldChange('injuries', injuries)}
                 />
+            </div>
+
+            {saveError && (
+                <div className="save-error">
+                    <p>{saveError}</p>
+                </div>
+            )}
+
+            <div className="profile-actions">
+                <button 
+                    className="save-button"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
             </div>
 
             {context.debug && (
                 <div className="debug-info">
                     <h3>Debug Information</h3>
                     <pre>
-                        {JSON.stringify({ userId, profile }, null, 2)}
+                        {JSON.stringify({ userId, profile: localProfile }, null, 2)}
                     </pre>
                 </div>
             )}

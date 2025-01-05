@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useUser } from '../../hooks/useUser';
 import { FeatureRegistry } from '../../core/FeatureRegistry';
 import { FeatureContext, Feature } from '../../contracts/Feature';
@@ -17,34 +17,49 @@ interface DashboardShellProps {
 
 export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, context }) => {
     const { user, isLoading: isUserLoading, error: userError } = useUser(context);
+    const [activeFeature, setActiveFeature] = useState<string>(DEFAULT_FEATURE);
 
     useEffect(() => {
         if (!validateDashboardData(window.athleteDashboardData)) {
-            console.error('Invalid dashboard data structure');
+            console.error('[DashboardShell] Invalid dashboard data structure');
             return;
         }
 
+        // Get feature from URL
+        const params = new URLSearchParams(window.location.search);
+        const featureFromUrl = params.get('dashboard_feature');
+        
+        if (featureFromUrl && registry.getFeature(featureFromUrl)) {
+            setActiveFeature(featureFromUrl);
+        }
+
         if (context.debug) {
-            console.log('DashboardShell mounted with:', {
-                featureData: window.athleteDashboardData.feature,
+            console.log('[DashboardShell] Mounted with:', {
+                featureFromUrl,
+                activeFeature,
                 registeredFeatures: registry.getAllFeatures().map(f => f.identifier),
                 user: user?.id
             });
         }
 
-        const handleFeatureError = ({ identifier, error }: { identifier: string; error: Error }) => {
-            console.error(`Feature error (${identifier}):`, error);
+        // Listen for navigation changes
+        const handleNavigation = ({ identifier }: { identifier: string }) => {
+            if (context.debug) {
+                console.log('[DashboardShell] Navigation change:', identifier);
+            }
+            setActiveFeature(identifier);
         };
 
-        Events.on('feature.error', handleFeatureError);
+        Events.on('navigation:changed', handleNavigation);
 
         return () => {
-            Events.off('feature.error', handleFeatureError);
+            Events.off('navigation:changed', handleNavigation);
         };
     }, [registry, user, context.debug]);
 
     // Handle user loading state
     if (isUserLoading) {
+        console.log('[DashboardShell] Loading user data...');
         return (
             <div className="dashboard-shell">
                 <div className="dashboard-loading">
@@ -57,6 +72,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, contex
 
     // Handle user error state
     if (userError || !user) {
+        console.error('[DashboardShell] User error:', userError);
         return (
             <div className="dashboard-shell">
                 <div className="dashboard-error">
@@ -70,19 +86,22 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, contex
         );
     }
 
-    const featureName = window.athleteDashboardData.feature?.name || DEFAULT_FEATURE;
-    const currentFeature = registry.getFeature(featureName);
-    const fallbackFeature = featureName !== DEFAULT_FEATURE ? registry.getFeature(DEFAULT_FEATURE) : undefined;
+    const currentFeature = registry.getFeature(activeFeature);
+    const fallbackFeature = activeFeature !== DEFAULT_FEATURE ? registry.getFeature(DEFAULT_FEATURE) : undefined;
     const enabledFeatures = registry.getEnabledFeatures();
 
     if (context.debug) {
-        console.log('Current feature:', currentFeature?.identifier);
-        console.log('Fallback feature:', fallbackFeature?.identifier);
-        console.log('Enabled features:', enabledFeatures.map(f => f.identifier));
+        console.log('[DashboardShell] Rendering with:', {
+            activeFeature,
+            currentFeature: currentFeature?.identifier,
+            fallbackFeature: fallbackFeature?.identifier,
+            enabledFeatures: enabledFeatures.map(f => f.identifier)
+        });
     }
 
     // Handle no enabled features
     if (enabledFeatures.length === 0) {
+        console.error('[DashboardShell] No enabled features available');
         return (
             <div className="dashboard-shell">
                 <div className="dashboard-error">
@@ -97,7 +116,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, contex
         <div className="dashboard-shell">
             <Navigation 
                 features={enabledFeatures} 
-                currentFeature={featureName}
+                currentFeature={activeFeature}
             />
             <main className="dashboard-content">
                 <FeatureRouter
