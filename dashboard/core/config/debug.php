@@ -11,10 +11,14 @@ class Debug {
      * @return array Debug configuration
      */
     public static function get_settings(): array {
+        $debug_enabled = apply_filters('athlete_dashboard_debug_mode', 
+            defined('WP_DEBUG') && WP_DEBUG
+        );
+        
         return [
-            'enabled' => defined('WP_DEBUG') && WP_DEBUG,
+            'enabled' => $debug_enabled && current_user_can('administrator'),
             'log_enabled' => defined('WP_DEBUG_LOG') && WP_DEBUG_LOG,
-            'display_enabled' => defined('WP_DEBUG_DISPLAY') && WP_DEBUG_DISPLAY
+            'display_enabled' => $debug_enabled && current_user_can('administrator')
         ];
     }
 

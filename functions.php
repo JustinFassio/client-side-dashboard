@@ -39,6 +39,15 @@ function athlete_dashboard_debug_log($message) {
     Debug::log($message);
 }
 
+// Add debug mode filter
+add_filter('athlete_dashboard_debug_mode', function($debug) {
+    // Example: Add a condition to enable debug only for specific users or environments
+    if (current_user_can('administrator')) {
+        return $debug; // Keep as is for admins
+    }
+    return false; // Disable for non-admins
+});
+
 // Debug REST API registration
 add_action('rest_api_init', function() {
     Debug::log('REST API initialized', 'core');
