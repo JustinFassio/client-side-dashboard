@@ -150,17 +150,19 @@
 .save-button {
     padding: 0.75rem 2rem;
     background-color: var(--primary-color);
-    color: var(--text-light);
+    color: var(--background-darker);
     border: none;
     border-radius: 4px;
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
 .save-button:hover:not(:disabled) {
     background-color: var(--primary-hover);
+    color: var(--background-darker);
+    transform: translateY(-1px);
 }
 
 .save-button:disabled {

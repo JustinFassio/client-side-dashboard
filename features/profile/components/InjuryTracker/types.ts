@@ -1,33 +1,39 @@
-export interface Injury {
-    id: string;
-    name: string;
-    details: string;
-    severity?: 'low' | 'medium' | 'high';
-    dateAdded?: string;
-    isCustom: boolean;
-    status: 'active' | 'recovered';
+export interface TrackerField<T> {
+    label: string;
+    key: keyof T;
+    type: 'text' | 'select' | 'textarea';
+    options?: Array<{ value: string; label: string }>;
+    placeholder?: string;
 }
 
+export interface TrackerProps<T> {
+    items: T[];
+    onAdd: (item: Partial<T>) => void;
+    onUpdate: (id: string, updates: Partial<T>) => void;
+    onRemove: (id: string) => void;
+    title: string;
+    description: string;
+    fields: TrackerField<T>[];
+    predefinedItems?: Array<{ value: string; label: string }>;
+    className?: string;
+}
+
+// Import the Injury type from profile types to ensure consistency
+import { Injury as ProfileInjury } from '../../types/profile';
+export type { ProfileInjury as Injury };
+
+// Specific props for the InjuryTracker implementation
 export interface InjuryTrackerProps {
-    injuries: Injury[];
-    onChange: (injuries: Injury[]) => void;
+    injuries: ProfileInjury[];
+    onChange: (injuries: ProfileInjury[]) => void;
     className?: string;
 }
 
 export const PREDEFINED_INJURIES = [
-    { name: 'Lower Back Pain', category: 'Back' },
-    { name: 'Upper Back Strain', category: 'Back' },
-    { name: 'Knee Pain', category: 'Legs' },
-    { name: 'Runner\'s Knee', category: 'Legs' },
-    { name: 'Shin Splints', category: 'Legs' },
-    { name: 'Ankle Sprain', category: 'Legs' },
-    { name: 'Shoulder Impingement', category: 'Upper Body' },
-    { name: 'Tennis Elbow', category: 'Upper Body' },
-    { name: 'Wrist Strain', category: 'Upper Body' },
-    { name: 'Hamstring Strain', category: 'Legs' },
-    { name: 'Hip Flexor Strain', category: 'Legs' },
-    { name: 'Plantar Fasciitis', category: 'Feet' },
-    { name: 'Achilles Tendinitis', category: 'Legs' },
-    { name: 'Rotator Cuff Injury', category: 'Upper Body' },
-    { name: 'Neck Strain', category: 'Back' }
+    { value: 'knee_pain', label: 'Knee Pain' },
+    { value: 'back_pain', label: 'Back Pain' },
+    { value: 'shoulder_pain', label: 'Shoulder Pain' },
+    { value: 'ankle_sprain', label: 'Ankle Sprain' },
+    { value: 'muscle_strain', label: 'Muscle Strain' },
+    { value: 'tendonitis', label: 'Tendonitis' }
 ]; 
