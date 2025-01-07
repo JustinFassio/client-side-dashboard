@@ -1,11 +1,18 @@
 <?php
 namespace AthleteDashboard\RestApi;
 
+use AthleteDashboard\Services\Cache_Service;
+
 if (!defined('ABSPATH')) {
     exit;
 }
 
 class Profile_Controller extends Rest_Controller_Base {
+    /**
+     * Cache expiration time for profile data (1 hour)
+     */
+    const CACHE_EXPIRATION = 3600;
+
     /**
      * Constructor.
      */
@@ -101,17 +108,19 @@ class Profile_Controller extends Rest_Controller_Base {
                 );
             }
 
-            $user = get_user_by('id', $user_id);
-            if (!$user) {
-                return new \WP_Error(
-                    'profile_not_found',
-                    __('Profile not found.', 'athlete-dashboard'),
-                    array('status' => 404)
-                );
-            }
-
-            // Get profile data with proper type casting
-            $profile_data = $this->get_profile_data($user);
+            // Try to get profile from cache
+            $cache_key = Cache_Service::generate_profile_key($user_id, 'full');
+            $profile_data = Cache_Service::remember(
+                $cache_key,
+                function() use ($user_id) {
+                    $user = get_user_by('id', $user_id);
+                    if (!$user) {
+                        throw new \Exception(__('Profile not found.', 'athlete-dashboard'));
+                    }
+                    return $this->get_profile_data($user);
+                },
+                self::CACHE_EXPIRATION
+            );
 
             return $this->prepare_response($profile_data);
         } catch (\Exception $e) {
@@ -170,6 +179,9 @@ class Profile_Controller extends Rest_Controller_Base {
                 return $this->handle_error($updated);
             }
 
+            // Invalidate cache
+            Cache_Service::invalidate_user_cache($user_id);
+
             // Return updated profile
             return $this->get_profile($request);
         } catch (\Exception $e) {
@@ -210,6 +222,8 @@ class Profile_Controller extends Rest_Controller_Base {
                     );
                 } else {
                     $results['success'][] = $profile['id'];
+                    // Invalidate cache for this profile
+                    Cache_Service::invalidate_user_cache($profile['id']);
                 }
             }
 
@@ -232,17 +246,25 @@ class Profile_Controller extends Rest_Controller_Base {
      * @return array The profile data.
      */
     private function get_profile_data($user) {
-        return array(
-            'id' => $user->ID,
-            'username' => $user->user_login,
-            'email' => $user->user_email,
-            'firstName' => get_user_meta($user->ID, 'first_name', true),
-            'lastName' => get_user_meta($user->ID, 'last_name', true),
-            'age' => (int)get_user_meta($user->ID, 'age', true),
-            'height' => (float)get_user_meta($user->ID, 'height', true),
-            'weight' => (float)get_user_meta($user->ID, 'weight', true),
-            'medicalNotes' => get_user_meta($user->ID, 'medical_notes', true),
-            'injuries' => $this->get_injuries($user->ID)
+        // Try to get from cache first
+        $cache_key = Cache_Service::generate_user_key($user->ID, 'meta');
+        return Cache_Service::remember(
+            $cache_key,
+            function() use ($user) {
+                return array(
+                    'id' => $user->ID,
+                    'username' => $user->user_login,
+                    'email' => $user->user_email,
+                    'firstName' => get_user_meta($user->ID, 'first_name', true),
+                    'lastName' => get_user_meta($user->ID, 'last_name', true),
+                    'age' => (int)get_user_meta($user->ID, 'age', true),
+                    'height' => (float)get_user_meta($user->ID, 'height', true),
+                    'weight' => (float)get_user_meta($user->ID, 'weight', true),
+                    'medicalNotes' => get_user_meta($user->ID, 'medical_notes', true),
+                    'injuries' => $this->get_injuries($user->ID)
+                );
+            },
+            self::CACHE_EXPIRATION
         );
     }
 
@@ -253,20 +275,27 @@ class Profile_Controller extends Rest_Controller_Base {
      * @return array The injuries array.
      */
     private function get_injuries($user_id) {
-        $injuries = get_user_meta($user_id, 'injuries', true);
-        if (!is_array($injuries)) {
-            return array();
-        }
+        // Try to get from cache first
+        $cache_key = Cache_Service::generate_user_key($user_id, 'injuries');
+        return Cache_Service::remember(
+            $cache_key,
+            function() use ($user_id) {
+                $injuries = get_user_meta($user_id, 'injuries', true);
+                if (!is_array($injuries)) {
+                    return array();
+                }
 
-        // Ensure proper structure
-        return array_map(function($injury) {
-            return array(
-                'name' => sanitize_text_field($injury['name'] ?? ''),
-                'description' => sanitize_textarea_field($injury['description'] ?? ''),
-                'date' => sanitize_text_field($injury['date'] ?? ''),
-                'status' => sanitize_text_field($injury['status'] ?? 'active')
-            );
-        }, $injuries);
+                return array_map(function($injury) {
+                    return array(
+                        'name' => sanitize_text_field($injury['name'] ?? ''),
+                        'description' => sanitize_textarea_field($injury['description'] ?? ''),
+                        'date' => sanitize_text_field($injury['date'] ?? ''),
+                        'status' => sanitize_text_field($injury['status'] ?? 'active')
+                    );
+                }, $injuries);
+            },
+            self::CACHE_EXPIRATION
+        );
     }
 
     /**
@@ -292,6 +321,10 @@ class Profile_Controller extends Rest_Controller_Base {
             }
 
             $wpdb->query('COMMIT');
+
+            // Invalidate user cache
+            Cache_Service::invalidate_user_cache($user_id);
+
             return true;
         } catch (\Exception $e) {
             $wpdb->query('ROLLBACK');
