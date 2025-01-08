@@ -6,6 +6,23 @@ require_once get_stylesheet_directory() . '/dashboard/core/config/debug.php';
 require_once get_stylesheet_directory() . '/dashboard/core/config/environment.php';
 require_once get_stylesheet_directory() . '/dashboard/core/dashboardbridge.php';
 
+// Load cache services
+require_once get_stylesheet_directory() . '/includes/services/class-cache-service.php';
+require_once get_stylesheet_directory() . '/includes/services/class-cache-warmer.php';
+require_once get_stylesheet_directory() . '/includes/services/class-cache-monitor.php';
+
+// Load admin widgets
+require_once get_stylesheet_directory() . '/includes/admin/class-cache-stats-widget.php';
+
+// Initialize cache stats widget
+function init_cache_stats_widget() {
+    if (is_admin()) {
+        $widget = new AthleteDashboard\Admin\Cache_Stats_Widget();
+        $widget->init();
+    }
+}
+add_action('init', 'init_cache_stats_widget');
+
 // Load feature configurations
 require_once get_stylesheet_directory() . '/features/profile/config.php';
 

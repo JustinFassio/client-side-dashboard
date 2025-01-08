@@ -26,6 +26,7 @@ return [
         'on_cron' => true,
         'priority_users' => true, // Warm cache for users with recent activity
         'max_users_per_job' => 50,
+        'activity_threshold' => 24 * HOUR_IN_SECONDS, // Consider users active if they've logged in within 24 hours
     ],
 
     // Cache groups to warm
@@ -44,7 +45,7 @@ return [
 
     // Cron schedule for cache warming
     'cron' => [
-        'warm_cache' => 'hourly',
+        'warm_cache' => 'fifteen_minutes',
         'cleanup' => 'daily',
     ],
 
