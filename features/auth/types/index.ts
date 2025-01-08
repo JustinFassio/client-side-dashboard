@@ -125,13 +125,15 @@ export type AuthEvent<T extends AuthEventType> = DashboardEvent<AuthEventPayload
  * Auth error codes
  */
 export enum AuthErrorCode {
-    INVALID_CREDENTIALS = 'AUTH_INVALID_CREDENTIALS',
-    REGISTRATION_FAILED = 'AUTH_REGISTRATION_FAILED',
-    INVALID_INVITE_CODE = 'AUTH_INVALID_INVITE_CODE',
-    SESSION_EXPIRED = 'AUTH_SESSION_EXPIRED',
-    RATE_LIMIT_EXCEEDED = 'AUTH_RATE_LIMIT_EXCEEDED',
-    TOKEN_REFRESH_FAILED = 'AUTH_TOKEN_REFRESH_FAILED',
-    NETWORK_ERROR = 'AUTH_NETWORK_ERROR'
+    INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
+    REGISTRATION_FAILED = 'REGISTRATION_FAILED',
+    INVALID_INVITE_CODE = 'INVALID_INVITE_CODE',
+    SESSION_EXPIRED = 'SESSION_EXPIRED',
+    RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
+    TOKEN_REFRESH_FAILED = 'TOKEN_REFRESH_FAILED',
+    NETWORK_ERROR = 'NETWORK_ERROR',
+    INVALID_RESPONSE = 'INVALID_RESPONSE',
+    UNKNOWN_ERROR = 'UNKNOWN_ERROR'
 }
 
 /**
@@ -162,4 +164,22 @@ export interface UseAuth {
     login: (credentials: LoginRequest) => Promise<void>;
     logout: () => Promise<void>;
     register: (data: RegisterRequest) => Promise<void>;
+}
+
+export interface AuthResponse {
+    success: boolean;
+    data?: {
+        token: string;
+        user: {
+            id: number;
+            username: string;
+            email: string;
+            roles: string[];
+        };
+    };
+    error?: {
+        code: AuthErrorCode;
+        message: string;
+        details?: Record<string, any>;
+    };
 } 
