@@ -1,232 +1,211 @@
-# Authentication Feature
+# Auth Feature
 
 ## Overview
-The Authentication feature manages user authentication, session handling, and access control within the Athlete Dashboard. It provides a secure, event-driven authentication system that integrates with WordPress's authentication mechanisms while adding custom functionality for athlete-specific requirements.
+The Auth feature manages user authentication, including login, logout, and registration processes. It provides secure authentication flows, session management, and integration with WordPress's authentication system while adding athlete-specific registration fields.
 
-## Components
-
-### AuthFeature
-The main feature component that initializes authentication handling and manages the authentication lifecycle.
-
+## Configuration
 ```typescript
-import { AuthFeature } from './AuthFeature';
-const authFeature = new AuthFeature();
-authFeature.register();
-```
-
-### AuthContext
-Provides authentication state and methods throughout the application.
-
-```typescript
-import { useAuth } from './context/AuthContext';
-
-function MyComponent() {
-    const { isAuthenticated, user, login, logout } = useAuth();
-    // ... use auth state and methods
-}
-```
-
-### Services
-
-#### AuthService
-Handles authentication operations and API interactions.
-
-```typescript
-import { AuthService } from './services/AuthService';
-
-// Login user
-await AuthService.login(credentials);
-
-// Logout user
-await AuthService.logout();
-
-// Check authentication status
-const isAuthenticated = await AuthService.checkAuth();
-```
-
-## Events
-
-### Emitted Events
-- `AUTH_LOGIN_SUCCESS`: Emitted when a user successfully logs in
-- `AUTH_LOGOUT`: Emitted when a user logs out
-- `AUTH_SESSION_EXPIRED`: Emitted when the user's session expires
-- `AUTH_ERROR`: Emitted when an authentication error occurs
-
-### Handled Events
-- `FEATURE_LOADED`: Initializes authentication state
-- `NAVIGATION_CHANGED`: Updates authentication state based on route changes
-
-## WordPress Integration
-
-### REST API Endpoints
-The feature registers custom REST API endpoints for authentication:
-
-```php
-/athlete-dashboard/v1/auth/login
-/athlete-dashboard/v1/auth/logout
-/athlete-dashboard/v1/auth/status
-```
-
-### Nonce Handling
-All authenticated requests require WordPress nonces:
-
-```typescript
-const headers = {
-    'X-WP-Nonce': wp_rest.nonce
-};
-```
-
-## Security Features
-
-1. **Session Management**
-   - Secure session handling
-   - Automatic session refresh
-   - Session timeout handling
-
-2. **Access Control**
-   - Role-based access control
-   - Permission checking
-   - Protected route handling
-
-3. **Security Headers**
-   - CSRF protection
-   - XSS prevention
-   - Content Security Policy
-
-## Usage Examples
-
-### Basic Authentication Flow
-```typescript
-import { useAuth } from './context/AuthContext';
-
-function LoginComponent() {
-    const { login, error } = useAuth();
-
-    const handleLogin = async (credentials) => {
-        try {
-            await login(credentials);
-            // Handle successful login
-        } catch (err) {
-            // Handle login error
-        }
+interface AuthConfig {
+    enabled: boolean;
+    registration: {
+        enabled: boolean;
+        requireInviteCode: boolean;
+    };
+    security: {
+        maxLoginAttempts: number;
+        lockoutDuration: number;
+        passwordStrength: 'weak' | 'medium' | 'strong';
+    };
+    redirects: {
+        afterLogin: string;
+        afterLogout: string;
+        afterRegistration: string;
     };
 }
 ```
 
-### Protected Route
+## API Endpoints
+
+### Base Path
+```
+/wp-json/athlete-dashboard/v1/auth
+```
+
+### Endpoints
+
+#### POST /login
+- **Purpose**: Authenticate user and create session
+- **Authentication**: Not Required
+- **Parameters**:
+  ```typescript
+  interface LoginRequest {
+      username: string;
+      password: string;
+      rememberMe?: boolean;
+  }
+  ```
+- **Response**:
+  ```typescript
+  interface LoginResponse {
+      success: boolean;
+      data: {
+          token: string;
+          user: {
+              id: number;
+              username: string;
+              email: string;
+              roles: string[];
+          };
+      };
+  }
+  ```
+
+#### POST /register
+- **Purpose**: Create new user account
+- **Authentication**: Not Required
+- **Parameters**:
+  ```typescript
+  interface RegisterRequest {
+      username: string;
+      email: string;
+      password: string;
+      firstName: string;
+      lastName: string;
+      inviteCode?: string;
+  }
+  ```
+- **Error Codes**:
+  - `400`: Invalid registration data
+  - `401`: Invalid invite code
+  - `409`: Username/email already exists
+  - `500`: Registration failed
+
+#### POST /logout
+- **Purpose**: End user session
+- **Authentication**: Required
+- **Response**: Success message
+
+## Events/Actions
+
+### WordPress Actions
+```php
+// Fired on successful login
+do_action('athlete_dashboard_auth_login_success', $user_id);
+
+// Fired on successful registration
+do_action('athlete_dashboard_auth_registration_success', $user_id);
+
+// Fired on logout
+do_action('athlete_dashboard_auth_logout', $user_id);
+```
+
+### TypeScript Events
 ```typescript
-import { useAuth } from './context/AuthContext';
-import { Navigate } from 'react-router-dom';
-
-function ProtectedRoute({ children }) {
-    const { isAuthenticated, isLoading } = useAuth();
-
-    if (isLoading) {
-        return <LoadingSpinner />;
-    }
-
-    if (!isAuthenticated) {
-        return <Navigate to="/login" />;
-    }
-
-    return children;
+enum AuthEvent {
+    LOGIN_REQUEST = 'AUTH_LOGIN_REQUEST',
+    LOGIN_SUCCESS = 'AUTH_LOGIN_SUCCESS',
+    LOGIN_ERROR = 'AUTH_LOGIN_ERROR',
+    REGISTER_REQUEST = 'AUTH_REGISTER_REQUEST',
+    REGISTER_SUCCESS = 'AUTH_REGISTER_SUCCESS',
+    REGISTER_ERROR = 'AUTH_REGISTER_ERROR',
+    LOGOUT = 'AUTH_LOGOUT'
 }
 ```
 
-### Event Handling
-```typescript
-import { EventEmitter } from '@/dashboard/events';
+## Components
 
-// Listen for authentication events
-EventEmitter.on('AUTH_LOGIN_SUCCESS', (user) => {
-    // Handle successful login
-});
+### Main Components
+- `LoginForm`: Handles user login
+  ```typescript
+  interface LoginFormProps {
+      onSuccess?: (user: User) => void;
+      onError?: (error: Error) => void;
+      redirectUrl?: string;
+  }
+  ```
+- `RegistrationForm`: Handles user registration
+  ```typescript
+  interface RegistrationFormProps {
+      onSuccess?: (user: User) => void;
+      onError?: (error: Error) => void;
+      requireInviteCode?: boolean;
+  }
+  ```
 
-EventEmitter.on('AUTH_SESSION_EXPIRED', () => {
-    // Handle session expiration
-});
+### Hooks
+- `useAuth`: Access authentication state and methods
+  ```typescript
+  function useAuth(): {
+      user: User | null;
+      isAuthenticated: boolean;
+      login: (credentials: LoginCredentials) => Promise<void>;
+      logout: () => Promise<void>;
+      register: (data: RegistrationData) => Promise<void>;
+  }
+  ```
+
+## Dependencies
+
+### External
+- @wordpress/api-fetch
+- @wordpress/hooks
+- jwt-decode
+
+### Internal
+- ValidationUtils (from dashboard/utils)
+- SecurityService (from dashboard/services)
+- ErrorBoundary (from dashboard/components)
+
+## Testing
+
+### Unit Tests
+```bash
+# Run auth feature tests
+npm run test features/auth
+```
+
+### Integration Tests
+```bash
+# Run auth integration tests
+npm run test:integration features/auth
 ```
 
 ## Error Handling
 
-### Common Error Codes
-- `invalid_credentials`: Invalid username or password
-- `session_expired`: User session has expired
-- `insufficient_permissions`: User lacks required permissions
-- `auth_required`: Authentication required for this action
-
-### Error Response Format
-```json
-{
-    "code": "error_code",
-    "message": "Human-readable error message",
-    "data": {
-        // Additional error details
-    }
+### Error Types
+```typescript
+enum AuthErrorCodes {
+    INVALID_CREDENTIALS = 'AUTH_INVALID_CREDENTIALS',
+    REGISTRATION_FAILED = 'AUTH_REGISTRATION_FAILED',
+    INVALID_INVITE_CODE = 'AUTH_INVALID_INVITE_CODE',
+    SESSION_EXPIRED = 'AUTH_SESSION_EXPIRED',
+    RATE_LIMIT_EXCEEDED = 'AUTH_RATE_LIMIT_EXCEEDED'
 }
 ```
 
-## Configuration
+### Error Recovery
+- Automatic token refresh for expired sessions
+- Rate limiting recovery with exponential backoff
+- Form data persistence on failed submissions
+- Clear error messages with recovery instructions
 
-### Default Settings
-```typescript
-const DEFAULT_CONFIG = {
-    sessionTimeout: 3600,
-    refreshThreshold: 300,
-    maxRetries: 3
-};
-```
+## Performance Considerations
+- Token-based authentication for API requests
+- Caching of user permissions
+- Minimal session data storage
+- Efficient form validation
 
-### Customization
-Override default settings in your theme:
+## Security
+- CSRF protection
+- Password strength enforcement
+- Rate limiting on login attempts
+- Secure session management
+- Input sanitization and validation
+- Invite code system for registration control
 
-```php
-add_filter('athlete_dashboard_auth_config', function($config) {
-    return array_merge($config, [
-        'sessionTimeout' => 7200,
-        'refreshThreshold' => 600
-    ]);
-});
-```
-
-## Development
-
-### Testing
-Run authentication tests:
-```bash
-npm run test:auth
-```
-
-### Adding New Authentication Methods
-1. Create a new authentication provider
-2. Implement required interfaces
-3. Register the provider with AuthService
-4. Add corresponding REST API endpoints
-
-## Troubleshooting
-
-### Common Issues
-1. **Session Expiration**
-   - Check session timeout settings
-   - Verify refresh token handling
-
-2. **CORS Issues**
-   - Verify allowed origins
-   - Check credentials handling
-
-3. **WordPress Integration**
-   - Validate nonce configuration
-   - Check WordPress user roles
-
-### Debugging
-Enable debug mode for detailed logging:
-
-```php
-define('AUTH_DEBUG', true);
-```
-
-## Need Help?
-- Check error responses for detailed messages
-- Review authentication logs
-- Contact the development team
+## Changelog
+- 1.2.0: Added invite code system
+- 1.1.0: Implemented rate limiting
+- 1.0.1: Security enhancements
+- 1.0.0: Initial release
 ``` 

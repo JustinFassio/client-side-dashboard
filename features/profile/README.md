@@ -1,397 +1,176 @@
 # Profile Feature
 
 ## Overview
-The Profile feature in the Athlete Dashboard is responsible for managing user profile data. It provides a modular, type-safe implementation for collecting, validating, and storing user data, including basic information, physical metrics, medical details, and account settings.
+The Profile feature manages athlete profile data, including personal information, preferences, and training settings. It provides a complete interface for users to view and update their profile information while maintaining data consistency across the application.
 
-## Getting Started
-1. Clone the repository
-2. Navigate to the `features/profile/` directory
-3. Run `npm install` to install dependencies
-4. Run `npm test` to verify functionality
-5. Start the dashboard using `npm start` and navigate to `/dashboard?dashboard_feature=profile`
-
-## Architecture
-
-### Directory Structure
-```plaintext
-features/profile/
-├── components/
-│   ├── form/                    # Form components
-│   │   ├── fields/             # Form field components
-│   │   ├── sections/           # Form section components
-│   │   └── ProfileForm.tsx     # Main form container
-│   ├── InjuryTracker/          # Injury tracking feature
-│   └── PhysicalMetricsDisplay/ # Physical metrics display
-├── services/
-│   ├── ProfileService.ts       # Profile data and API management
-│   └── ValidationService.ts    # Form validation logic
-├── context/
-│   └── ProfileContext.tsx      # Profile state management
-├── events/
-│   └── events.ts              # Event definitions
-├── types/
-│   ├── profile.ts             # Type definitions
-│   └── validation.ts          # Validation types
-├── api/
-│   └── profile-endpoints.php  # WordPress API endpoints
-└── __tests__/                 # Feature tests
-```
-
-## Key Components
-
-### ProfileForm
-- Manages form state and section navigation
-- Implements real-time validation
-- Handles data persistence and error states
-- Uses a tabbed interface for section organization
-
-### Form Sections
-1. **BasicSection**: Core user information
-   - Display Name
-   - Email
-   - Basic Demographics
-
-2. **PhysicalSection**: Physical metrics
-   - Height
-   - Weight
-   - Fitness Level
-   - Activity Level
-
-3. **MedicalSection**: Health information
-   - Medical Conditions
-   - Exercise Limitations
-   - Medications
-
-4. **InjuryTracker**: Injury management
-   - Current Injuries
-   - Past Injuries
-   - Recovery Progress
-   - Exercise Modifications
-
-5. **AccountSection**: Account settings
-   - Username
-   - Password
-   - Preferences
-
-### Cross-Component Interaction
-The Profile feature interacts with other dashboard features through:
-
-1. **Workout Generator**
-   - Provides fitness level and limitations for workout customization
-   - Syncs injury data for exercise modifications
-
-2. **Progress Tracker**
-   - Shares physical metrics for progress visualization
-   - Updates weight and fitness level based on completed workouts
-
-3. **Nutrition Planner**
-   - Provides height, weight, and activity level for caloric calculations
-   - Syncs dietary restrictions from medical conditions
-
-### Services
-
-#### ProfileService
-- Manages API interactions
-- Implements caching for performance
-- Handles data normalization
-- Emits events for state changes
-- Includes performance monitoring
-
-#### ValidationService
-- Provides field-level validation
-- Implements cross-field validation rules
-- Supports custom validation rules
-
-### Context System
-The feature uses React Context (`ProfileContext`) for centralized state management:
-- Manages profile data state and loading states
-- Handles API interactions through ProfileService
-- Provides form validation state
-- Manages error handling and notifications
-
+## Configuration
 ```typescript
-import { useProfile } from '../../context/ProfileContext';
-
-function ProfileComponent() {
-    const { 
-        profileData,      // Current profile state
-        updateProfile,    // Method to update profile
-        isLoading,       // Loading state
-        validationErrors // Current validation errors
-    } = useProfile();
-    // Use profile data and methods
+interface ProfileConfig {
+    enabled: boolean;
+    fields: {
+        required: string[];
+        optional: string[];
+    };
+    validation: {
+        age: {
+            min: number;
+            max: number;
+        };
+    };
 }
 ```
 
-### Event System
-Events are defined in the `events/` directory with a modular structure:
+## API Endpoints
 
-```plaintext
-events/
-├── index.ts           # Main export file
-├── types.ts          # Event type definitions
-├── constants.ts      # Event constant definitions
-├── utils.ts          # Event utilities
-└── compatibility.ts  # Legacy compatibility layer
+### Base Path
+```
+/wp-json/athlete-dashboard/v1/profile
 ```
 
-Events are used for cross-component communication and state updates:
+### Endpoints
 
-```typescript
-import { PROFILE_EVENTS, emitProfileEvent, onProfileEvent } from './events';
+#### GET /profile
+- **Purpose**: Retrieve user profile data
+- **Authentication**: Required
+- **Response**:
+  ```typescript
+  interface ProfileResponse {
+      success: boolean;
+      data: {
+          profile: {
+              age: number;
+              firstName: string;
+              lastName: string;
+              email: string;
+              preferences: UserPreferences;
+          };
+      };
+  }
+  ```
 
-// Emit an event
-emitProfileEvent(PROFILE_EVENTS.UPDATE_SUCCESS, updatedProfile);
+#### POST /profile
+- **Purpose**: Update user profile data
+- **Authentication**: Required
+- **Parameters**:
+  ```typescript
+  interface ProfileUpdateRequest {
+      age?: number;
+      firstName?: string;
+      lastName?: string;
+      preferences?: Partial<UserPreferences>;
+  }
+  ```
+- **Error Codes**:
+  - `400`: Invalid profile data
+  - `401`: Unauthorized
+  - `500`: Server error
 
-// Listen for events
-onProfileEvent(PROFILE_EVENTS.UPDATE_SUCCESS, (profile) => {
-    // Handle profile update
-});
-```
+## Events/Actions
 
-Available events:
-```typescript
-PROFILE_EVENTS = {
-    // Data fetching events
-    FETCH_REQUEST: 'profile:fetch-request',
-    FETCH_SUCCESS: 'profile:fetch-success',
-    FETCH_ERROR: 'profile:fetch-error',
-
-    // Update events
-    UPDATE_REQUEST: 'profile:update-request',
-    UPDATE_SUCCESS: 'profile:update-success',
-    UPDATE_ERROR: 'profile:update-error',
-
-    // UI events
-    SECTION_CHANGE: 'profile:section-change',
-    VALIDATION_ERROR: 'profile:validation-error',
-    FORM_RESET: 'profile:form-reset',
-
-    // Injury tracking events
-    INJURY_ADDED: 'profile:injury-added',
-    INJURY_UPDATED: 'profile:injury-updated',
-    INJURY_REMOVED: 'profile:injury-removed'
-}
-```
-
-Example of adding a new custom event:
-```typescript
-// 1. Add to PROFILE_EVENTS in constants.ts
-export const PROFILE_EVENTS = {
-    // ... existing events ...
-    GOALS_UPDATED: 'profile:goals-updated'
-} as const;
-
-// 2. Update types in types.ts
-export type ProfileEvent = 
-    // ... existing types ...
-    | { type: typeof PROFILE_EVENTS.GOALS_UPDATED; goals: string[] };
-
-export type ProfileEventPayloads = {
-    // ... existing payloads ...
-    [PROFILE_EVENTS.GOALS_UPDATED]: string[];
-};
-
-// 3. Use in components
-emitProfileEvent(PROFILE_EVENTS.GOALS_UPDATED, ['weight_loss', 'muscle_gain']);
-```
-
-To extend available events:
-1. Add new event type to `events/constants.ts`
-2. Update event types in `events/types.ts`
-3. Add event handler in relevant components
-4. Update compatibility layer in `events/compatibility.ts` if needed
-
-## WordPress Integration
-### Data Storage
-- Profile data stored in WordPress user meta
-- Custom meta fields prefixed with `athlete_`
-- Automatic data sanitization and validation
-
-### Security
-- Nonce validation implemented in `profile-endpoints.php`
-- Capability checks for data access
-- Input sanitization on both client and server
-
-### API Endpoints
+### WordPress Actions
 ```php
-// Available in profile-endpoints.php
-/wp-json/athlete-dashboard/v1/profile/
-├── GET  /              # Fetch profile
-├── POST /              # Update profile
-├── GET  /basic         # Fetch basic info
-└── POST /user          # Update user data
+// Fired when profile is updated
+do_action('athlete_dashboard_profile_updated', $user_id, $profile_data);
+
+// Fired when profile is loaded
+do_action('athlete_dashboard_profile_loaded', $user_id);
 ```
 
-Example API Requests/Responses:
-
-```json
-// GET /wp-json/athlete-dashboard/v1/profile/basic
-{
-    "success": true,
-    "data": {
-        "displayName": "John Doe",
-        "email": "john@example.com",
-        "activityLevel": "moderately_active",
-        "fitnessLevel": "intermediate"
-    }
-}
-
-// POST /wp-json/athlete-dashboard/v1/profile
-Request:
-{
-    "height": 175,
-    "weight": 70,
-    "fitnessGoals": ["strength", "endurance"]
-}
-
-Response:
-{
-    "success": true,
-    "data": {
-        "profile": {
-            "height": 175,
-            "weight": 70,
-            "fitnessGoals": ["strength", "endurance"],
-            "updatedAt": "2024-01-20T15:30:00Z"
-        }
-    }
-}
-
-// Error Response
-{
-    "success": false,
-    "error": {
-        "code": "VALIDATION_ERROR",
-        "message": "Invalid height value",
-        "details": {
-            "height": ["Must be between 100 and 250 cm"]
-        }
-    }
-}
-```
-
-## Usage
-
-### Basic Implementation
+### TypeScript Events
 ```typescript
-import { ProfileForm } from './components/form/ProfileForm';
-
-function App() {
-    return (
-        <div>
-            <h1>User Profile</h1>
-            <ProfileForm />
-        </div>
-    );
+enum ProfileEvent {
+    FETCH_REQUEST = 'PROFILE_FETCH_REQUEST',
+    FETCH_SUCCESS = 'PROFILE_FETCH_SUCCESS',
+    FETCH_ERROR = 'PROFILE_FETCH_ERROR',
+    UPDATE_REQUEST = 'PROFILE_UPDATE_REQUEST',
+    UPDATE_SUCCESS = 'PROFILE_UPDATE_SUCCESS',
+    UPDATE_ERROR = 'PROFILE_UPDATE_ERROR'
 }
 ```
 
-### Using Profile Context
-```typescript
-import { useProfile } from './context/ProfileContext';
+## Components
 
-function ProfileDisplay() {
-    const { profileData, isLoading } = useProfile();
-    
-    if (isLoading) return <div>Loading...</div>;
-    
-    return <div>{profileData.displayName}</div>;
-}
-```
+### Main Components
+- `ProfileLayout`: Main profile page layout
+  ```typescript
+  interface ProfileLayoutProps {
+      context: FeatureContext;
+  }
+  ```
+- `ProfileForm`: Profile editing form
+  ```typescript
+  interface ProfileFormProps {
+      onSubmit: (data: ProfileUpdateRequest) => Promise<void>;
+      initialData?: ProfileData;
+  }
+  ```
 
-## Data Flow
+### Hooks
+- `useProfile`: Access and manage profile data
+  ```typescript
+  function useProfile(): {
+      profile: ProfileData | null;
+      loading: boolean;
+      error: Error | null;
+      updateProfile: (data: ProfileUpdateRequest) => Promise<void>;
+  }
+  ```
 
-1. **Initial Load**
-   ```
-   ProfileForm -> PROFILE_LOADING -> ProfileService
-                  PROFILE_UPDATED -> Update UI
-   ```
+## Dependencies
 
-2. **Form Updates**
-   ```
-   Field Change -> Validation -> Update State
-                   Emit Events -> Update UI
-   ```
+### External
+- @wordpress/api-fetch
+- @wordpress/hooks
+- react-hook-form
 
-3. **Save Flow**
-   ```
-   Submit -> Validate -> Update Request
-                     -> PROFILE_UPDATED/UPDATE_FAILED
-   ```
+### Internal
+- UserContext (from user feature)
+- ErrorBoundary (from dashboard/components)
+- ValidationUtils (from dashboard/utils)
 
-## Development
-
-### Adding New Fields
-1. Add field type to `ProfileData` interface
-2. Add validation rules in `ValidationService`
-3. Update relevant form section
-4. Add event handling if needed
-
-### Testing
-The feature includes comprehensive test coverage:
+## Testing
 
 ### Unit Tests
-- Services (`services/__tests__/`)
-  - API interaction tests
-  - Data transformation tests
-  - Validation logic tests
+```bash
+# Run profile feature tests
+npm run test features/profile
+```
 
 ### Integration Tests
-- Form interactions (`components/__tests__/`)
-  - Section navigation
-  - Form submission
-  - Validation feedback
-
-### Event Tests
-- Event emission and handling (`events/__tests__/`)
-  - Event payload validation
-  - Event handler registration
-
 ```bash
-# Run all profile feature tests
-npm test features/profile
-
-# Run specific test file
-npm test features/profile/events/__tests__/events.test.ts
+# Run profile integration tests
+npm run test:integration features/profile
 ```
 
 ## Error Handling
-- Form-level validation errors
-- API error responses
-- Network issues
-- Cross-field validation errors
 
-## Future Improvements
+### Error Types
+```typescript
+enum ProfileErrorCodes {
+    INVALID_DATA = 'PROFILE_INVALID_DATA',
+    UPDATE_FAILED = 'PROFILE_UPDATE_FAILED',
+    FETCH_FAILED = 'PROFILE_FETCH_FAILED'
+}
+```
 
-### High Priority
-- [ ] Enhance accessibility
-  - Add ARIA roles and labels
-  - Improve keyboard navigation
-  - Add screen reader support
-- [ ] Implement field-level loading states
-  - Add loading indicators for async operations
-  - Improve feedback during saves
+### Error Recovery
+- Automatic retry on network failures
+- Form data persistence on browser refresh
+- Optimistic updates with rollback
 
-### Medium Priority
-- [ ] Add optimistic updates
-  - Update UI before API response
-  - Handle rollback on failure
-- [ ] Implement form state persistence
-  - Save draft changes locally
-  - Restore form state after navigation
+## Performance Considerations
+- Profile data is cached using WordPress transients
+- Lazy loading of non-critical profile sections
+- Debounced form updates
+- Optimistic UI updates
 
-### Low Priority
-- [ ] Add analytics tracking
-  - Track form completion rates
-  - Monitor error frequencies
-- [ ] Enhance performance monitoring
-  - Track layout shifts
-  - Measure interaction delays
+## Security
+- All endpoints require authentication
+- Data validation on both client and server
+- XSS prevention through WordPress escaping
+- CSRF protection via WordPress nonces
 
-## Contributing
-1. Follow the Feature-First architecture
-2. Ensure type safety
-3. Add tests for new functionality
-4. Update documentation
-5. Follow the existing code style 
+## Changelog
+- 1.1.0: Added profile image support
+- 1.0.1: Fixed validation issues
+- 1.0.0: Initial release 
