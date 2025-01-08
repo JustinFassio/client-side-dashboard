@@ -6,14 +6,24 @@ use WP_REST_Server;
 use WP_REST_Request;
 use WP_REST_Response;
 use WP_Error;
+use AthleteDashboard\Services\Cache_Service;
 
-class Overview_Controller extends WP_REST_Controller {
+class Overview_Controller extends Rest_Controller_Base {
+    /**
+     * Cache expiration time for overview data (5 minutes)
+     */
+    const CACHE_EXPIRATION = 300;
+
     /**
      * Constructor.
      */
     public function __construct() {
-        $this->namespace = 'custom/v1';
+        $this->namespace = 'athlete-dashboard/v1';
         $this->rest_base = 'overview';
+        $this->rate_limit_rules = array(
+            'limit' => 100,  // 100 requests per hour
+            'window' => 3600 // 1 hour window
+        );
     }
 
     /**
@@ -82,158 +92,273 @@ class Overview_Controller extends WP_REST_Controller {
     /**
      * Get overview data for a user.
      */
-    public function get_overview_data(WP_REST_Request $request): WP_REST_Response {
-        $user_id = (int) $request->get_param('user_id');
-        
-        // Get workouts completed
-        $workouts_completed = (int) get_user_meta($user_id, 'workouts_completed', true);
-        
-        // Get active programs
-        $active_programs = $this->get_active_programs($user_id);
-        
-        // Get nutrition score
-        $nutrition_score = $this->calculate_nutrition_score($user_id);
-        
-        // Get recent activity
-        $recent_activity = $this->get_recent_activity($user_id);
-        
-        // Get goals
-        $goals = $this->get_user_goals($user_id);
+    public function get_overview_data($request) {
+        try {
+            $user_id = (int) $request->get_param('user_id');
+            
+            // Check if user can access this overview
+            if (!$this->can_access_overview($user_id)) {
+                return new \WP_Error(
+                    'rest_forbidden',
+                    __('You do not have permission to access this overview.', 'athlete-dashboard'),
+                    array('status' => 403)
+                );
+            }
 
-        $data = [
-            'stats' => [
-                'workouts_completed' => $workouts_completed,
-                'active_programs' => count($active_programs),
-                'nutrition_score' => $nutrition_score,
-            ],
-            'recent_activity' => $recent_activity,
-            'goals' => $goals,
-        ];
+            // Try to get overview data from cache
+            $cache_key = Cache_Service::generate_user_key($user_id, 'overview');
+            $data = Cache_Service::remember(
+                $cache_key,
+                function() use ($user_id) {
+                    // Get workouts completed
+                    $workouts_completed = (int) get_user_meta($user_id, 'workouts_completed', true);
+                    
+                    // Get active programs
+                    $active_programs = $this->get_active_programs($user_id);
+                    
+                    // Get nutrition score
+                    $nutrition_score = $this->calculate_nutrition_score($user_id);
+                    
+                    // Get recent activity
+                    $recent_activity = $this->get_recent_activity($user_id);
+                    
+                    // Get goals
+                    $goals = $this->get_user_goals($user_id);
 
-        return new WP_REST_Response($data, 200);
+                    return [
+                        'stats' => [
+                            'workouts_completed' => $workouts_completed,
+                            'active_programs' => count($active_programs),
+                            'nutrition_score' => $nutrition_score,
+                        ],
+                        'recent_activity' => $recent_activity,
+                        'goals' => $goals,
+                    ];
+                },
+                self::CACHE_EXPIRATION
+            );
+
+            return $this->prepare_response($data);
+        } catch (\Exception $e) {
+            return $this->handle_error(
+                new \WP_Error(
+                    'overview_error',
+                    $e->getMessage(),
+                    array('status' => 500)
+                )
+            );
+        }
     }
 
     /**
      * Update a goal's progress.
      */
-    public function update_goal(WP_REST_Request $request): WP_REST_Response {
-        $goal_id = (int) $request->get_param('goal_id');
-        $progress = (int) $request->get_param('progress');
-
-        // Update goal progress in database
-        update_post_meta($goal_id, 'goal_progress', $progress);
-
-        return new WP_REST_Response(['success' => true], 200);
+    public function update_goal($request) {
+        try {
+            $goal_id = (int) $request->get_param('goal_id');
+            $progress = (int) $request->get_param('progress');
+            
+            // Update goal progress
+            $updated = update_post_meta($goal_id, 'goal_progress', $progress);
+            
+            if ($updated) {
+                // Invalidate user's overview cache
+                $user_id = get_post_field('post_author', $goal_id);
+                Cache_Service::invalidate_user_data($user_id, 'overview');
+                return $this->prepare_response(['success' => true]);
+            }
+            
+            return $this->handle_error(
+                new \WP_Error(
+                    'update_failed',
+                    __('Failed to update goal progress.', 'athlete-dashboard'),
+                    array('status' => 500)
+                )
+            );
+        } catch (\Exception $e) {
+            return $this->handle_error(
+                new \WP_Error(
+                    'goal_update_error',
+                    $e->getMessage(),
+                    array('status' => 500)
+                )
+            );
+        }
     }
 
     /**
      * Dismiss an activity.
      */
-    public function dismiss_activity(WP_REST_Request $request): WP_REST_Response {
-        $activity_id = (int) $request->get_param('activity_id');
+    public function dismiss_activity($request) {
+        try {
+            $activity_id = (int) $request->get_param('activity_id');
+            
+            // Mark activity as dismissed
+            $updated = update_post_meta($activity_id, 'activity_dismissed', true);
+            
+            if ($updated) {
+                // Invalidate user's overview cache
+                $user_id = get_post_field('post_author', $activity_id);
+                Cache_Service::invalidate_user_data($user_id, 'overview');
+                return $this->prepare_response(['success' => true]);
+            }
+            
+            return $this->handle_error(
+                new \WP_Error(
+                    'dismiss_failed',
+                    __('Failed to dismiss activity.', 'athlete-dashboard'),
+                    array('status' => 500)
+                )
+            );
+        } catch (\Exception $e) {
+            return $this->handle_error(
+                new \WP_Error(
+                    'activity_dismiss_error',
+                    $e->getMessage(),
+                    array('status' => 500)
+                )
+            );
+        }
+    }
 
-        // Mark activity as dismissed in database
-        update_post_meta($activity_id, 'activity_dismissed', true);
-
-        return new WP_REST_Response(['success' => true], 200);
+    /**
+     * Check if current user can access an overview.
+     *
+     * @param int $user_id The user ID to check.
+     * @return bool Whether the current user can access the overview.
+     */
+    private function can_access_overview($user_id) {
+        $current_user_id = get_current_user_id();
+        return $current_user_id === (int)$user_id || current_user_can('administrator');
     }
 
     /**
      * Get active programs for a user.
      */
     private function get_active_programs(int $user_id): array {
-        $args = [
-            'post_type' => 'program',
-            'post_status' => 'publish',
-            'meta_query' => [
-                [
-                    'key' => 'program_user',
-                    'value' => $user_id,
-                ],
-                [
-                    'key' => 'program_status',
-                    'value' => 'active',
-                ],
-            ],
-        ];
+        // Try to get active programs from cache
+        $cache_key = Cache_Service::generate_user_key($user_id, 'active_programs');
+        return Cache_Service::remember(
+            $cache_key,
+            function() use ($user_id) {
+                $args = [
+                    'post_type' => 'program',
+                    'post_status' => 'publish',
+                    'meta_query' => [
+                        [
+                            'key' => 'program_user',
+                            'value' => $user_id,
+                        ],
+                        [
+                            'key' => 'program_status',
+                            'value' => 'active',
+                        ],
+                    ],
+                ];
 
-        $query = new \WP_Query($args);
-        return $query->posts;
+                $query = new \WP_Query($args);
+                return $query->posts;
+            },
+            self::CACHE_EXPIRATION
+        );
     }
 
     /**
      * Calculate nutrition score for a user.
      */
     private function calculate_nutrition_score(int $user_id): int {
-        // Implement nutrition score calculation logic
-        $score = (int) get_user_meta($user_id, 'nutrition_score', true);
-        return $score ?: 0;
+        // Try to get nutrition score from cache
+        $cache_key = Cache_Service::generate_user_key($user_id, 'nutrition_score');
+        return Cache_Service::remember(
+            $cache_key,
+            function() use ($user_id) {
+                $score = (int) get_user_meta($user_id, 'nutrition_score', true);
+                return $score ?: 0;
+            },
+            self::CACHE_EXPIRATION
+        );
     }
 
     /**
      * Get recent activity for a user.
      */
     private function get_recent_activity(int $user_id): array {
-        $args = [
-            'post_type' => 'activity',
-            'posts_per_page' => 10,
-            'orderby' => 'date',
-            'order' => 'DESC',
-            'meta_query' => [
-                [
-                    'key' => 'activity_user',
-                    'value' => $user_id,
-                ],
-                [
-                    'key' => 'activity_dismissed',
-                    'compare' => 'NOT EXISTS',
-                ],
-            ],
-        ];
+        // Try to get recent activity from cache
+        $cache_key = Cache_Service::generate_user_key($user_id, 'recent_activity');
+        return Cache_Service::remember(
+            $cache_key,
+            function() use ($user_id) {
+                $args = [
+                    'post_type' => 'activity',
+                    'posts_per_page' => 10,
+                    'orderby' => 'date',
+                    'order' => 'DESC',
+                    'meta_query' => [
+                        [
+                            'key' => 'activity_user',
+                            'value' => $user_id,
+                        ],
+                        [
+                            'key' => 'activity_dismissed',
+                            'compare' => 'NOT EXISTS',
+                        ],
+                    ],
+                ];
 
-        $query = new \WP_Query($args);
-        $activities = [];
+                $query = new \WP_Query($args);
+                $activities = [];
 
-        foreach ($query->posts as $post) {
-            $activities[] = [
-                'id' => $post->ID,
-                'type' => get_post_meta($post->ID, 'activity_type', true),
-                'title' => $post->post_title,
-                'date' => get_the_date('Y-m-d', $post),
-            ];
-        }
+                foreach ($query->posts as $post) {
+                    $activities[] = [
+                        'id' => $post->ID,
+                        'type' => get_post_meta($post->ID, 'activity_type', true),
+                        'title' => $post->post_title,
+                        'date' => get_the_date('Y-m-d', $post),
+                    ];
+                }
 
-        return $activities;
+                return $activities;
+            },
+            self::CACHE_EXPIRATION
+        );
     }
 
     /**
      * Get goals for a user.
      */
     private function get_user_goals(int $user_id): array {
-        $args = [
-            'post_type' => 'goal',
-            'posts_per_page' => -1,
-            'meta_query' => [
-                [
-                    'key' => 'goal_user',
-                    'value' => $user_id,
-                ],
-            ],
-        ];
+        // Try to get user goals from cache
+        $cache_key = Cache_Service::generate_user_key($user_id, 'goals');
+        return Cache_Service::remember(
+            $cache_key,
+            function() use ($user_id) {
+                $args = [
+                    'post_type' => 'goal',
+                    'posts_per_page' => -1,
+                    'meta_query' => [
+                        [
+                            'key' => 'goal_user',
+                            'value' => $user_id,
+                        ],
+                    ],
+                ];
 
-        $query = new \WP_Query($args);
-        $goals = [];
+                $query = new \WP_Query($args);
+                $goals = [];
 
-        foreach ($query->posts as $post) {
-            $goals[] = [
-                'id' => $post->ID,
-                'title' => $post->post_title,
-                'progress' => (int) get_post_meta($post->ID, 'goal_progress', true),
-                'target_date' => get_post_meta($post->ID, 'goal_target_date', true),
-            ];
-        }
+                foreach ($query->posts as $post) {
+                    $goals[] = [
+                        'id' => $post->ID,
+                        'title' => $post->post_title,
+                        'progress' => (int) get_post_meta($post->ID, 'goal_progress', true),
+                        'target_date' => get_post_meta($post->ID, 'goal_target_date', true),
+                    ];
+                }
 
-        return $goals;
+                return $goals;
+            },
+            self::CACHE_EXPIRATION
+        );
     }
 
     /**

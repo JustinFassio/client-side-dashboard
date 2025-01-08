@@ -36,8 +36,11 @@ class Cache_Service {
         // Try object cache first
         $data = wp_cache_get($key, $group);
         if (false !== $data) {
+            do_action('athlete_dashboard_cache_hit', $key, $group);
             return $data;
         }
+
+        do_action('athlete_dashboard_cache_miss', $key, $group);
 
         // Fall back to transient
         return get_transient(self::TRANSIENT_PREFIX . $key);
@@ -59,6 +62,10 @@ class Cache_Service {
         // Also set in transients for persistence
         $transient_set = set_transient(self::TRANSIENT_PREFIX . $key, $data, $expiration);
 
+        if ($object_cache_set && $transient_set) {
+            do_action('athlete_dashboard_cache_set', $key, $data, $expiration, $group);
+        }
+
         return $object_cache_set && $transient_set;
     }
 
@@ -75,6 +82,10 @@ class Cache_Service {
 
         // Delete from transients
         $transient_deleted = delete_transient(self::TRANSIENT_PREFIX . $key);
+
+        if ($object_cache_deleted && $transient_deleted) {
+            do_action('athlete_dashboard_cache_delete', $key, $group);
+        }
 
         return $object_cache_deleted && $transient_deleted;
     }

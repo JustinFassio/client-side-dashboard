@@ -86,9 +86,9 @@ abstract class Rest_Controller_Base {
             $this->rest_base
         );
 
-        $response->header('X-RateLimit-Limit', $status['limit']);
-        $response->header('X-RateLimit-Remaining', $status['remaining']);
-        $response->header('X-RateLimit-Reset', $status['reset']);
+        $response->header('X-RateLimit-Limit', $status['endpoint']['limit']);
+        $response->header('X-RateLimit-Remaining', $status['endpoint']['remaining']);
+        $response->header('X-RateLimit-Reset', $status['endpoint']['reset']);
 
         return $response;
     }

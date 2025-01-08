@@ -9,6 +9,15 @@ require_once get_stylesheet_directory() . '/dashboard/core/dashboardbridge.php';
 // Load feature configurations
 require_once get_stylesheet_directory() . '/features/profile/config.php';
 
+// Load REST API dependencies
+require_once get_stylesheet_directory() . '/includes/rest-api/class-rate-limiter.php';
+require_once get_stylesheet_directory() . '/includes/rest-api/class-request-validator.php';
+require_once get_stylesheet_directory() . '/includes/rest-api/class-rest-controller-base.php';
+
+// Load REST API controllers
+require_once get_stylesheet_directory() . '/includes/rest-api/class-overview-controller.php';
+require_once get_stylesheet_directory() . '/includes/rest-api/class-profile-controller.php';
+
 // Load feature endpoints
 require_once get_stylesheet_directory() . '/features/profile/api/profile-endpoints.php';
 
@@ -17,7 +26,6 @@ require_once get_stylesheet_directory() . '/includes/rest-api.php';
 
 // Initialize REST API
 require_once get_stylesheet_directory() . '/includes/class-rest-api.php';
-require_once get_stylesheet_directory() . '/includes/rest-api/class-overview-controller.php';
 
 // Load feature endpoints
 require_once get_stylesheet_directory() . '/dashboard/api/profile-endpoint.php';
