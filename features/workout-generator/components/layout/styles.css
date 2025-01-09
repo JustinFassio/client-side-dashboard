@@ -1,0 +1,158 @@
+@import '../../../../dashboard/styles/variables.css';
+
+.workout-layout {
+    padding: var(--spacing-xl);
+    max-width: 1200px;
+    margin: 0 auto;
+    color: var(--charcoal-dark);
+}
+
+.workout-layout h1 {
+    margin-bottom: var(--spacing-xl);
+    color: var(--charcoal-dark);
+    font-size: var(--font-size-xxl);
+}
+
+.loading, .error {
+    text-align: center;
+    padding: var(--spacing-xl);
+    background: var(--background-darker);
+    border-radius: var(--border-radius-md);
+    margin: var(--spacing-md) 0;
+}
+
+.error {
+    color: var(--error-color);
+    background: var(--error-background);
+}
+
+.current-workout {
+    background: var(--background-darker);
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius-md);
+    box-shadow: var(--shadow-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.exercises {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.exercise {
+    background: var(--background-dark);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    transition: transform var(--transition-fast);
+}
+
+.exercise:hover {
+    transform: translateY(-2px);
+}
+
+.exercise h3 {
+    margin-bottom: var(--spacing-md);
+    color: var(--charcoal-dark);
+    font-size: var(--font-size-lg);
+}
+
+.exercise p {
+    margin: var(--spacing-xs) 0;
+    color: var(--charcoal-dark);
+}
+
+.no-workout {
+    text-align: center;
+    padding: var(--spacing-xxl);
+    background: var(--background-darker);
+    border-radius: var(--border-radius-md);
+}
+
+.generate-button {
+    background: var(--primary-color);
+    color: var(--background-darker);
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    margin-top: var(--spacing-md);
+}
+
+.generate-button:hover {
+    background: var(--primary-hover);
+    color: var(--background-darker);
+    transform: translateY(-1px);
+}
+
+.workout-history {
+    margin-top: var(--spacing-xxl);
+}
+
+.workout-history h2 {
+    color: var(--charcoal-dark);
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--spacing-lg);
+}
+
+.workouts-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.workout-item {
+    background: var(--background-darker);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-fast);
+}
+
+.workout-item:hover {
+    transform: translateY(-2px);
+}
+
+.workout-item h3 {
+    margin-bottom: var(--spacing-xs);
+    color: var(--charcoal-dark);
+    font-size: var(--font-size-lg);
+}
+
+.workout-item p {
+    color: var(--charcoal-dark);
+    font-size: var(--font-size-sm);
+}
+
+@media (max-width: 768px) {
+    .workout-layout {
+        padding: var(--spacing-lg);
+    }
+
+    .exercises {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .workout-layout {
+        padding: var(--spacing-md);
+    }
+
+    .exercises {
+        grid-template-columns: 1fr;
+    }
+
+    .workouts-list {
+        grid-template-columns: 1fr;
+    }
+
+    .current-workout,
+    .no-workout {
+        padding: var(--spacing-lg);
+    }
+} 

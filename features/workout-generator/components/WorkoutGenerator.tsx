@@ -1,5 +1,5 @@
 import React from 'react';
-import './styles.css';
+import './layout/styles.css';
 
 interface WorkoutGeneratorProps {
     userId: number;

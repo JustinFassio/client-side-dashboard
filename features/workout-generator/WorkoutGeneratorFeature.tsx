@@ -1,6 +1,10 @@
 import React from 'react';
 import { Feature, FeatureContext, FeatureMetadata } from '../../dashboard/contracts/Feature';
 import { ErrorBoundary } from '../../dashboard/components/ErrorBoundary';
+import { WorkoutEvent } from './events';
+import { WorkoutProvider } from './contexts/WorkoutContext';
+import { WorkoutLayout } from './components/layout';
+import { UserProvider } from '../user/context/UserContext';
 
 export class WorkoutGeneratorFeature implements Feature {
     public readonly identifier = 'workout-generator';
@@ -26,6 +30,13 @@ export class WorkoutGeneratorFeature implements Feature {
         if (this.context.debug) {
             console.log('[WorkoutGeneratorFeature] Initialized');
         }
+
+        // Dispatch initial load event
+        this.context.dispatch('athlete-dashboard')({
+            type: WorkoutEvent.FETCH_REQUEST,
+            payload: { userId: 0 } // The actual userId will be determined by the WorkoutContext
+        });
+
         return Promise.resolve();
     }
 
@@ -34,50 +45,18 @@ export class WorkoutGeneratorFeature implements Feature {
     }
 
     render({ userId }: { userId: number }): React.ReactElement | null {
+        if (!this.context) {
+            console.error('[WorkoutGeneratorFeature] Context not initialized');
+            return null;
+        }
+
         return (
             <ErrorBoundary>
-                <div className="workout-generator">
-                    <div className="coming-soon-preview">
-                        <h2>Coming Soon: AI-Powered Workout Generation</h2>
-                        
-                        <div className="feature-highlights">
-                            <h3>Key Features</h3>
-                            <ul>
-                                <li>Dynamic workout creation using advanced AI models</li>
-                                <li>Integration with your profile, equipment, and training preferences</li>
-                                <li>Real-time customization and exercise alternatives</li>
-                                <li>Intelligent progression and performance tracking</li>
-                                <li>Voice and chat interactions for workout modifications</li>
-                                <li>Gamification features to boost motivation</li>
-                            </ul>
-                        </div>
-
-                        <div className="workflow-preview">
-                            <h3>Smart Workout Generation</h3>
-                            <ol>
-                                <li>Aggregates data from your profile, equipment, and preferences</li>
-                                <li>AI generates personalized workouts with natural language understanding</li>
-                                <li>Real-time customization with voice or chat commands</li>
-                                <li>Performance tracking with visual analytics</li>
-                                <li>Adaptive progression based on your feedback and results</li>
-                            </ol>
-                        </div>
-
-                        <div className="safety-note">
-                            <h3>Safety & Quality</h3>
-                            <p>
-                                Our AI-powered system includes built-in safety checks and validation filters,
-                                ensuring all generated workouts are safe, effective, and aligned with your goals.
-                                Expert oversight helps refine our AI prompts for optimal results.
-                            </p>
-                        </div>
-
-                        <p className="preview-note">
-                            We're building an intelligent workout system that combines AI technology with your personal
-                            data to create the most effective and engaging workout experience. Stay tuned for the launch!
-                        </p>
-                    </div>
-                </div>
+                <UserProvider>
+                    <WorkoutProvider>
+                        <WorkoutLayout context={this.context} />
+                    </WorkoutProvider>
+                </UserProvider>
             </ErrorBoundary>
         );
     }
@@ -86,6 +65,19 @@ export class WorkoutGeneratorFeature implements Feature {
         if (this.context?.debug) {
             console.log('[WorkoutGeneratorFeature] Cleanup');
         }
+        this.context = null;
         return Promise.resolve();
+    }
+
+    onNavigate(): void {
+        if (this.context) {
+            this.init();
+        }
+    }
+
+    onUserChange(): void {
+        if (this.context) {
+            this.init();
+        }
     }
 } 

@@ -94,6 +94,45 @@ Generate a 30-minute strength training workout for a beginner:
 - \`ProgressTracker\`: Performance analytics
 - \`SafetyValidator\`: Exercise validation
 
+### Styling Guidelines
+
+#### Button Patterns
+All primary action buttons (e.g., "Generate Workout", "Save Changes") should follow these styling rules:
+```css
+.action-button {
+    background: var(--primary-color);
+    color: var(--background-darker);  /* Critical for text contrast */
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.action-button:hover {
+    background: var(--primary-hover);
+    color: var(--background-darker);
+    transform: translateY(-1px);
+}
+```
+
+Key styling principles:
+1. Use `var(--background-darker)` for button text to ensure contrast against citron green
+2. Maintain consistent padding using spacing variables
+3. Include hover state with subtle transform effect
+4. Use transition for smooth hover effects
+
+#### Theme Integration
+- Import variables from dashboard: `@import '../../../../dashboard/styles/variables.css';`
+- Use CSS variables for colors, spacing, and typography
+- Follow dark theme color scheme for consistent UI
+
+#### Responsive Design
+- Use breakpoints at 768px and 480px
+- Adjust grid layouts and padding for mobile
+- Maintain button styling across all screen sizes
+
 ### Services
 - \`WorkoutService\`: API communication
 - \`AIService\`: AI model integration

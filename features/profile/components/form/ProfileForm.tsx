@@ -1,68 +1,107 @@
 import React from 'react';
+import { useForm } from 'react-hook-form';
 import { ProfileData } from '../../types/profile';
+import { useProfileErrors } from '../../hooks/useProfileErrors';
 
 interface ProfileFormProps {
     profile: ProfileData;
     onSubmit: (data: ProfileData) => void;
     onCancel: () => void;
+    isSubmitting?: boolean;
 }
 
-export const ProfileForm: React.FC<ProfileFormProps> = ({ profile, onSubmit, onCancel }) => {
-    const [formData, setFormData] = React.useState<ProfileData>(profile);
-    const [errors, setErrors] = React.useState<Record<string, string>>({});
+export const ProfileForm: React.FC<ProfileFormProps> = ({ 
+    profile, 
+    onSubmit, 
+    onCancel,
+    isSubmitting = false 
+}) => {
+    const { register, handleSubmit, formState: { errors } } = useForm<ProfileData>({
+        defaultValues: profile
+    });
+    const { getErrorMessage } = useProfileErrors();
 
-    const handleChange = (field: keyof ProfileData, value: string | number | boolean) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
-    };
-
-    const validateForm = (): boolean => {
-        const newErrors: Record<string, string> = {};
-        let isValid = true;
-
-        // Add validation logic here
-        Object.entries(formData).forEach(([key, value]) => {
-            if (typeof value === 'string' && !value.trim()) {
-                newErrors[key] = 'This field is required';
-                isValid = false;
-            }
-        });
-
-        setErrors(newErrors);
-        return isValid;
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (validateForm()) {
-            onSubmit(formData);
+    const onSubmitHandler = async (data: ProfileData) => {
+        try {
+            await onSubmit(data);
+        } catch (error) {
+            console.error('Profile update failed:', error);
         }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="profile-form">
-            {Object.entries(formData).map(([key, value]) => {
-                const fieldKey = key as keyof ProfileData;
-                return (
-                    <div key={key} className="form-field">
-                        <label htmlFor={key}>{key}</label>
-                        <input
-                            id={key}
-                            type="text"
-                            value={String(value)}
-                            onChange={(e) => handleChange(fieldKey, e.target.value)}
-                        />
-                        {errors[key] && (
-                            <span className="error">{errors[key]}</span>
-                        )}
-                    </div>
-                );
-            })}
+        <form 
+            onSubmit={handleSubmit(onSubmitHandler)} 
+            className="profile-form"
+            aria-label="Profile Update Form"
+            role="form"
+        >
+            <div className="form-field">
+                <label htmlFor="firstName">First Name</label>
+                <input
+                    id="firstName"
+                    type="text"
+                    aria-invalid={errors.firstName ? "true" : "false"}
+                    {...register("firstName", { 
+                        required: "First name is required",
+                        minLength: { value: 2, message: "First name must be at least 2 characters" }
+                    })}
+                />
+                {errors.firstName && (
+                    <span role="alert" className="error">{getErrorMessage(errors.firstName)}</span>
+                )}
+            </div>
+
+            <div className="form-field">
+                <label htmlFor="lastName">Last Name</label>
+                <input
+                    id="lastName"
+                    type="text"
+                    aria-invalid={errors.lastName ? "true" : "false"}
+                    {...register("lastName", { 
+                        required: "Last name is required",
+                        minLength: { value: 2, message: "Last name must be at least 2 characters" }
+                    })}
+                />
+                {errors.lastName && (
+                    <span role="alert" className="error">{getErrorMessage(errors.lastName)}</span>
+                )}
+            </div>
+
+            <div className="form-field">
+                <label htmlFor="email">Email</label>
+                <input
+                    id="email"
+                    type="email"
+                    aria-invalid={errors.email ? "true" : "false"}
+                    {...register("email", { 
+                        required: "Email is required",
+                        pattern: {
+                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                            message: "Invalid email address"
+                        }
+                    })}
+                />
+                {errors.email && (
+                    <span role="alert" className="error">{getErrorMessage(errors.email)}</span>
+                )}
+            </div>
+
             <div className="form-actions">
-                <button type="submit">Save</button>
-                <button type="button" onClick={onCancel}>Cancel</button>
+                <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    aria-busy={isSubmitting}
+                >
+                    {isSubmitting ? 'Saving...' : 'Save'}
+                </button>
+                <button 
+                    type="button" 
+                    onClick={onCancel}
+                    disabled={isSubmitting}
+                >
+                    Cancel
+                </button>
             </div>
         </form>
     );

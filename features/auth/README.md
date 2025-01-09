@@ -208,4 +208,50 @@ enum AuthErrorCodes {
 - 1.1.0: Implemented rate limiting
 - 1.0.1: Security enhancements
 - 1.0.0: Initial release
+
+### Styling Guidelines
+
+#### Button Patterns
+All primary action buttons (e.g., "Login", "Register", "Reset Password") should follow these styling rules:
+```css
+.action-button {
+    background: var(--primary-color);
+    color: var(--background-darker);  /* Critical for text contrast */
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.action-button:hover {
+    background: var(--primary-hover);
+    color: var(--background-darker);
+    transform: translateY(-1px);
+}
+
+.action-button:disabled {
+    background-color: var(--text-dim);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+```
+
+Key styling principles:
+1. Use `var(--background-darker)` for button text to ensure contrast against citron green
+2. Maintain consistent padding using spacing variables
+3. Include hover state with subtle transform effect
+4. Use transition for smooth hover effects
+5. Include disabled state styling
+
+#### Theme Integration
+- Import variables from dashboard: `@import '../../../../dashboard/styles/variables.css';`
+- Use CSS variables for colors, spacing, and typography
+- Follow dark theme color scheme for consistent UI
+
+#### Responsive Design
+- Use breakpoints at 768px and 480px
+- Adjust grid layouts and padding for mobile
+- Maintain button styling across all screen sizes
 ``` 
