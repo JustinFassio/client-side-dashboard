@@ -1,3 +1,5 @@
+import { DashboardError } from '../../../dashboard/types';
+
 export interface Exercise {
     id: string;
     name: string;
@@ -42,13 +44,50 @@ export interface GeneratorSettings {
     restBetweenExercises: number; // in seconds
 }
 
-export interface WorkoutResponse {
-    success: boolean;
-    data?: WorkoutPlan;
-    error?: {
-        code: string;
-        message: string;
-    };
+export interface WorkoutState {
+    isLoading: boolean;
+    error: DashboardError | null;
+    preferences: WorkoutPreferences | null;
+    settings: GeneratorSettings | null;
+    currentWorkout: WorkoutPlan | null;
+    workoutHistory: WorkoutPlan[];
 }
 
-export type WorkoutStatus = 'pending' | 'generating' | 'completed' | 'failed'; 
+export type WorkoutStatus = 'pending' | 'generating' | 'completed' | 'failed';
+
+export interface WorkoutError extends DashboardError {
+    code: WorkoutErrorCode;
+}
+
+export enum WorkoutErrorCode {
+    GENERATION_FAILED = 'GENERATION_FAILED',
+    INVALID_PREFERENCES = 'INVALID_PREFERENCES',
+    INVALID_SETTINGS = 'INVALID_SETTINGS',
+    SAVE_FAILED = 'SAVE_FAILED',
+    LOAD_FAILED = 'LOAD_FAILED',
+    NETWORK_ERROR = 'NETWORK_ERROR',
+    UNKNOWN_ERROR = 'UNKNOWN_ERROR'
+}
+
+export interface WorkoutValidation {
+    isValid: boolean;
+    errors: Record<string, string[]>;
+}
+
+export interface WorkoutConfig {
+    endpoints: {
+        base: string;
+        generate: string;
+        save: string;
+        history: string;
+    };
+    validation: {
+        minDuration: number;
+        maxDuration: number;
+        maxExercises: number;
+    };
+    defaults: {
+        preferences: WorkoutPreferences;
+        settings: GeneratorSettings;
+    };
+} 

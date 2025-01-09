@@ -40,11 +40,13 @@ async function initializeDashboard() {
         const { OverviewFeature } = await import('../../features/overview/OverviewFeature');
         const { ProfileFeature } = await import('../../features/profile/ProfileFeature');
         const { WorkoutGeneratorFeature } = await import('../../features/workout-generator/WorkoutGeneratorFeature');
+        const { EquipmentManagerFeature } = await import('../../features/equipment/EquipmentManagerFeature');
 
         // Register features in correct order
         await registry.register(new OverviewFeature());
         await registry.register(new ProfileFeature());
         await registry.register(new WorkoutGeneratorFeature());
+        await registry.register(new EquipmentManagerFeature());
 
         console.log('[Dashboard] Registered features:', registry.getAllFeatures().map(f => ({
             id: f.identifier,

@@ -3,15 +3,22 @@ import { useEquipment } from '../contexts/equipment-context';
 import { EquipmentListWidget } from './widgets/EquipmentListWidget';
 import { EquipmentSetWidget } from './widgets/EquipmentSetWidget';
 import { WorkoutZoneWidget } from './widgets/WorkoutZoneWidget';
+import { EquipmentRecommendationsWidget } from './widgets/EquipmentRecommendationsWidget';
 import { LoadingSpinner } from '../../../dashboard/components/LoadingSpinner';
 import { ErrorMessage } from '../../../dashboard/components/ErrorMessage';
 import './styles.css';
 
 interface EquipmentManagerProps {
     userId: number;
+    userGoals: string[];
+    fitnessLevel: string;
 }
 
-export const EquipmentManager: React.FC<EquipmentManagerProps> = ({ userId }) => {
+export const EquipmentManager: React.FC<EquipmentManagerProps> = ({
+    userId,
+    userGoals,
+    fitnessLevel
+}) => {
     const { equipment, equipmentSets, workoutZones, loading, error, actions } = useEquipment();
 
     useEffect(() => {
@@ -67,6 +74,13 @@ export const EquipmentManager: React.FC<EquipmentManagerProps> = ({ userId }) =>
                     className="equipment-widget"
                 />
             </div>
+
+            <EquipmentRecommendationsWidget
+                equipment={equipment}
+                userGoals={userGoals}
+                fitnessLevel={fitnessLevel}
+                className="equipment-widget"
+            />
         </div>
     );
 }; 

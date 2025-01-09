@@ -1,10 +1,4 @@
-import React, { useEffect } from 'react';
-import { useWorkout } from '../contexts/workout-context';
-import { PreferencesWidget } from './widgets/PreferencesWidget';
-import { WorkoutPlanWidget } from './widgets/WorkoutPlanWidget';
-import { WorkoutHistoryWidget } from './widgets/WorkoutHistoryWidget';
-import { LoadingSpinner } from '../../../dashboard/components/LoadingSpinner';
-import { ErrorMessage } from '../../../dashboard/components/ErrorMessage';
+import React from 'react';
 import './styles.css';
 
 interface WorkoutGeneratorProps {
@@ -12,25 +6,6 @@ interface WorkoutGeneratorProps {
 }
 
 export const WorkoutGenerator: React.FC<WorkoutGeneratorProps> = ({ userId }) => {
-    const { state, actions } = useWorkout();
-
-    useEffect(() => {
-        actions.loadHistory();
-    }, [actions]);
-
-    if (state.loading) {
-        return <LoadingSpinner message="Loading workout data..." />;
-    }
-
-    if (state.error) {
-        return (
-            <ErrorMessage
-                error={state.error}
-                onRetry={actions.clearError}
-            />
-        );
-    }
-
     return (
         <div className="workout-generator">
             <header className="workout-header">
@@ -39,27 +14,21 @@ export const WorkoutGenerator: React.FC<WorkoutGeneratorProps> = ({ userId }) =>
             </header>
 
             <div className="workout-grid">
-                <PreferencesWidget
-                    preferences={state.preferences}
-                    settings={state.settings}
-                    onPreferencesChange={actions.updatePreferences}
-                    onSettingsChange={actions.updateSettings}
-                    onGenerate={actions.generateWorkout}
-                    className="workout-widget"
-                />
+                {/* Placeholder for future widgets */}
+                <div className="workout-widget preferences-widget">
+                    <h3>Workout Preferences</h3>
+                    <p>Configure your workout preferences here</p>
+                </div>
 
-                {state.currentWorkout && (
-                    <WorkoutPlanWidget
-                        workout={state.currentWorkout}
-                        onSave={actions.saveWorkout}
-                        className="workout-widget"
-                    />
-                )}
+                <div className="workout-widget workout-plan-widget">
+                    <h3>Current Workout</h3>
+                    <p>Your generated workout will appear here</p>
+                </div>
 
-                <WorkoutHistoryWidget
-                    workouts={state.workoutHistory}
-                    className="workout-widget"
-                />
+                <div className="workout-widget history-widget">
+                    <h3>Workout History</h3>
+                    <p>Your past workouts will be listed here</p>
+                </div>
             </div>
         </div>
     );
