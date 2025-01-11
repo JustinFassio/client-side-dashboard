@@ -1,29 +1,19 @@
-<?php
 /**
- * Feature router template
- * Handles loading feature-specific content based on the current feature
+ * Feature router template for the Athlete Dashboard.
+ *
+ * @package Athlete_Dashboard
  */
 
-if (!defined('ABSPATH')) {
-    exit;
-}
+// Get the current feature from the URL.
+$current_feature = get_query_var('feature', 'overview');
 
-use AthleteDashboard\Core\DashboardBridge;
+// Load the appropriate feature template.
+$template_path = get_template_directory() . "/features/{$current_feature}/template.php";
 
-// Initialize the bridge if not already done
-DashboardBridge::init();
-
-$feature = $args['feature'] ?? DashboardBridge::get_current_feature();
-$feature_data = DashboardBridge::get_feature_data($feature);
-
-// Output feature data for React
-wp_localize_script('athlete-dashboard', 'athleteDashboardFeature', $feature_data);
-
-// Load feature-specific template if it exists
-$feature_template = get_stylesheet_directory() . "/features/{$feature}/templates/{$feature}-view.php";
-if (file_exists($feature_template)) {
-    include $feature_template;
+// Check if the template exists.
+if (file_exists($template_path)) {
+    include $template_path;
 } else {
-    // Fallback to default content
-    echo '<div class="feature-content" data-feature="' . esc_attr($feature) . '"></div>';
-} 
+    // Fall back to the overview template if the requested feature doesn't exist.
+    include get_template_directory() . '/features/overview/template.php';
+}

@@ -1,4 +1,4 @@
-import { ProfileData, PhysicalMetric, ProfileErrorCode } from '../types/profile';
+import { ProfileData, ProfileErrorCode } from '../types/profile';
 
 export class ProfileError extends Error {
     constructor(

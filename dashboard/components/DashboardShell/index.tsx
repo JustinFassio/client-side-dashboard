@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../../hooks/useUser';
 import { FeatureRegistry } from '../../core/FeatureRegistry';
-import { FeatureContext, Feature } from '../../contracts/Feature';
+import { FeatureContext } from '../../contracts/Feature';
 import { Events } from '../../core/events';
 import { Navigation } from '../Navigation';
 import { FeatureRouter } from '../FeatureRouter';
@@ -55,7 +55,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, contex
         return () => {
             Events.off('navigation:changed', handleNavigation);
         };
-    }, [registry, user, context.debug]);
+    }, [registry, user, context.debug, activeFeature]);
 
     // Handle user loading state
     if (isUserLoading) {

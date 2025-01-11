@@ -1,4 +1,4 @@
-import { ProfileEvent, ProfileEventPayloads } from './types';
+import { ProfileEventPayloads } from './types';
 
 export const PROFILE_EVENT_TYPES = {
     FETCH_REQUEST: 'profile:fetch-request',
@@ -33,4 +33,4 @@ export function createEventHandler<T extends keyof typeof PROFILE_EVENT_TYPES>(
     handler: (payload: ProfileEventPayloads[typeof PROFILE_EVENT_TYPES[T]]) => void
 ): (event: { type: typeof PROFILE_EVENT_TYPES[T]; payload: ProfileEventPayloads[typeof PROFILE_EVENT_TYPES[T]] }) => void {
     return (e) => handler(e.payload);
-} 
+}

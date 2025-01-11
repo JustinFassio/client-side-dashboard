@@ -1,0 +1,90 @@
+.cache-stats-widget {
+	padding: 15px;
+	background: #fff;
+	border-radius: 4px;
+}
+
+.cache-stats-widget h3 {
+	margin: 0 0 20px;
+	padding-bottom: 10px;
+	border-bottom: 1px solid #eee;
+	color: #23282d;
+	font-size: 14px;
+}
+
+.stats-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 15px;
+	margin-bottom: 20px;
+}
+
+.stat-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px;
+	background: #f8f9fa;
+	border-radius: 4px;
+	transition: background-color 0.2s;
+}
+
+.stat-item:hover {
+	background: #f1f1f1;
+}
+
+.stat-label {
+	color: #646970;
+	font-weight: 500;
+}
+
+.stat-value {
+	color: #2271b1;
+	font-weight: 600;
+}
+
+/* Status-specific colors */
+.stat-value[data-status="enabled"] {
+	color: #00a32a;
+}
+
+.stat-value[data-status="disabled"] {
+	color: #d63638;
+}
+
+.cache-actions {
+	display: flex;
+	gap: 10px;
+	margin-top: 15px;
+	padding-top: 15px;
+	border-top: 1px solid #eee;
+}
+
+.cache-actions button {
+	flex: 1;
+	justify-content: center;
+	min-height: 32px;
+}
+
+/* Loading state */
+.cache-stats-widget.loading {
+	opacity: 0.7;
+	pointer-events: none;
+}
+
+.cache-stats-widget.loading::after {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(255, 255, 255, 0.7) url(../images/spinner.gif) no-repeat center;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+	.stats-grid {
+		grid-template-columns: 1fr;
+	}
+} 

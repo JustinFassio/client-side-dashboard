@@ -4,7 +4,7 @@ import { useUser } from '../../../../dashboard/hooks/useUser';
 
 export const ProfileLayout = () => {
     const { context } = useProfile();
-    const { user, isLoading, error } = useUser(context);
+    const { user, isLoading, _error } = useUser(context);
     const userId = user?.id;
 
     if (isLoading) {
@@ -13,9 +13,9 @@ export const ProfileLayout = () => {
         );
     }
 
-    if (error || !user) {
+    if (_error || !user) {
         return createElement('div', { className: 'profile-layout' },
-            createElement('p', null, `Error: ${error || 'Failed to load profile'}`)
+            createElement('p', null, `Error: ${_error || 'Failed to load profile'}`)
         );
     }
 

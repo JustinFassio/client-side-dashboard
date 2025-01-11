@@ -1,10 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { ProfileFeature } from '../ProfileFeature';
-import { Feature, FeatureContext } from '../../../dashboard/contracts/Feature';
-import { ProfileEvent } from '../events';
-import { ApiClient } from '../../../dashboard/services/api';
-import { API_ROUTES } from '../../../dashboard/constants/api';
+import { FeatureContext } from '../../../dashboard/contracts/Feature';
 import { ProfileProvider } from '../context/ProfileContext';
 import { ProfileLayout } from '../components/layout';
 

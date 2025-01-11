@@ -1,5 +1,3 @@
-import { createElement } from '@wordpress/element';
-
 /**
  * Core feature data interface that defines the structure of a feature
  * in the athlete dashboard system.

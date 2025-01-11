@@ -1,4 +1,4 @@
-import { createElement, useCallback } from '@wordpress/element';
+import { useCallback } from '@wordpress/element';
 import { Injury, InjuryTrackerProps, PREDEFINED_INJURIES } from './types';
 import { Tracker } from '../Tracker';
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { PhysicalMetric } from '../../types/profile';
 
 export interface PhysicalMetricFieldProps {
-    metricId: string;
+    _metricId: string;
     metric: PhysicalMetric;
     label: string;
     onUpdate: (value: number, unit: string) => Promise<void>;
@@ -11,7 +11,7 @@ export interface PhysicalMetricFieldProps {
 }
 
 export const PhysicalMetricField: React.FC<PhysicalMetricFieldProps> = ({
-    metricId,
+    _metricId,
     metric,
     label,
     onUpdate,

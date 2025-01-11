@@ -39,10 +39,10 @@ export interface LoginRequest {
 /**
  * Login response data
  */
-export interface LoginResponse extends ApiResponse<{
+export type LoginResponse = ApiResponse<{
     token: string;
     user: User;
-}> {}
+}>;
 
 /**
  * Registration request payload
@@ -59,10 +59,10 @@ export interface RegisterRequest {
 /**
  * Registration response data
  */
-export interface RegisterResponse extends ApiResponse<{
+export type RegisterResponse = ApiResponse<{
     user: User;
     token: string;
-}> {}
+}>;
 
 /**
  * Auth state interface

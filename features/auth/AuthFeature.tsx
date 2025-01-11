@@ -111,7 +111,7 @@ export class AuthFeature extends Feature {
      * @private
      * @param {any} user - The authenticated user data
      */
-    private handleLoginSuccess = (user: any): void => {
+    private handleLoginSuccess = (_user: any): void => {
         this.startSessionRefresh();
         // Additional login success handling
     };

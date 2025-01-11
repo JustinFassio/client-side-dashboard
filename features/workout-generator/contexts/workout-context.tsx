@@ -1,5 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
-import { WorkoutPlan, WorkoutPreferences, GeneratorSettings } from '../types/workout-types';
+import React, { createContext, useContext } from 'react';
+import { GeneratorSettings } from '../types/workout-types';
 
 interface WorkoutContextValue {
     // Placeholder context value
@@ -12,7 +12,7 @@ const WorkoutContext = createContext<WorkoutContextValue>({
     error: null
 });
 
-export function WorkoutProvider({ children }: { children: ReactNode }) {
+export function WorkoutProvider({ children }: { children: React.ReactNode }) {
     return (
         <WorkoutContext.Provider value={{ loading: false, error: null }}>
             {children}

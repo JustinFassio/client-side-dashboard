@@ -44,7 +44,7 @@ export class WorkoutGeneratorFeature implements Feature {
         return true;
     }
 
-    render({ userId }: { userId: number }): React.ReactElement | null {
+    render({ _userId }: { userId: number }): React.ReactElement | null {
         if (!this.context) {
             console.error('[WorkoutGeneratorFeature] Context not initialized');
             return null;

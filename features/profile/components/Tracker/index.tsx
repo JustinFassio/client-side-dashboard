@@ -1,6 +1,6 @@
-import { createElement, useState, useCallback } from '@wordpress/element';
+import { createElement, useState } from '@wordpress/element';
 import { PlusCircle, XCircle } from 'lucide-react';
-import { TrackerProps, TrackerField } from '../InjuryTracker/types';
+import type { TrackerProps } from '../InjuryTracker/types';
 import './styles.css';
 
 export function Tracker<T extends { id: string }>({
@@ -17,7 +17,7 @@ export function Tracker<T extends { id: string }>({
     const [newItemValue, setNewItemValue] = useState('');
     const [selectedPredefined, setSelectedPredefined] = useState('');
 
-    const handleAdd = useCallback((value: string, isCustom: boolean = false) => {
+    const handleAdd = (value: string, isCustom: boolean = false) => {
         if (!isCustom) {
             const predefinedItem = predefinedItems?.find(item => item.value === value);
             onAdd({ 
@@ -32,7 +32,7 @@ export function Tracker<T extends { id: string }>({
         }
         setNewItemValue('');
         setSelectedPredefined('');
-    }, [onAdd, predefinedItems]);
+    };
 
     const renderField = (item: T, field: TrackerField<T>) => {
         const value = item[field.key] as string;

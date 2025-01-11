@@ -1,8 +1,9 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { ProfileFeature } from '../ProfileFeature';
-import { FeatureContext } from '../../../dashboard/contracts/Feature';
-import { ProfileEvent } from '../events';
+// Note: Removed unused imports:
+// - FeatureContext
+// - ProfileEvent
 
 describe('ProfileFeature Integration', () => {
     let feature: ProfileFeature;

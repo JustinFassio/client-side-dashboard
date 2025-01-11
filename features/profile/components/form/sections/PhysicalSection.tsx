@@ -80,14 +80,8 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
     const handleImperialHeightChange = (field: 'feet' | 'inches', value: number) => {
         console.log('Height field change:', { field, value });
         
-        let newFeet = field === 'feet' ? value : heightFeet;
-        let newInches = field === 'inches' ? value : heightInches;
-
-        // Validate inches range
-        if (newInches >= 12) {
-            console.warn('Correcting inches value:', newInches);
-            newInches = 11;
-        }
+        const newFeet = field === 'feet' ? value : heightFeet;
+        const newInches = field === 'inches' ? Math.min(value, 11) : heightInches;
 
         setHeightFeet(newFeet);
         setHeightInches(newInches);

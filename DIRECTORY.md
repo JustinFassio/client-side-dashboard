@@ -1,267 +1,122 @@
-Root Directory
+# Directory Structure
 
-ATHLETE-DASHBOARD-CHILD/
-├── assets/
-├── bin/
-├── dashboard/
-├── features/
-├── includes/
-├── node_modules/
-├── tests/
-├── vendor/
-├── .gitignore
+```
+.
 ├── ARCHITECTURE.md
-├── athlete-dashboard.php
+├── DIRECTORY.md
+├── README.md
+├── ROADMAP.md
+├── assets
+│   ├── build
+│   ├── css
+│   │   ├── admin.css
+│   │   └── cache-stats-widget.css
+│   ├── js
+│   │   ├── admin.js
+│   │   └── cache-stats-widget.js
+│   └── src
+│       ├── components
+│       │   └── App.tsx
+│       ├── features.ts
+│       ├── main.tsx
+│       └── styles
+├── bin
+│   └── run-tests.sh
 ├── composer.lock
+├── dashboard
+│   ├── api
+│   │   └── profile-endpoint.php
+│   ├── components
+│   │   ├── DashboardShell
+│   │   ├── ErrorBoundary
+│   │   ├── ErrorMessage
+│   │   ├── FeatureRouter
+│   │   ├── LoadingSpinner
+│   │   ├── LoadingState
+│   │   ├── Navigation
+│   │   └── Spinner
+│   ├── constants
+│   ├── contracts
+│   ├── core
+│   ├── events.ts
+│   ├── features
+│   ├── hooks
+│   ├── services
+│   ├── styles
+│   ├── templates
+│   ├── testing
+│   ├── types
+│   └── utils
+├── docs
+│   ├── CACHING.md
+│   ├── CHANGELOG.md
+│   ├── CONTRIBUTING.md
+│   ├── DEPLOYMENT.md
+│   ├── FEATURE_AUDIT.md
+│   ├── SERVICE_LAYER_PLAN.md
+│   ├── TESTING.md
+│   └── api
+│       ├── ENDPOINTS.md
+│       ├── ERROR_HANDLING.md
+│       ├── GETTING_STARTED.md
+│       ├── RATE_LIMITING_AND_VALIDATION.md
+│       └── README.md
+├── features
+│   ├── README.template.md
+│   ├── auth
+│   ├── equipment
+│   ├── overview
+│   ├── profile
+│   ├── user
+│   └── workout-generator
 ├── footer.php
 ├── functions.php
 ├── header.php
+├── includes
+│   ├── admin
+│   │   ├── class-cache-stats-widget.php
+│   │   └── user-profile.php
+│   ├── class-athlete-dashboard.php
+│   ├── class-rest-api.php
+│   ├── config
+│   │   ├── cache-config.php
+│   │   └── endpoints.php
+│   ├── rest-api
+│   │   ├── __tests__
+│   │   ├── class-overview-controller.php
+│   │   ├── class-profile-controller.php
+│   │   ├── class-rate-limiter.php
+│   │   ├── class-request-validator.php
+│   │   ├── class-rest-controller-base.php
+│   │   └── profile-endpoints.php
+│   ├── rest-api.php
+│   └── services
+│       ├── class-cache-monitor.php
+│       ├── class-cache-service.php
+│       └── class-cache-warmer.php
 ├── jest.config.js
 ├── jest.setup.js
 ├── package-lock.json
 ├── package.json
-├── README.md
-├── ROADMAP.md
+├── phpunit.xml
 ├── style.css
+├── tests
+│   ├── README.md
+│   ├── bootstrap.php
+│   ├── php
+│   │   ├── TestCase.php
+│   │   ├── endpoints
+│   │   ├── framework
+│   │   ├── helpers.php
+│   │   ├── rest-api
+│   │   └── services
+│   └── reports
+│       └── summary.txt
 ├── tsconfig.json
 └── webpack.config.js
+```
 
-
-Assets Directory Structure
-
-
-assets/
-│   ├── build/
-│   ├── src/
-│   │   ├── components/
-│   │   │   └── App.tsx
-│   │   ├── styles/
-│   │   ├── features.ts
-│   │   └── main.tsx
-
-
-Dashboard Directory Structure
-
-
-dashboard/
-├── api
-│   └──  profile-endpoint.php
-├── components
-│   ├── DashboardShell
-│   │   ├── DashboardShell.css
-│   │   └── index.tsx
-│   ├── ErrorBoundary
-│   │   └── index.tsx
-│   ├── FeatureRouter
-│   │   └── index.tsx
-│   ├── LoadingState
-│   │   └── index.tsx
-│   ├── Navigation
-│   │   ├── __tests__
-│   │   │   └── Navigation.test.tsx
-│   │   ├── Navigation.css
-│   │   └── index.tsx
-│   ├── Spinner
-│   │   ├── Spinner.css
-│   │   ├── index.d.ts
-│   │   └── index.tsx
-├── constants
-│   └── api.ts
-├── contracts
-│   ├── Events.ts
-│   └── Feature.ts
-├── core
-│   ├── config
-│   │   ├── debug.php
-│   │   └── environment.php
-│   ├── services
-│   │   └── BaseFeatureService.ts
-│   ├── store
-│   │   └── index.ts
-│   ├── testing
-│   │   └── FeatureTestUtils.ts
-│   ├── config.ts
-│   ├── dashboardbridge.php
-│   ├── events.ts
-│   ├── Feature.ts
-│   ├── FeatureRegistry.ts
-│   ├──types.ts
-│   ├── config.ts
-│   ├── dashboardbridge.php
-│   ├── events.ts
-│   ├── Feature.ts
-│   ├── FeatureRegistry.ts
-│   └── types.ts
-├── features
-│   ├── overview
-│   │   ├── components
-│   │   │   ├── OverviewLayout.css
-│   │   │   └── OverviewLayout.tsx
-│   │   ├── services
-│   │   │   └── OverviewService.ts
-│   │   └── OverviewFeature.tsx
-├── hooks
-│   └── useUser.ts
-├── services
-│   └── api.ts
-├── styles
-│   ├── base
-│   │   ├── layout.css
-│   │   ├── reset.css
-│   │   └── typography.css
-│   ├── components
-│   │   └── DashboardShell.css
-│   ├── main.css
-│   └── variables.css
-├── templates
-│   ├── dashboard.php
-│   ├── feature-router.php
-│   ├── footer-minimal.php
-│   └── header-minimal.php
-├── testing
-│   ├── mocks
-│   │   ├── index.ts
-│   │   └── mocks.ts
-├── types
-│   ├── api.ts
-│   ├── config.d.ts
-│   ├── config.ts
-│   ├── feature.ts
-│   ├── global.d.ts
-│   └── wordpress.d.ts
-├── utils
-│   └── date.ts
-└── events.ts
-
-
-
-Features Directory
-
-features/
-├── auth/
-│   ├── api/
-│   │   └── registration-endpoints.php
-│   └── types/
-│       └── registration.ts
-├── overview/
-│   ├── components/
-│   │   └── layout/
-│   │       └── index.tsx
-│   └── OverviewFeature.tsx
-├── profile/
-│   ├── __tests__/
-│   │   ├── components/
-│   │   ├── endpoints/
-│   │   │   └── profile-endpoint.test.php
-│   │   ├── events/
-│   │   │   └── ProfileEvents.test.ts
-│   │   └── services/
-│   ├── api/
-│   │   └── profile-endpoints.php
-│   ├── assets/
-│   │   ├── js/
-│   │   │   └── profileService.ts
-│   │   └── styles/
-│   │       ├── base/
-│   │       │   ├── forms.css
-│   │       │   └── layout.css
-│   │       ├── components/
-│   │       │   ├── CoreSection.css
-│   │       │   ├── InjuryTracker.css
-│   │       │   ├── PhysicalMetrics.css
-│   │       │   ├── ProfileForm.css
-│   │       │   └── index.css
-│   ├── components/
-│   │   ├── form/
-│   │   │   ├── __tests__/
-│   │   │   │   └── ProfileForm.test.tsx
-│   │   │   ├── fields/
-│   │   │   │   └── FormField.tsx
-│   │   │   └── sections/
-│   │   │       ├── AccountSection.tsx
-│   │   │       ├── BasicSection.tsx
-│   │   │       ├── MedicalSection.tsx
-│   │   │       ├── PhysicalSection.css
-│   │   │       └── PhysicalSection.tsx
-│   │   ├── InjuryTracker/
-│   │   │   ├── index.tsx
-│   │   │   ├── styles.css
-│   │   │   └── types.ts
-│   │   ├── layout/
-│   │   │   ├── index.ts
-│   │   │   ├── index.tsx
-│   │   │   └── ProfileLayout.tsx
-│   │   ├── PhysicalMetricsDisplay/
-│   │   │   ├── index.tsx
-│   │   │   ├── PhysicalMetricField.tsx
-│   │   │   └── styles.scss
-│   │   ├── SaveAlert.tsx
-│   │   └── Section/
-│   │       └── index.tsx
-│   │   ├── Tracker/
-│   │   │   ├── index.tsx
-│   │   │   └── styles.css
-│   ├── config/
-           ├── index.ts
-│   │   └── meta_keys.php
-│   ├── context/
-│   │   └── ProfileContext.tsx
-│   ├── events/
-│   │   ├── __tests__/
-│   │   │   └── events.test.ts
-│   │   ├── compatibility.ts
-│   │   ├── constants.ts
-│   │   ├── events.ts
-│   │   ├── handlers.ts
-│   │   ├── index.ts
-│   │   ├── types.ts
-│   │   └── utils.ts
-│   ├── services/
-│   │   ├── ProfileService.ts
-│   │   └── ValidationService.ts
-│   ├── types/
-│   │   ├── events.ts
-│   │   ├── physical-metrics.ts
-│   │   ├── profile.ts
-│   │   ├── validation.ts
-│   │   └── window.d.ts
-│   ├── utils
-│   │   ├── config.php
-│   │   └── validation.ts
-│   ├── ProfileFeature.ts
-│   ├── ProfileFeature.tsx
-│   └── README.md
-└── user/
-    └── context/
-        └── UserContext.tsx
-
-
-Includes Directory
-
-includes/
-├── admin/
-│   └── user-profile.php
-├── features/profile
-│   └── meta_keys.php
-├── rest-api/
-│   ├── __tests__/
-│   │      └── overview-controller.test.php
-│   ├── class-overview-controller.php
-│   ├── profile-endpoints.php
-├── class-rest-api.php
-└── rest-api.php
-
-Tests Directory
-
-
-tests/
-├── php/
-│   └── endpoints/
-│       └── class-profile-endpoint-test.php
-├── framework/
-├── reports/
-│   └── summary.txt
-└── README.md
+Note: This tree view excludes `node_modules`, `vendor`, and `.git` directories for clarity. The project contains 121 directories and 256 files in total.
 
 
 

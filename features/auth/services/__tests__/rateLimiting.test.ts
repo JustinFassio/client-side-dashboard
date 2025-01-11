@@ -1,6 +1,4 @@
 import { RateLimiter } from '../rateLimiting';
-import { AuthServiceError } from '../errors';
-import { AuthErrorCode } from '../../types';
 
 describe('RateLimiter', () => {
     let rateLimiter: RateLimiter;

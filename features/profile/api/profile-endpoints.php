@@ -1,6 +1,12 @@
 <?php
 /**
- * Profile API endpoints
+ * Profile API endpoints for the Athlete Dashboard.
+ *
+ * This file contains the REST API endpoints for managing athlete profiles,
+ * including profile data retrieval, updates, and validation.
+ *
+ * @package AthleteDashboardChild
+ * @subpackage API
  */
 
 namespace AthleteProfile\API;
@@ -10,616 +16,851 @@ use WP_REST_Request;
 use WP_REST_Response;
 use WP_Error;
 
+/**
+ * Class ProfileEndpoints
+ *
+ * Handles all REST API endpoints related to athlete profiles.
+ * Provides functionality for managing profile data, user data,
+ * and combined profile information.
+ *
+ * @package AthleteDashboardChild
+ * @subpackage API
+ */
 class ProfileEndpoints {
-    const NAMESPACE = 'athlete-dashboard/v1';
-    const ROUTE = 'profile';
-    const META_KEY = '_athlete_profile_data';
+	/**
+	 * API namespace for all endpoints.
+	 *
+	 * @var string
+	 */
+	const NAMESPACE = 'athlete-dashboard/v1';
 
-    /**
-     * Initialize the endpoints
-     */
-    public static function init() {
-        // Log initialization
-        error_log('Initializing ProfileEndpoints...');
-        
-        // Register our endpoints when WordPress initializes the REST API
-        add_action('rest_api_init', [self::class, 'register_routes']);
-        
-        // Debug hook to verify WordPress is loading our class
-        add_action('init', function() {
-            error_log('WordPress init: ProfileEndpoints loaded');
-        });
-    }
+	/**
+	 * Base route for profile endpoints.
+	 *
+	 * @var string
+	 */
+	const ROUTE = 'profile';
 
-    /**
-     * Register profile endpoints
-     */
-    public static function register_routes() {
-        error_log('Registering profile endpoints...');
-        error_log('Namespace: ' . self::NAMESPACE);
-        error_log('Route: ' . self::ROUTE);
+	/**
+	 * Meta key for storing profile data.
+	 *
+	 * @var string
+	 */
+	const META_KEY = '_athlete_profile_data';
 
-        // Test endpoint for debugging
-        register_rest_route(
-            self::NAMESPACE,
-            '/' . self::ROUTE . '/test',
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => function() {
-                    error_log('Test endpoint called');
-                    $user_id = get_current_user_id();
-                    $raw_meta = get_user_meta($user_id);
-                    $profile_data = get_user_meta($user_id, self::META_KEY, true);
-                    
-                    return rest_ensure_response([
-                        'status' => 'ok',
-                        'message' => 'Profile API is working',
-                        'timestamp' => current_time('mysql'),
-                        'debug' => [
-                            'user_id' => $user_id,
-                            'meta_key' => self::META_KEY,
-                            'profile_data' => $profile_data,
-                            'all_meta' => $raw_meta
-                        ]
-                    ]);
-                },
-                'permission_callback' => [self::class, 'check_auth']
-            ]
-        );
+	/**
+	 * Initialize the endpoints.
+	 *
+	 * Registers all necessary hooks and actions for the profile endpoints.
+	 *
+	 * @return void
+	 */
+	public static function init() {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Initializing ProfileEndpoints.' );
+		}
 
-        // Main endpoints
-        error_log('Registering main profile endpoints...');
-        
-        register_rest_route(
-            self::NAMESPACE,
-            '/' . self::ROUTE,
-            [
-                [
-                    'methods' => WP_REST_Server::READABLE,
-                    'callback' => [self::class, 'get_profile'],
-                    'permission_callback' => [self::class, 'check_auth'],
-                ],
-                [
-                    'methods' => WP_REST_Server::CREATABLE,
-                    'callback' => [self::class, 'update_profile'],
-                    'permission_callback' => [self::class, 'check_auth'],
-                ]
-            ]
-        );
+		// Register endpoints when WordPress initializes the REST API.
+		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 
-        // Add user data endpoint
-        register_rest_route(
-            self::NAMESPACE,
-            '/' . self::ROUTE . '/user',
-            [
-                [
-                    'methods' => WP_REST_Server::READABLE,
-                    'callback' => [self::class, 'get_user_data'],
-                    'permission_callback' => [self::class, 'check_auth'],
-                ],
-                [
-                    'methods' => WP_REST_Server::CREATABLE,
-                    'callback' => [self::class, 'update_user_data'],
-                    'permission_callback' => [self::class, 'check_auth'],
-                ]
-            ]
-        );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		add_action(
+			'init',
+			function () {
+					error_log( 'WordPress init: ProfileEndpoints loaded.' );
+				}
+			);
+		}
+	}
 
-        // Add combined data endpoint
-        register_rest_route(
-            self::NAMESPACE,
-            '/' . self::ROUTE . '/full',
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [self::class, 'get_combined_data'],
-                'permission_callback' => [self::class, 'check_auth'],
-            ]
-        );
+	/**
+	 * Register profile endpoints.
+	 *
+	 * Registers all REST API endpoints for profile management:
+	 * - Test endpoint for debugging (when WP_DEBUG is enabled)
+	 * - Main profile endpoints for CRUD operations
+	 * - User data endpoints
+	 * - Combined data endpoint
+	 * - Basic data endpoint
+	 *
+	 * @return void
+	 */
+	public static function register_routes() {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Registering profile endpoints.' );
+		error_log( 'Namespace: ' . self::NAMESPACE );
+		error_log( 'Route: ' . self::ROUTE );
+		}
 
-        // Add basic data endpoint
-        register_rest_route(
-            self::NAMESPACE,
-            '/' . self::ROUTE . '/basic',
-            [
-                'methods' => WP_REST_Server::READABLE,
-                'callback' => [self::class, 'get_basic_data'],
-                'permission_callback' => [self::class, 'check_auth'],
-            ]
-        );
+		// Test endpoint for debugging (only when WP_DEBUG is enabled)
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/test',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => function () {
+					$user_id      = get_current_user_id();
+					$raw_meta     = get_user_meta( $user_id );
+					$profile_data = get_user_meta( $user_id, self::META_KEY, true );
 
-        error_log('Profile endpoints registered successfully');
-    }
+					return rest_ensure_response(
+						array(
+							'status'    => 'ok',
+							'message'   => 'Profile API is working',
+							'timestamp' => current_time( 'mysql' ),
+							'debug'     => array(
+								'user_id'      => $user_id,
+								'meta_key'     => self::META_KEY,
+								'profile_data' => $profile_data,
+								'all_meta'     => $raw_meta,
+							),
+						)
+					);
+				},
+				'permission_callback' => array( self::class, 'check_auth' ),
+			)
+		);
+		}
 
-    /**
-     * Check if user is authenticated
-     */
-    public static function check_auth() {
-        if (!is_user_logged_in()) {
-            error_log('Unauthorized profile API access attempt');
-            return false;
-        }
-        return true;
-    }
+		// Main profile endpoints
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE,
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'get_profile' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, 'update_profile' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+			)
+		);
 
-    /**
-     * Get profile data
-     */
-    public static function get_profile() {
-        $user_id = get_current_user_id();
-        error_log("Fetching profile for user: $user_id");
+		// User data endpoints
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/user',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'get_user_data' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, 'update_user_data' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+			)
+		);
 
-        try {
-            $profile_data = self::get_profile_data($user_id);
-            error_log("Profile data retrieved successfully for user: $user_id");
-            error_log("Profile data: " . json_encode($profile_data));
-            
-            // Ensure age is properly cast to integer
-            if (isset($profile_data['age'])) {
-                $profile_data['age'] = absint($profile_data['age']);
-            }
-            
-            return rest_ensure_response([
-                'success' => true,
-                'data' => [
-                    'profile' => $profile_data
-                ]
-            ]);
-        } catch (\Exception $e) {
-            error_log("Error fetching profile: " . $e->getMessage());
-            return new WP_Error(
-                'profile_fetch_error',
-                'Failed to fetch profile data',
-                ['status' => 500]
-            );
-        }
-    }
+		// Combined data endpoint
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/full',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_combined_data' ),
+				'permission_callback' => array( self::class, 'check_auth' ),
+			)
+		);
 
-    /**
-     * Update profile data
-     */
-    public static function update_profile(WP_REST_Request $request) {
-        $user_id = get_current_user_id();
-        $data = $request->get_json_params();
-        
-        error_log("=== Profile Update Request ===");
-        error_log("User ID: $user_id");
-        error_log("Raw request data: " . print_r($request->get_body(), true));
-        error_log("Parsed JSON data: " . print_r($data, true));
+		// Basic data endpoint
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/basic',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_basic_data' ),
+				'permission_callback' => array( self::class, 'check_auth' ),
+			)
+		);
 
-        if (empty($data)) {
-            error_log("No profile data provided in request");
-            return new WP_Error(
-                'invalid_params',
-                'No profile data provided',
-                ['status' => 400]
-            );
-        }
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Profile endpoints registered successfully.' );
+		}
+	}
 
-        try {
-            // Convert age to integer if provided
-            if (isset($data['age'])) {
-                $original_age = $data['age'];
-                $data['age'] = absint($data['age']);
-                error_log("Age conversion: $original_age -> {$data['age']}");
-            }
+	/**
+	 * Check if user is authenticated.
+	 *
+	 * Verifies that the current user is logged in and has permission
+	 * to access the profile endpoints.
+	 *
+	 * @return bool True if user is authenticated, false otherwise.
+	 */
+	public static function check_auth() {
+		if ( ! is_user_logged_in() ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Unauthorized profile API access attempt.' );
+			}
+			return false;
+		}
+		return true;
+	}
 
-            $validation = self::validate_profile_data($data);
-            if (is_wp_error($validation)) {
-                error_log("Profile validation failed: " . $validation->get_error_message());
-                error_log("Validation errors: " . print_r($validation->get_error_data(), true));
-                return $validation;
-            }
+	/**
+	 * Get profile data for the current user.
+	 *
+	 * Retrieves the complete profile data for the currently logged-in user,
+	 * including any custom fields and preferences.
+	 *
+	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
+	 */
+	public static function get_profile() {
+		$user_id = get_current_user_id();
 
-            $current_data = self::get_profile_data($user_id);
-            error_log("Current profile data: " . print_r($current_data, true));
-            
-            $updated_data = array_merge($current_data, $data);
-            error_log("Merged profile data: " . print_r($updated_data, true));
-            
-            error_log("Saving profile data to meta key: " . self::META_KEY);
-            $update_success = update_user_meta($user_id, self::META_KEY, $updated_data);
-            
-            if ($update_success === false) {
-                error_log("Failed to update profile data in user meta");
-                return new WP_Error(
-                    'update_failed',
-                    'Failed to update profile',
-                    ['status' => 500]
-                );
-            }
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( "Fetching profile for user: $user_id" );
+		}
 
-            error_log("Profile updated successfully for user: $user_id");
-            error_log("=== End Profile Update ===");
-            
-            return rest_ensure_response([
-                'success' => true,
-                'data' => [
-                    'profile' => $updated_data
-                ],
-                'message' => 'Profile updated successfully'
-            ]);
-        } catch (\Exception $e) {
-            error_log("Error updating profile: " . $e->getMessage());
-            error_log("Error trace: " . $e->getTraceAsString());
-            return new WP_Error(
-                'profile_update_error',
-                'Failed to update profile',
-                ['status' => 500]
-            );
-        }
-    }
+		try {
+			$profile_data = self::get_profile_data( $user_id );
 
-    /**
-     * Get profile data from user meta
-     */
-    private static function get_profile_data($user_id) {
-        global $wpdb;
-        
-        error_log("=== Profile Data Fetch Debug ===");
-        error_log("Fetching profile data for user ID: {$user_id}");
-        
-        // Fetch core user data
-        $user = get_userdata($user_id);
-        if (!$user) {
-            error_log("ERROR: Failed to fetch user data for ID: {$user_id}");
-            return new WP_Error('user_not_found', 'User not found');
-        }
-        
-        error_log("Core WordPress user data:");
-        error_log(print_r([
-            'user_login' => $user->user_login,
-            'user_email' => $user->user_email,
-            'display_name' => $user->display_name,
-            'first_name' => $user->first_name,
-            'last_name' => $user->last_name
-        ], true));
-        
-        // Get profile meta data
-        $profile_data = get_user_meta($user_id, self::META_KEY, true);
-        error_log("Raw profile meta data:");
-        error_log(print_r($profile_data, true));
-        
-        // If no profile data exists, return default structure
-        if (empty($profile_data)) {
-            error_log("No existing profile data found, returning default structure");
-            $profile_data = [
-                'id' => $user_id,
-                'username' => $user->user_login,
-                'email' => $user->user_email,
-                'displayName' => $user->display_name,
-                'firstName' => $user->first_name,
-                'lastName' => $user->last_name,
-                'phoneNumber' => '',
-                'age' => 0,
-                'gender' => '',
-                'height' => 0,
-                'weight' => 0,
-                'preferredUnits' => 'imperial',
-                'fitnessLevel' => 'beginner',
-                'activityLevel' => 'sedentary',
-                'medicalConditions' => [],
-                'exerciseLimitations' => [],
-                'medications' => '',
-                'injuries' => [],
-                'physicalMetrics' => [
-                    [
-                        'type' => 'height',
-                        'value' => 0,
-                        'unit' => 'cm',
-                        'date' => date('c')
-                    ],
-                    [
-                        'type' => 'weight',
-                        'value' => 0,
-                        'unit' => 'kg',
-                        'date' => date('c')
-                    ]
-                ]
-            ];
-        }
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( "Profile data retrieved successfully for user: $user_id" );
+			error_log( 'Profile data: ' . wp_json_encode( $profile_data ) );
+			}
 
-        // Ensure core user data is always included and up to date
-        $profile_data['id'] = $user_id;
-        $profile_data['username'] = $user->user_login;
-        $profile_data['email'] = $user->user_email;
-        $profile_data['displayName'] = $user->display_name;
-        $profile_data['firstName'] = $user->first_name;
-        $profile_data['lastName'] = $user->last_name;
-        
-        error_log("Final profile data structure:");
-        error_log(print_r($profile_data, true));
-        error_log("=== End Profile Data Fetch Debug ===");
-        
-        return $profile_data;
-    }
+			// Ensure age is properly cast to integer
+			if ( isset( $profile_data['age'] ) ) {
+				$profile_data['age'] = absint( $profile_data['age'] );
+			}
 
-    /**
-     * Validate profile data
-     */
-    private static function validate_profile_data($data) {
-        $errors = [];
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'profile' => $profile_data,
+					),
+				)
+			);
+		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Error fetching profile: ' . $e->getMessage() );
+			}
+			return new WP_Error(
+				'profile_fetch_error',
+				'Failed to fetch profile data',
+				array( 'status' => 500 )
+			);
+		}
+	}
 
-        // Validate height (in cm)
-        if (isset($data['height'])) {
-            $height = floatval($data['height']);
-            if ($height < 50 || $height > 250) {
-                $errors['height'] = 'Height must be between 50cm and 250cm';
-            }
-        }
+	/**
+	 * Update profile data for the current user.
+	 *
+	 * Updates the profile data for the currently logged-in user with the provided data.
+	 * Validates the input data before saving and merges it with existing data.
+	 *
+	 * @param WP_REST_Request $request The request object containing the profile data to update.
+	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
+	 */
+	public static function update_profile( WP_REST_Request $request ) {
+		$user_id = get_current_user_id();
+		$data    = $request->get_json_params();
 
-        // Validate weight (in kg)
-        if (isset($data['weight'])) {
-            $weight = floatval($data['weight']);
-            if ($weight < 30 || $weight > 200) {
-                $errors['weight'] = 'Weight must be between 30kg and 200kg';
-            }
-        }
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+		error_log( '=== Profile Update Request ===' );
+		error_log( "User ID: $user_id" );
+			error_log( 'Raw request data: ' . wp_json_encode( $request->get_body() ) );
+			error_log( 'Parsed JSON data: ' . wp_json_encode( $data ) );
+		}
 
-        // Validate preferred units
-        if (isset($data['preferredUnits']) && !in_array($data['preferredUnits'], ['imperial', 'metric'])) {
-            $errors['preferredUnits'] = 'Invalid unit system';
-        }
+		if ( empty( $data ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'No profile data provided in request.' );
+			}
+			return new WP_Error(
+				'invalid_params',
+				'No profile data provided',
+				array( 'status' => 400 )
+			);
+		}
 
-        // Validate age
-        if (isset($data['age'])) {
-            $age = intval($data['age']);
-            if ($age < 13 || $age > 120) {
-                $errors['age'] = 'Age must be between 13 and 120';
-            }
-        }
+		try {
+			// Convert age to integer if provided
+			if ( isset( $data['age'] ) ) {
+				$original_age = $data['age'];
+				$data['age']  = absint( $data['age'] );
 
-        // Validate gender
-        if (isset($data['gender']) && !in_array($data['gender'], ['male', 'female', 'other', 'prefer_not_to_say'])) {
-            $errors['gender'] = 'Invalid gender value';
-        }
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( "Age conversion: $original_age -> {$data['age']}" );
+				}
+			}
 
-        // Validate fitness level
-        if (isset($data['fitnessLevel']) && !in_array($data['fitnessLevel'], ['beginner', 'intermediate', 'advanced', 'expert'])) {
-            $errors['fitnessLevel'] = 'Invalid fitness level';
-        }
+			$validation = self::validate_profile_data( $data );
+			if ( is_wp_error( $validation ) ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Profile validation failed: ' . $validation->get_error_message() );
+					error_log( 'Validation errors: ' . wp_json_encode( $validation->get_error_data() ) );
+				}
+				return $validation;
+			}
 
-        // Validate activity level
-        if (isset($data['activityLevel']) && !in_array($data['activityLevel'], ['sedentary', 'lightly_active', 'moderately_active', 'very_active', 'extremely_active'])) {
-            $errors['activityLevel'] = 'Invalid activity level';
-        }
+			$current_data = self::get_profile_data( $user_id );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Current profile data: ' . wp_json_encode( $current_data ) );
+			}
 
-        // Validate physicalMetrics
-        if (isset($data['physicalMetrics'])) {
-            if (!is_array($data['physicalMetrics'])) {
-                $errors['physicalMetrics'] = 'Physical metrics must be an array';
-            } else {
-                foreach ($data['physicalMetrics'] as $index => $metric) {
-                    if (!isset($metric['type']) || !in_array($metric['type'], ['height', 'weight', 'bodyFat', 'muscleMass'])) {
-                        $errors["physicalMetrics.{$index}.type"] = 'Invalid metric type';
-                    }
-                    if (!isset($metric['value']) || !is_numeric($metric['value'])) {
-                        $errors["physicalMetrics.{$index}.value"] = 'Invalid metric value';
-                    }
-                    if (!isset($metric['unit']) || empty($metric['unit'])) {
-                        $errors["physicalMetrics.{$index}.unit"] = 'Invalid metric unit';
-                    }
-                    if (!isset($metric['date']) || !strtotime($metric['date'])) {
-                        $errors["physicalMetrics.{$index}.date"] = 'Invalid metric date';
-                    }
-                }
-            }
-        }
+			$updated_data = array_merge( $current_data, $data );
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Merged profile data: ' . wp_json_encode( $updated_data ) );
+			error_log( 'Saving profile data to meta key: ' . self::META_KEY );
+			}
 
-        if (!empty($errors)) {
-            return new WP_Error(
-                'validation_error',
-                'Profile validation failed',
-                ['status' => 400, 'errors' => $errors]
-            );
-        }
+			$update_success = update_user_meta( $user_id, self::META_KEY, $updated_data );
 
-        return true;
-    }
+			if ( $update_success === false ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'Failed to update profile data in user meta.' );
+				}
+				return new WP_Error(
+					'update_failed',
+					'Failed to update profile',
+					array( 'status' => 500 )
+				);
+			}
 
-    /**
-     * Get WordPress user data
-     */
-    public static function get_user_data() {
-        $user_id = get_current_user_id();
-        error_log("Fetching WordPress user data for user: $user_id");
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( "Profile updated successfully for user: $user_id" );
+			error_log( '=== End Profile Update ===' );
+			}
 
-        try {
-            $user = get_userdata($user_id);
-            if (!$user) {
-                return new WP_Error(
-                    'user_not_found',
-                    'User not found',
-                    ['status' => 404]
-                );
-            }
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'profile' => $updated_data,
+					),
+				)
+			);
+		} catch ( \Exception $e ) {
+			error_log( 'Error updating profile: ' . $e->getMessage() );
+			error_log( 'Error trace: ' . $e->getTraceAsString() );
+			return new WP_Error(
+				'profile_update_error',
+				'Failed to update profile',
+				array( 'status' => 500 )
+			);
+		}
+	}
 
-            return rest_ensure_response([
-                'success' => true,
-                'data' => [
-                    'username' => $user->user_login,
-                    'email' => $user->user_email,
-                    'display_name' => $user->display_name,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name
-                ]
-            ]);
-        } catch (\Exception $e) {
-            error_log("Error fetching user data: " . $e->getMessage());
-            return new WP_Error(
-                'user_fetch_error',
-                'Failed to fetch user data',
-                ['status' => 500]
-            );
-        }
-    }
+	/**
+	 * Get profile data for a specific user.
+	 *
+	 * Retrieves the stored profile data for the specified user ID.
+	 * If no data exists, returns an empty array as the default.
+	 *
+	 * @param int $user_id The ID of the user to get profile data for.
+	 * @return array The user's profile data or an empty array if none exists.
+	 * @throws \Exception If there's an error retrieving the profile data.
+	 */
+	private static function get_profile_data( $user_id ) {
+		if ( empty( $user_id ) ) {
+			throw new \Exception( 'Invalid user ID provided.' );
+		}
 
-    /**
-     * Update WordPress user data
-     */
-    public static function update_user_data(WP_REST_Request $request) {
-        $user_id = get_current_user_id();
-        $data = $request->get_json_params();
-        error_log("Updating WordPress user data for user: $user_id");
-        error_log("Update data: " . json_encode($data));
+		try {
+		$profile_data = get_user_meta( $user_id, self::META_KEY, true );
 
-        try {
-            $update_data = [
-                'ID' => $user_id
-            ];
+			// If no data exists, return empty array as default
+		if ( empty( $profile_data ) ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( "No profile data found for user: $user_id" );
+				}
+				return array();
+			}
 
-            // Map fields to WordPress user data
-            if (isset($data['email'])) {
-                $update_data['user_email'] = sanitize_email($data['email']);
-            }
-            if (isset($data['display_name'])) {
-                $update_data['display_name'] = sanitize_text_field($data['display_name']);
-            }
-            if (isset($data['first_name'])) {
-                $update_data['first_name'] = sanitize_text_field($data['first_name']);
-            }
-            if (isset($data['last_name'])) {
-                $update_data['last_name'] = sanitize_text_field($data['last_name']);
-            }
+			// Ensure we have an array
+			if ( ! is_array( $profile_data ) ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( "Invalid profile data format for user: $user_id" );
+				}
+				return array();
+			}
 
-            // Update user data
-            $result = wp_update_user($update_data);
+		return $profile_data;
+		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Error retrieving profile data: ' . $e->getMessage() );
+			}
+			throw $e;
+		}
+	}
 
-            if (is_wp_error($result)) {
-                error_log("Error updating user: " . $result->get_error_message());
-                return new WP_Error(
-                    'user_update_error',
-                    $result->get_error_message(),
-                    ['status' => 500]
-                );
-            }
+	/**
+	 * Validate profile data before saving.
+	 *
+	 * Performs validation checks on the profile data to ensure it meets
+	 * the required format and constraints.
+	 *
+	 * @param array $data The profile data to validate.
+	 * @return true|WP_Error True if validation passes, WP_Error if validation fails.
+	 */
+	private static function validate_profile_data( $data ) {
+		if ( ! is_array( $data ) ) {
+			return new WP_Error(
+				'invalid_data_format',
+				'Profile data must be an array',
+				array( 'status' => 400 )
+			);
+		}
 
-            // Get updated user data
-            $user = get_userdata($user_id);
-            if (!$user) {
-                return new WP_Error(
-                    'user_not_found',
-                    'User not found after update',
-                    ['status' => 404]
-                );
-            }
+		$allowed_fields = array(
+			'phoneNumber',
+			'age',
+			'gender',
+			'height',
+			'weight',
+			'preferredUnits',
+			'fitnessLevel',
+			'activityLevel',
+			'medicalConditions',
+			'exerciseLimitations',
+			'medications',
+			'injuries',
+			'physicalMetrics',
+		);
 
-            return rest_ensure_response([
-                'success' => true,
-                'data' => [
-                    'username' => $user->user_login,
-                    'email' => $user->user_email,
-                    'display_name' => $user->display_name,
-                    'first_name' => $user->first_name,
-                    'last_name' => $user->last_name
-                ],
-                'message' => 'User data updated successfully'
-            ]);
-        } catch (\Exception $e) {
-            error_log("Error updating user data: " . $e->getMessage());
-            return new WP_Error(
-                'user_update_error',
-                'Failed to update user data',
-                ['status' => 500]
-            );
-        }
-    }
+		$allowed_units           = array( 'imperial', 'metric' );
+		$allowed_fitness_levels  = array( 'beginner', 'intermediate', 'advanced', 'expert' );
+		$allowed_activity_levels = array( 'sedentary', 'light', 'moderate', 'very_active', 'extra_active' );
+		$allowed_genders         = array( 'male', 'female', 'other', 'prefer_not_to_say' );
 
-    /**
-     * Get combined user and profile data
-     */
-    public static function get_combined_data() {
-        $user_id = get_current_user_id();
-        $user = get_userdata($user_id);
+		foreach ( $data as $field => $value ) {
+			if ( ! in_array( $field, $allowed_fields, true ) ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( "Invalid field in profile data: $field" );
+				}
+				continue;
+			}
 
-        if (!$user) {
-            return new WP_Error(
-                'user_not_found',
-                'User not found',
-                ['status' => 404]
-            );
-        }
+			switch ( $field ) {
+				case 'age':
+					if ( ! is_numeric( $value ) || $value < 0 || $value > 120 ) {
+						return new WP_Error(
+							'invalid_age',
+							'Age must be between 0 and 120',
+							array( 'status' => 400 )
+						);
+					}
+					break;
 
-        try {
-            $profile_data = self::get_profile_data($user_id);
-            
-            $combined_data = [
-                // WordPress core fields
-                'username' => $user->user_login,
-                'email' => $user->user_email,
-                'displayName' => $user->display_name,
-                'firstName' => $user->first_name,
-                'lastName' => $user->last_name,
-                
-                // Profile data
-                ...$profile_data
-            ];
+				case 'gender':
+					if ( ! empty( $value ) && ! in_array( $value, $allowed_genders, true ) ) {
+						return new WP_Error(
+							'invalid_gender',
+							'Invalid gender value provided',
+							array(
+								'status'         => 400,
+								'allowed_values' => $allowed_genders,
+							)
+						);
+					}
+					break;
 
-            return rest_ensure_response([
-                'success' => true,
-                'data' => $combined_data
-            ]);
-        } catch (\Exception $e) {
-            error_log("Error fetching combined data: " . $e->getMessage());
-            return new WP_Error(
-                'fetch_error',
-                'Failed to fetch user data',
-                ['status' => 500]
-            );
-        }
-    }
+				case 'preferredUnits':
+					if ( ! empty( $value ) && ! in_array( $value, $allowed_units, true ) ) {
+						return new WP_Error(
+							'invalid_units',
+							'Invalid units preference',
+							array(
+								'status'         => 400,
+								'allowed_values' => $allowed_units,
+							)
+						);
+					}
+					break;
 
-    /**
-     * Get basic profile data for initial render
-     */
-    public static function get_basic_data() {
-        $user_id = get_current_user_id();
-        $user = get_userdata($user_id);
+				case 'fitnessLevel':
+					if ( ! empty( $value ) && ! in_array( $value, $allowed_fitness_levels, true ) ) {
+						return new WP_Error(
+							'invalid_fitness_level',
+							'Invalid fitness level',
+							array(
+								'status'         => 400,
+								'allowed_values' => $allowed_fitness_levels,
+							)
+						);
+					}
+					break;
 
-        if (!$user) {
-            return new WP_Error(
-                'user_not_found',
-                'User not found',
-                ['status' => 404]
-            );
-        }
+				case 'activityLevel':
+					if ( ! empty( $value ) && ! in_array( $value, $allowed_activity_levels, true ) ) {
+						return new WP_Error(
+							'invalid_activity_level',
+							'Invalid activity level',
+							array(
+								'status'         => 400,
+								'allowed_values' => $allowed_activity_levels,
+							)
+						);
+					}
+					break;
 
-        try {
-            // Get only essential profile fields
-            $profile_data = self::get_profile_data($user_id);
-            
-            $basic_data = [
-                // Essential user fields
-                'username' => $user->user_login,
-                'displayName' => $user->display_name,
-                'firstName' => $user->first_name,
-                'lastName' => $user->last_name,
-                
-                // Essential profile fields
-                'userId' => $profile_data['user_id'],
-                'email' => $user->user_email
-            ];
+				case 'height':
+				case 'weight':
+					if ( ! empty( $value ) && ( ! is_numeric( $value ) || $value < 0 ) ) {
+						return new WP_Error(
+							"invalid_$field",
+							ucfirst( $field ) . ' must be a positive number',
+							array( 'status' => 400 )
+						);
+					}
+					break;
 
-            // Add cache headers
-            header('Cache-Control: private, max-age=60'); // 1 minute cache
-            header('ETag: "' . md5(json_encode($basic_data)) . '"');
+				case 'medicalConditions':
+				case 'exerciseLimitations':
+				case 'injuries':
+					if ( ! empty( $value ) && ! is_array( $value ) ) {
+						return new WP_Error(
+							"invalid_$field",
+							ucfirst( $field ) . ' must be an array',
+							array( 'status' => 400 )
+						);
+					}
+					break;
 
-            return rest_ensure_response([
-                'success' => true,
-                'data' => $basic_data
-            ]);
-        } catch (\Exception $e) {
-            error_log("Error fetching basic data: " . $e->getMessage());
-            return new WP_Error(
-                'fetch_error',
-                'Failed to fetch basic user data',
-                ['status' => 500]
-            );
-        }
-    }
+				case 'physicalMetrics':
+					if ( ! empty( $value ) ) {
+						if ( ! is_array( $value ) ) {
+							return new WP_Error(
+								'invalid_physical_metrics',
+								'Physical metrics must be an array',
+								array( 'status' => 400 )
+							);
+						}
+
+						foreach ( $value as $metric ) {
+							if ( ! isset( $metric['type'], $metric['value'], $metric['unit'], $metric['date'] ) ) {
+								return new WP_Error(
+									'invalid_metric_format',
+									'Each metric must have type, value, unit, and date',
+									array( 'status' => 400 )
+								);
+							}
+
+							if ( ! is_numeric( $metric['value'] ) || $metric['value'] < 0 ) {
+								return new WP_Error(
+									'invalid_metric_value',
+									'Metric value must be a positive number',
+									array( 'status' => 400 )
+								);
+							}
+						}
+					}
+					break;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Get user data for the current user.
+	 *
+	 * Retrieves basic user information from WordPress core for the currently
+	 * logged-in user.
+	 *
+	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
+	 */
+	public static function get_user_data() {
+		$user_id = get_current_user_id();
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( "Fetching user data for ID: $user_id" );
+		}
+
+		try {
+			$user = get_userdata( $user_id );
+			if ( ! $user ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( "User not found for ID: $user_id" );
+				}
+				return new WP_Error(
+					'user_not_found',
+					'User not found',
+					array( 'status' => 404 )
+				);
+			}
+
+			$user_data = array(
+				'id'          => $user_id,
+				'username'    => $user->user_login,
+				'email'       => $user->user_email,
+				'displayName' => $user->display_name,
+				'firstName'   => $user->first_name,
+				'lastName'    => $user->last_name,
+				'roles'       => $user->roles,
+			);
+
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => $user_data,
+				)
+			);
+		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Error fetching user data: ' . $e->getMessage() );
+			}
+			return new WP_Error(
+				'user_fetch_error',
+				'Failed to fetch user data',
+				array( 'status' => 500 )
+			);
+		}
+	}
+
+	/**
+	 * Update user data for the current user.
+	 *
+	 * Updates basic user information in WordPress core for the currently
+	 * logged-in user.
+	 *
+	 * @param WP_REST_Request $request The request object containing the user data to update.
+	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
+	 */
+	public static function update_user_data( WP_REST_Request $request ) {
+		$user_id = get_current_user_id();
+		$data    = $request->get_json_params();
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( '=== User Data Update Request ===' );
+			error_log( "User ID: $user_id" );
+		error_log( 'Update data: ' . wp_json_encode( $data ) );
+		}
+
+		if ( empty( $data ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'No user data provided in request' );
+			}
+				return new WP_Error(
+				'invalid_params',
+				'No user data provided',
+				array( 'status' => 400 )
+			);
+		}
+
+		try {
+			$user = get_userdata( $user_id );
+			if ( ! $user ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( "User not found for ID: $user_id" );
+				}
+				return new WP_Error(
+					'user_not_found',
+					'User not found',
+					array( 'status' => 404 )
+				);
+			}
+
+			$updateable_fields = array(
+				'first_name'   => 'firstName',
+				'last_name'    => 'lastName',
+				'display_name' => 'displayName',
+				'user_email'   => 'email',
+			);
+
+			$user_data = array( 'ID' => $user_id );
+			foreach ( $updateable_fields as $wp_field => $request_field ) {
+				if ( isset( $data[ $request_field ] ) ) {
+					$user_data[ $wp_field ] = sanitize_text_field( $data[ $request_field ] );
+				}
+			}
+
+			if ( count( $user_data ) === 1 ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'No valid fields to update' );
+				}
+				return new WP_Error(
+					'invalid_params',
+					'No valid fields to update',
+					array( 'status' => 400 )
+				);
+			}
+
+			$result = wp_update_user( $user_data );
+			if ( is_wp_error( $result ) ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'Failed to update user: ' . $result->get_error_message() );
+				}
+				return $result;
+			}
+
+			// Get updated user data
+			$updated_user  = get_userdata( $user_id );
+			$response_data = array(
+				'id'          => $user_id,
+				'username'    => $updated_user->user_login,
+				'email'       => $updated_user->user_email,
+				'displayName' => $updated_user->display_name,
+				'firstName'   => $updated_user->first_name,
+				'lastName'    => $updated_user->last_name,
+				'roles'       => $updated_user->roles,
+			);
+
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( "User data updated successfully for ID: $user_id" );
+				error_log( '=== End User Data Update ===' );
+			}
+
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => $response_data,
+				)
+			);
+		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Error updating user data: ' . $e->getMessage() );
+			}
+			return new WP_Error(
+				'update_error',
+				'Failed to update user data',
+				array( 'status' => 500 )
+			);
+		}
+	}
+
+	/**
+	 * Get combined user and profile data.
+	 *
+	 * Retrieves both WordPress user data and profile data for the current user
+	 * and combines them into a single response.
+	 *
+	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
+	 */
+	public static function get_combined_data() {
+		$user_id = get_current_user_id();
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( "Fetching combined data for user: $user_id" );
+		}
+
+		try {
+			$user = get_userdata( $user_id );
+		if ( ! $user ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( "User not found for ID: $user_id" );
+				}
+			return new WP_Error(
+				'user_not_found',
+				'User not found',
+				array( 'status' => 404 )
+			);
+		}
+
+			$profile_data = self::get_profile_data( $user_id );
+			$user_data    = array(
+				'id'          => $user_id,
+				'username'    => $user->user_login,
+				'email'       => $user->user_email,
+				'displayName' => $user->display_name,
+				'firstName'   => $user->first_name,
+				'lastName'    => $user->last_name,
+				'roles'       => $user->roles,
+			);
+
+			$combined_data = array_merge( $user_data, $profile_data );
+
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( "Combined data retrieved successfully for user: $user_id" );
+			}
+
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => $combined_data,
+				)
+			);
+		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Error fetching combined data: ' . $e->getMessage() );
+			}
+			return new WP_Error(
+				'data_fetch_error',
+				'Failed to fetch combined data',
+				array( 'status' => 500 )
+			);
+		}
+	}
+
+	/**
+	 * Get basic user profile data.
+	 *
+	 * Retrieves a minimal set of user and profile data, suitable for
+	 * display in lists or summaries.
+	 *
+	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
+	 */
+	public static function get_basic_data() {
+		$user_id = get_current_user_id();
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( "Fetching basic data for user: $user_id" );
+		}
+
+		try {
+			$user = get_userdata( $user_id );
+		if ( ! $user ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( "User not found for ID: $user_id" );
+				}
+			return new WP_Error(
+				'user_not_found',
+				'User not found',
+				array( 'status' => 404 )
+			);
+		}
+
+			$profile_data = self::get_profile_data( $user_id );
+			$basic_data   = array(
+				'id'          => $user_id,
+				'displayName' => $user->display_name,
+				'firstName'   => $user->first_name,
+				'lastName'    => $user->last_name,
+			);
+
+			// Add selected profile fields if they exist
+			$profile_fields = array( 'age', 'gender', 'fitnessLevel', 'activityLevel' );
+			foreach ( $profile_fields as $field ) {
+				if ( isset( $profile_data[ $field ] ) ) {
+					$basic_data[ $field ] = $profile_data[ $field ];
+				}
+			}
+
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( "Basic data retrieved successfully for user: $user_id" );
+			}
+
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => $basic_data,
+				)
+			);
+		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Error fetching basic data: ' . $e->getMessage() );
+			}
+			return new WP_Error(
+				'data_fetch_error',
+				'Failed to fetch basic data',
+				array( 'status' => 500 )
+			);
+		}
+	}
 }
 
 // Initialize endpoints
 ProfileEndpoints::init();
 
 // Debug log when this file is loaded
-error_log('Profile endpoints file loaded'); 
+error_log( 'Profile endpoints file loaded' );

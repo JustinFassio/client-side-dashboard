@@ -1,128 +1,205 @@
 <?php
 namespace AthleteDashboard\Tests;
 
-use WP_Mock;
 use PHPUnit\Framework\TestCase as PHPUnit_TestCase;
 
+/**
+ * Base test case class for the Athlete Dashboard theme.
+ *
+ * @package Athlete_Dashboard
+ */
+
+/**
+ * Logger class for test cases.
+ */
+class Logger {
+	/** @var array Messages logged during test execution. */
+	private static $messages = array();
+
+	/** @var Logger|null Singleton instance. */
+	private static $instance = null;
+
+	/** @var bool Debug mode flag. */
+	private $debug = false;
+
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		// Initialize the logger instance.
+		self::$messages = array();
+	}
+
+	/**
+	 * Get singleton instance of the logger.
+	 *
+	 * @return Logger Logger instance.
+	 */
+	public static function getInstance() {
+		if ( null === self::$instance ) {
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
+
+	/**
+	 * Log a message.
+	 *
+	 * @param string $message Message to log.
+	 */
+	public function log( $message ) {
+		global $test_log_messages;
+
+		// Add message to both static array and global array.
+		self::$messages[]    = $message;
+		$test_log_messages[] = $message;
+
+		// Print debug information if enabled.
+		if ( $this->debug ) {
+			print_r( 'Logged message: ' . $message );
+		}
+	}
+
+	/**
+	 * Get all logged messages.
+	 *
+	 * @return array Array of logged messages.
+	 */
+	public function getMessages() {
+		global $test_log_messages;
+
+		if ( $this->debug ) {
+			print_r( 'Current messages: ' );
+			print_r( self::$messages );
+		}
+
+		// Return both static and global messages.
+		return array_merge( self::$messages, $test_log_messages );
+	}
+
+	/**
+	 * Reset the logger state.
+	 */
+	public function reset() {
+		global $test_log_messages;
+
+		if ( $this->debug ) {
+			print_r( 'Resetting logger state.' );
+		}
+
+		// Clear both static and global messages.
+		self::$messages    = array();
+		$test_log_messages = array();
+	}
+
+	/**
+	 * Set debug mode.
+	 *
+	 * @param bool $enabled Whether to enable debug mode.
+	 */
+	public function setDebugMode( $enabled ) {
+		$this->debug = $enabled;
+	}
+}
+
+/**
+ * Base test case class for all tests.
+ */
 class TestCase extends PHPUnit_TestCase {
-    public function setUp(): void {
-        parent::setUp();
-        WP_Mock::setUp();
-    }
+	/** @var Logger Logger instance. */
+	protected $logger;
 
-    public function tearDown(): void {
-        WP_Mock::tearDown();
-        parent::tearDown();
-    }
+	/** @var array Test data. */
+	protected $test_data;
 
-    /**
-     * Helper function to create a mock user
-     */
-    protected function createMockUser($id = 1, $role = 'subscriber') {
-        $user = new \stdClass();
-        $user->ID = $id;
-        $user->roles = [$role];
-        $user->user_login = 'test_user';
-        $user->user_email = 'test@example.com';
-        $user->user_registered = '2023-01-01 00:00:00';
-        return $user;
-    }
+	/**
+	 * Set up the test case.
+	 */
+	public function setUp(): void {
+		parent::setUp();
 
-    /**
-     * Helper function to mock WordPress functions
-     */
-    protected function mockWordPressFunctions() {
-        WP_Mock::userFunction('wp_cache_get')->andReturn(false);
-        WP_Mock::userFunction('wp_cache_set')->andReturn(true);
-        WP_Mock::userFunction('get_transient')->andReturn(false);
-        WP_Mock::userFunction('set_transient')->andReturn(true);
-        WP_Mock::userFunction('delete_transient')->andReturn(true);
-        WP_Mock::userFunction('wp_using_ext_object_cache')->andReturn(false);
-        WP_Mock::userFunction('is_user_logged_in')->andReturn(true);
-        WP_Mock::userFunction('get_current_user_id')->andReturn(1);
-        WP_Mock::userFunction('current_user_can')->andReturn(false);
-        WP_Mock::userFunction('rest_ensure_response')->andReturnUsing(function($data) {
-            return new \WP_REST_Response($data);
-        });
-    }
+		// Initialize logger.
+		$this->logger = Logger::getInstance();
+		$this->logger->reset();
 
-    /**
-     * Helper function to mock WordPress errors
-     */
-    protected function mockWordPressErrors() {
-        WP_Mock::userFunction('is_wp_error')->andReturnUsing(function($thing) {
-            return $thing instanceof \WP_Error;
-        });
-    }
+		// Set up test data.
+		$this->test_data = array();
+	}
 
-    /**
-     * Helper function to mock WordPress cache functions
-     */
-    protected function mockWordPressCache() {
-        WP_Mock::userFunction('wp_cache_get')->andReturn(false);
-        WP_Mock::userFunction('wp_cache_set')->andReturn(true);
-        WP_Mock::userFunction('wp_cache_delete')->andReturn(true);
-        WP_Mock::userFunction('wp_cache_flush')->andReturn(true);
-        WP_Mock::userFunction('wp_using_ext_object_cache')->andReturn(false);
-    }
+	/**
+	 * Clean up after the test.
+	 */
+	public function tearDown(): void {
+		// Clean up test data.
+		$this->test_data = array();
 
-    /**
-     * Helper function to mock WordPress transient functions
-     */
-    protected function mockWordPressTransients() {
-        WP_Mock::userFunction('get_transient')->andReturn(false);
-        WP_Mock::userFunction('set_transient')->andReturn(true);
-        WP_Mock::userFunction('delete_transient')->andReturn(true);
-    }
+		// Reset logger state.
+		$this->logger->reset();
 
-    /**
-     * Helper function to mock WordPress user functions
-     */
-    protected function mockWordPressUser($user = null) {
-        if (!$user) {
-            $user = $this->createMockUser();
-        }
+		parent::tearDown();
+	}
 
-        WP_Mock::userFunction('get_user_by')->andReturn($user);
-        WP_Mock::userFunction('get_userdata')->andReturn($user);
-        WP_Mock::userFunction('get_user_meta')->andReturn('');
-        WP_Mock::userFunction('update_user_meta')->andReturn(true);
-        WP_Mock::userFunction('delete_user_meta')->andReturn(true);
-    }
+	/**
+	 * Create a test user with specified capabilities.
+	 *
+	 * @param array $capabilities User capabilities to set.
+	 * @return int User ID.
+	 */
+	protected function create_test_user( $capabilities ) {
+		// Create user with specified capabilities.
+		$user_id = wp_insert_user(
+			array(
+				'user_login' => 'testuser_' . uniqid(),
+				'user_pass'  => 'password',
+				'role'       => 'subscriber',
+			)
+		);
 
-    /**
-     * Helper function to mock WordPress post functions
-     */
-    protected function mockWordPressPost($post = null) {
-        if (!$post) {
-            $post = new \stdClass();
-            $post->ID = 1;
-            $post->post_type = 'post';
-            $post->post_status = 'publish';
-        }
+		// Set user capabilities.
+		foreach ( $capabilities as $capability => $value ) {
+			update_user_meta( $user_id, 'wp_capabilities', array( $capability => $value ) );
+		}
 
-        WP_Mock::userFunction('get_post')->andReturn($post);
-        WP_Mock::userFunction('get_post_meta')->andReturn('');
-        WP_Mock::userFunction('update_post_meta')->andReturn(true);
-        WP_Mock::userFunction('delete_post_meta')->andReturn(true);
-    }
+		return $user_id;
+	}
 
-    /**
-     * Helper function to mock WordPress option functions
-     */
-    protected function mockWordPressOptions() {
-        WP_Mock::userFunction('get_option')->andReturn('');
-        WP_Mock::userFunction('update_option')->andReturn(true);
-        WP_Mock::userFunction('delete_option')->andReturn(true);
-    }
+	/**
+	 * Set user meta for testing.
+	 *
+	 * @param int    $user_id    User ID.
+	 * @param string $meta_key   Meta key.
+	 * @param mixed  $meta_value Meta value.
+	 */
+	protected function set_user_meta( $user_id, $meta_key, $meta_value ) {
+		update_user_meta( $user_id, $meta_key, $meta_value );
+	}
 
-    /**
-     * Helper function to mock WordPress REST functions
-     */
-    protected function mockWordPressRest() {
-        WP_Mock::userFunction('register_rest_route')->andReturn(true);
-        WP_Mock::userFunction('rest_ensure_response')->andReturnUsing(function($data) {
-            return new \WP_REST_Response($data);
-        });
-    }
-} 
+	/**
+	 * Log an error message.
+	 *
+	 * @param string $message Error message to log.
+	 */
+	protected function log_error( $message ) {
+		// Log error message for debugging.
+		error_log( $message );
+	}
+
+	/**
+	 * Set user capabilities for testing.
+	 *
+	 * @param array $capabilities User capabilities to set.
+	 */
+	protected function setUserCapabilities( $capabilities ) {
+		global $current_user_capabilities;
+		$current_user_capabilities = $capabilities;
+	}
+
+	/**
+	 * Get error log messages.
+	 *
+	 * @return array Array of error log messages.
+	 */
+	protected function getErrorLogMessages() {
+		return $this->logger->getMessages();
+	}
+}

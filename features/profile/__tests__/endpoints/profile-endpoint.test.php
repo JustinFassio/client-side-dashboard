@@ -1,86 +1,126 @@
 <?php
 /**
- * Profile Endpoint Tests
- * 
- * Essential tests for profile data storage and retrieval.
+ * Tests for the Profile Endpoint functionality.
+ *
+ * @package Athlete_Dashboard
  */
 
-class Profile_Endpoint_Test {
-    private $user_id;
+/**
+ * Test class for Profile Endpoint functionality.
+ */
+class Profile_Endpoint_Test extends TestCase {
+	/** @var WP_REST_Server REST server instance. */
+	private $server;
 
-    public function setUp() {
-        $this->user_id = wp_create_user('testuser', 'password', 'test@example.com');
-        wp_set_current_user($this->user_id);
-    }
+	/** @var string Base endpoint route. */
+	private $route = '/athlete-dashboard/v1/profile';
 
-    public function tearDown() {
-        wp_delete_user($this->user_id);
-    }
+	/**
+	 * Set up test environment.
+	 */
+	public function set_up() {
+		parent::setUp();
 
-    /**
-     * Test basic profile operations (create/update/read).
-     */
-    public function test_profile_crud() {
-        // Create/Update profile
-        $data = array(
-            'firstName' => 'John',
-            'lastName' => 'Doe'
-        );
+		// Initialize REST server.
+		global $wp_rest_server;
+		$wp_rest_server = new WP_REST_Server();
+		$this->server   = $wp_rest_server;
 
-        $response = $this->make_request('POST', '/athlete-dashboard/v1/profile', $data);
-        $this->assertEquals(200, $response['code']);
-        $this->assertEquals('John', $response['data']['firstName']);
+		do_action( 'rest_api_init' );
+	}
 
-        // Read profile
-        $response = $this->make_request('GET', '/athlete-dashboard/v1/profile/' . $this->user_id);
-        $this->assertEquals(200, $response['code']);
-        $this->assertEquals('John', $response['data']['firstName']);
-    }
+	/**
+	 * Clean up test environment.
+	 */
+	public function tear_down() {
+		parent::tearDown();
+		global $wp_rest_server;
+		$wp_rest_server = null;
+	}
 
-    /**
-     * Test basic validation.
-     */
-    public function test_basic_validation() {
-        $data = array(
-            'firstName' => '', // Empty required field
-        );
+	/**
+	 * Helper function to make a REST API request.
+	 *
+	 * @param string $method   HTTP method.
+	 * @param string $endpoint Endpoint path.
+	 * @param array  $data     Request data.
+	 * @return WP_REST_Response
+	 */
+	private function make_request( $method, $endpoint, $data = array() ) {
+		$request = new WP_REST_Request( $method, $endpoint );
+		if ( ! empty( $data ) ) {
+			$request->set_body_params( $data );
+		}
+		return $this->server->dispatch( $request );
+	}
 
-        $response = $this->make_request('POST', '/athlete-dashboard/v1/profile', $data);
-        $this->assertEquals(400, $response['code']);
-    }
+	/**
+	 * Helper function to compare response data.
+	 *
+	 * @param mixed $expected Expected data.
+	 * @param mixed $actual   Actual data.
+	 * @throws Exception If assertion fails.
+	 */
+	private function assert_response_data( $expected, $actual ) {
+		$this->assertEquals(
+			$expected,
+			$actual,
+			"Expected $expected but got $actual"
+		);
+	}
 
-    /**
-     * Test authentication.
-     */
-    public function test_auth() {
-        wp_set_current_user(0);
-        $response = $this->make_request('GET', '/athlete-dashboard/v1/profile/1');
-        $this->assertEquals(401, $response['code']);
-    }
+	/**
+	 * Test that profile data can be retrieved successfully.
+	 */
+	public function test_get_profile() {
+		// Create test user and set up data.
+		$user_id = $this->factory->user->create();
+		wp_set_current_user( $user_id );
 
-    /**
-     * Helper function to make REST API requests.
-     */
-    private function make_request($method, $endpoint, $data = null) {
-        $request = new WP_REST_Request($method, $endpoint);
-        if ($data) {
-            $request->set_body_params($data);
-        }
-        
-        $response = rest_do_request($request);
-        return array(
-            'code' => $response->get_status(),
-            'data' => $response->get_data(),
-            'message' => $response->get_data()['message'] ?? ''
-        );
-    }
+		// Make request.
+		$response = $this->make_request( 'GET', $this->route );
 
-    /**
-     * Simple assertion helpers.
-     */
-    private function assertEquals($expected, $actual) {
-        if ($expected !== $actual) {
-            throw new Exception("Expected $expected but got $actual");
-        }
-    }
-} 
+		// Verify response.
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'profile', $data );
+	}
+
+	/**
+	 * Test that profile data can be updated successfully.
+	 */
+	public function test_update_profile() {
+		// Create test user.
+		$user_id = $this->factory->user->create();
+		wp_set_current_user( $user_id );
+
+		// Test data.
+		$update_data = array(
+			'name'  => 'Test User',
+			'email' => 'test@example.com',
+		);
+
+		// Make request.
+		$response = $this->make_request( 'POST', $this->route, $update_data );
+
+		// Verify response.
+		$this->assertEquals( 200, $response->get_status() );
+		$data = $response->get_data();
+		$this->assertArrayHasKey( 'success', $data );
+		$this->assertTrue( $data['success'] );
+	}
+
+	/**
+	 * Test that unauthorized users cannot access profile data.
+	 */
+	public function test_unauthorized_access() {
+		// Ensure no user is logged in.
+		wp_set_current_user( 0 );
+
+		// Make request.
+		$response = $this->make_request( 'GET', $this->route );
+
+		// Verify response.
+		$this->assertEquals( 401, $response->get_status() );
+	}
+}

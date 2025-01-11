@@ -8,8 +8,6 @@ import {
 import { ProfileData } from '../types/profile';
 
 export class ValidationService implements IValidationService {
-    private validators: Record<string, ValidatorFn[]> = {};
-
     constructor() {
         this.initializeValidators();
     }
@@ -74,7 +72,6 @@ export class ValidationService implements IValidationService {
 
         // Validate each field
         for (const [field, value] of Object.entries(data)) {
-            const validators = this.getFieldValidators(field as keyof ProfileData);
             const config = this.getValidationConfig(field as keyof ProfileData);
             
             const result = this.validateField(value, config);

@@ -10,8 +10,8 @@ export interface DashboardEvents extends EventEmitter {
     once(event: string, listener: (...args: any[]) => void): this;
     eventNames(): Array<string | symbol>;
     listenerCount(event: string): number;
-    listeners(event: string): Function[];
-    rawListeners(event: string): Function[];
+    listeners(event: string): Array<(...args: any[]) => void>;
+    rawListeners(event: string): Array<(...args: any[]) => void>;
     prependListener(event: string, listener: (...args: any[]) => void): this;
     prependOnceListener(event: string, listener: (...args: any[]) => void): this;
 } 

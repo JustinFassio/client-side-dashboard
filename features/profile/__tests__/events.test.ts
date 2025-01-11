@@ -1,6 +1,6 @@
-import { ProfileEvent, ProfileEventPayloads } from '../events/types';
-import { mockDashboardEvents } from '../../../dashboard/testing/mocks';
+import { ProfileEvent } from '../events/types';
 import { ProfileData } from '../types/profile';
+import { mockDashboardEvents } from '../../../dashboard/testing/mocks/mocks';
 
 describe('Profile Events', () => {
     let events: ReturnType<typeof mockDashboardEvents>;

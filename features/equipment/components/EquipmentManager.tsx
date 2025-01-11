@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useEquipment } from '../contexts/equipment-context';
 import { EquipmentListWidget } from './widgets/EquipmentListWidget';
 import { EquipmentSetWidget } from './widgets/EquipmentSetWidget';
@@ -9,29 +9,29 @@ import { ErrorMessage } from '../../../dashboard/components/ErrorMessage';
 import './styles.css';
 
 interface EquipmentManagerProps {
-    userId: number;
-    userGoals: string[];
-    fitnessLevel: string;
+    _userId: number;
+    _userGoals: string[];
+    _fitnessLevel: string;
 }
 
 export const EquipmentManager: React.FC<EquipmentManagerProps> = ({
-    userId,
-    userGoals,
-    fitnessLevel
+    _userId,
+    _userGoals,
+    _fitnessLevel
 }) => {
     const { equipment, equipmentSets, workoutZones, loading, error, actions } = useEquipment();
 
-    useEffect(() => {
-        const loadData = async () => {
-            await Promise.all([
-                actions.fetchEquipment(),
-                actions.fetchEquipmentSets(),
-                actions.fetchWorkoutZones()
-            ]);
-        };
+    const loadData = useCallback(async () => {
+        await Promise.all([
+            actions.fetchEquipment(),
+            actions.fetchEquipmentSets(),
+            actions.fetchWorkoutZones()
+        ]);
+    }, [actions.fetchEquipment, actions.fetchEquipmentSets, actions.fetchWorkoutZones]);
 
+    useEffect(() => {
         loadData();
-    }, [actions]);
+    }, [loadData]);
 
     if (loading) {
         return <LoadingSpinner message="Loading equipment data..." />;
@@ -77,8 +77,8 @@ export const EquipmentManager: React.FC<EquipmentManagerProps> = ({
 
             <EquipmentRecommendationsWidget
                 equipment={equipment}
-                userGoals={userGoals}
-                fitnessLevel={fitnessLevel}
+                userGoals={_userGoals}
+                fitnessLevel={_fitnessLevel}
                 className="equipment-widget"
             />
         </div>

@@ -1,276 +1,293 @@
 <?php
+/**
+ * Cache Statistics Dashboard Widget.
+ *
+ * This file contains the Cache_Stats_Widget class which provides a dashboard
+ * widget displaying cache statistics and performance metrics.
+ *
+ * @package AthleteDashboard
+ * @subpackage Admin
+ */
+
 namespace AthleteDashboard\Admin;
 
-if (!defined('ABSPATH')) {
-    exit;
-}
+use WP_Debug_Data;
 
 /**
- * Dashboard widget for displaying cache performance metrics.
+ * Class Cache_Stats_Widget
+ *
+ * Implements a WordPress dashboard widget that displays cache statistics
+ * and performance metrics for the Athlete Dashboard.
+ *
+ * @package AthleteDashboard
+ * @subpackage Admin
  */
 class Cache_Stats_Widget {
-    /**
-     * Initialize the dashboard widget.
-     */
-    public function init() {
-        error_log('Cache Stats Widget: Initializing');
-        if (is_admin()) {
-            error_log('Cache Stats Widget: Admin area confirmed');
-            add_action('load-index.php', [$this, 'setup_dashboard_widget']);
-            error_log('Cache Stats Widget: Added load-index.php action');
-        } else {
-            error_log('Cache Stats Widget: Not in admin area');
-        }
-    }
+	/**
+	 * Initialize the widget.
+	 *
+	 * @return void
+	 */
+	public function init() {
+		if ( WP_DEBUG ) {
+			error_log( 'Initializing cache stats widget.' );
+		}
+		add_action( 'wp_dashboard_setup', array( $this, 'add_dashboard_widget' ) );
+		add_action( 'wp_ajax_clear_cache', array( $this, 'handle_clear_cache' ) );
+		add_action( 'wp_ajax_refresh_cache_stats', array( $this, 'handle_refresh_stats' ) );
+	}
 
-    /**
-     * Setup the dashboard widget.
-     */
-    public function setup_dashboard_widget() {
-        error_log('Cache Stats Widget: Setting up dashboard widget');
-        add_action('wp_dashboard_setup', [$this, 'add_dashboard_widget']);
-        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
-        error_log('Cache Stats Widget: Added wp_dashboard_setup and admin_enqueue_scripts actions');
-    }
+	/**
+	 * Add the dashboard widget.
+	 *
+	 * @return void
+	 */
+	public function add_dashboard_widget() {
+		if ( WP_DEBUG ) {
+			error_log( 'Adding cache stats dashboard widget.' );
+		}
+		wp_add_dashboard_widget(
+			'athlete_dashboard_cache_stats',
+			__( 'Cache Statistics', 'athlete-dashboard' ),
+			array( $this, 'render_widget' )
+		);
+	}
 
-    /**
-     * Add the dashboard widget.
-     */
-    public function add_dashboard_widget() {
-        error_log('Cache Stats Widget: Adding dashboard widget');
-        wp_add_dashboard_widget(
-            'athlete_dashboard_cache_stats',
-            __('Cache Performance Metrics', 'athlete-dashboard'),
-            [$this, 'render_widget']
-        );
-        error_log('Cache Stats Widget: Dashboard widget added successfully');
-    }
+	/**
+	 * Handle AJAX request to clear cache.
+	 *
+	 * @return void
+	 */
+	public function handle_clear_cache() {
+		check_ajax_referer( 'cache_stats_widget_nonce', 'nonce' );
 
-    /**
-     * Enqueue required assets for the widget.
-     *
-     * @param string $hook The current admin page
-     */
-    public function enqueue_assets($hook) {
-        error_log('Cache Stats Widget: Attempting to enqueue assets for hook: ' . $hook);
-        
-        if ('index.php' !== $hook) {
-            error_log('Cache Stats Widget: Skipping asset enqueue - not on dashboard page');
-            return;
-        }
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
+		}
 
-        $theme_version = wp_get_theme()->get('Version');
-        $css_file = get_stylesheet_directory() . '/assets/css/admin.css';
-        $js_file = get_stylesheet_directory() . '/assets/js/admin.js';
+		// Clear the cache
+		wp_cache_flush();
+		wp_cache_set( 'last_cleared', time(), 'athlete_dashboard_stats' );
 
-        error_log('Cache Stats Widget: Theme version: ' . $theme_version);
-        error_log('Cache Stats Widget: CSS file path: ' . $css_file);
-        error_log('Cache Stats Widget: JS file path: ' . $js_file);
+		// Return updated stats
+		wp_send_json_success( $this->get_cache_stats() );
+	}
 
-        // Enqueue CSS if it exists
-        if (file_exists($css_file)) {
-            wp_enqueue_style(
-                'athlete-dashboard-admin',
-                get_stylesheet_directory_uri() . '/assets/css/admin.css',
-                [],
-                $theme_version
-            );
-            error_log('Cache Stats Widget: CSS file enqueued successfully');
-        } else {
-            error_log('Cache Stats Widget: admin.css file not found at ' . $css_file);
-        }
+	/**
+	 * Handle AJAX request to refresh stats.
+	 *
+	 * @return void
+	 */
+	public function handle_refresh_stats() {
+		check_ajax_referer( 'cache_stats_widget_nonce', 'nonce' );
 
-        // Enqueue Chart.js
-        wp_enqueue_script(
-            'athlete-dashboard-charts',
-            'https://cdn.jsdelivr.net/npm/chart.js',
-            [],
-            '4.4.0',
-            true
-        );
-        error_log('Cache Stats Widget: Chart.js enqueued successfully');
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Insufficient permissions' ) );
+		}
 
-        // Enqueue admin JS if it exists
-        if (file_exists($js_file)) {
-            wp_enqueue_script(
-                'athlete-dashboard-admin',
-                get_stylesheet_directory_uri() . '/assets/js/admin.js',
-                ['jquery', 'athlete-dashboard-charts'],
-                $theme_version,
-                true
-            );
-            error_log('Cache Stats Widget: Admin JS file enqueued successfully');
-        } else {
-            error_log('Cache Stats Widget: admin.js file not found at ' . $js_file);
-        }
-    }
+		wp_send_json_success( $this->get_cache_stats() );
+	}
 
-    /**
-     * Render the dashboard widget content.
-     */
-    public function render_widget() {
-        $logs = $this->get_cache_logs();
-        $stats = $this->calculate_stats($logs);
-        
-        ?>
-        <div class="athlete-dashboard-cache-stats">
-            <div class="cache-stats-summary">
-                <div class="stat-box">
-                    <h4><?php _e('Cache Hit Rate', 'athlete-dashboard'); ?></h4>
-                    <div class="stat-value"><?php echo esc_html(number_format($stats['hit_rate'] * 100, 1)); ?>%</div>
-                </div>
-                <div class="stat-box">
-                    <h4><?php _e('Avg Response Time', 'athlete-dashboard'); ?></h4>
-                    <div class="stat-value"><?php echo esc_html(number_format($stats['avg_duration'], 2)); ?>s</div>
-                </div>
-                <div class="stat-box">
-                    <h4><?php _e('Error Rate', 'athlete-dashboard'); ?></h4>
-                    <div class="stat-value"><?php echo esc_html(number_format($stats['error_rate'] * 100, 1)); ?>%</div>
-                </div>
-            </div>
+	/**
+	 * Render the widget content.
+	 *
+	 * @return void
+	 */
+	public function render_widget() {
+		if ( WP_DEBUG ) {
+			error_log( 'Rendering cache stats widget.' );
+		}
 
-            <div class="cache-stats-chart">
-                <canvas id="cachePerformanceChart"></canvas>
-            </div>
+		$stats = $this->get_cache_stats();
 
-            <div class="cache-stats-logs">
-                <h4><?php _e('Recent Cache Jobs', 'athlete-dashboard'); ?></h4>
-                <table class="widefat">
-                    <thead>
-                        <tr>
-                            <th><?php _e('Time', 'athlete-dashboard'); ?></th>
-                            <th><?php _e('Type', 'athlete-dashboard'); ?></th>
-                            <th><?php _e('Duration', 'athlete-dashboard'); ?></th>
-                            <th><?php _e('Users', 'athlete-dashboard'); ?></th>
-                            <th><?php _e('Items', 'athlete-dashboard'); ?></th>
-                            <th><?php _e('Errors', 'athlete-dashboard'); ?></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach (array_slice($logs, 0, 5) as $log): ?>
-                        <tr>
-                            <td><?php echo esc_html(date('Y-m-d H:i:s', $log['timestamp'])); ?></td>
-                            <td><?php echo esc_html($log['job_type']); ?></td>
-                            <td><?php echo esc_html(number_format($log['duration'], 2)); ?>s</td>
-                            <td><?php echo esc_html($log['users_processed']); ?></td>
-                            <td><?php echo esc_html($log['items_warmed']); ?></td>
-                            <td><?php echo esc_html($log['errors']); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+		echo '<div class="cache-stats-widget">';
+		echo '<h3>' . esc_html__( 'Cache Performance', 'athlete-dashboard' ) . '</h3>';
 
-        <script type="text/javascript">
-            jQuery(document).ready(function($) {
-                var ctx = document.getElementById('cachePerformanceChart').getContext('2d');
-                var chartData = <?php echo wp_json_encode($this->prepare_chart_data($logs)); ?>;
-                
-                new Chart(ctx, {
-                    type: 'line',
-                    data: chartData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            });
-        </script>
-        <?php
-    }
+		echo '<div class="stats-grid">';
+		foreach ( $stats as $key => $value ) {
+			$is_status   = strpos( $key, 'Cache Status' ) !== false;
+			$status_attr = $is_status ? ' data-status="' . strtolower( $value ) . '"' : '';
 
-    /**
-     * Get cache warming logs.
-     *
-     * @return array Cache logs
-     */
-    private function get_cache_logs() {
-        return get_option('athlete_dashboard_cache_warming_log', []);
-    }
+			echo '<div class="stat-item">';
+			echo '<span class="stat-label">' . esc_html( $key ) . '</span>';
+			echo '<span class="stat-value"' . $status_attr . '>' . esc_html( $value ) . '</span>';
+			echo '</div>';
+		}
+		echo '</div>';
 
-    /**
-     * Calculate statistics from cache logs.
-     *
-     * @param array $logs Cache logs
-     * @return array Calculated statistics
-     */
-    private function calculate_stats($logs) {
-        if (empty($logs)) {
-            return [
-                'hit_rate' => 0,
-                'avg_duration' => 0,
-                'error_rate' => 0
-            ];
-        }
+		echo '<div class="cache-actions">';
+		echo '<button class="button" id="clear-cache">' .
+			esc_html__( 'Clear Cache', 'athlete-dashboard' ) . '</button>';
+		echo '<button class="button" id="refresh-stats">' .
+			esc_html__( 'Refresh Stats', 'athlete-dashboard' ) . '</button>';
+		echo '</div>';
+		echo '</div>';
 
-        $total_duration = 0;
-        $total_errors = 0;
-        $total_items = 0;
-        $total_attempts = 0;
+		$this->enqueue_widget_assets();
+	}
 
-        foreach ($logs as $log) {
-            $total_duration += $log['duration'];
-            $total_errors += $log['errors'];
-            $total_items += $log['items_warmed'];
-            $total_attempts++;
-        }
+	/**
+	 * Get cache statistics.
+	 *
+	 * @return array Array of cache statistics.
+	 */
+	private function get_cache_stats() {
+		if ( WP_DEBUG ) {
+			error_log( 'Retrieving cache statistics.' );
+		}
 
-        return [
-            'hit_rate' => $total_items > 0 ? ($total_items - $total_errors) / $total_items : 0,
-            'avg_duration' => $total_attempts > 0 ? $total_duration / $total_attempts : 0,
-            'error_rate' => $total_attempts > 0 ? $total_errors / $total_attempts : 0
-        ];
-    }
+		return array(
+			__( 'Cache Size', 'athlete-dashboard' )   => $this->get_cache_size(),
+			__( 'Cache Hits', 'athlete-dashboard' )   => $this->get_cache_hits(),
+			__( 'Cache Misses', 'athlete-dashboard' ) => $this->get_cache_misses(),
+			__( 'Cache Ratio', 'athlete-dashboard' )  => $this->get_cache_ratio(),
+			__( 'Object Count', 'athlete-dashboard' ) => $this->get_object_count(),
+			__( 'Memory Usage', 'athlete-dashboard' ) => $this->get_memory_usage(),
+			__( 'Last Cleared', 'athlete-dashboard' ) => $this->get_last_cleared(),
+			__( 'Cache Status', 'athlete-dashboard' ) => $this->get_cache_status(),
+		);
+	}
 
-    /**
-     * Prepare data for the performance chart.
-     *
-     * @param array $logs Cache logs
-     * @return array Chart data
-     */
-    private function prepare_chart_data($logs) {
-        $logs = array_reverse(array_slice($logs, 0, 24)); // Last 24 entries
-        
-        $labels = [];
-        $durations = [];
-        $items = [];
-        $errors = [];
+	/**
+	 * Enqueue widget assets.
+	 *
+	 * @return void
+	 */
+	private function enqueue_widget_assets() {
+		if ( WP_DEBUG ) {
+			error_log( 'Enqueuing widget assets.' );
+		}
 
-        foreach ($logs as $log) {
-            $labels[] = date('H:i', $log['timestamp']);
-            $durations[] = $log['duration'];
-            $items[] = $log['items_warmed'];
-            $errors[] = $log['errors'];
-        }
+		wp_enqueue_style(
+			'cache-stats-widget-style',
+			get_stylesheet_directory_uri() . '/includes/admin/css/cache-stats-widget.css',
+			array(),
+			wp_get_theme()->get( 'Version' )
+		);
 
-        return [
-            'labels' => $labels,
-            'datasets' => [
-                [
-                    'label' => __('Duration (s)', 'athlete-dashboard'),
-                    'data' => $durations,
-                    'borderColor' => '#2271b1',
-                    'fill' => false
-                ],
-                [
-                    'label' => __('Items Warmed', 'athlete-dashboard'),
-                    'data' => $items,
-                    'borderColor' => '#46b450',
-                    'fill' => false
-                ],
-                [
-                    'label' => __('Errors', 'athlete-dashboard'),
-                    'data' => $errors,
-                    'borderColor' => '#dc3232',
-                    'fill' => false
-                ]
-            ]
-        ];
-    }
-} 
+		wp_enqueue_script(
+			'cache-stats-widget-script',
+			get_stylesheet_directory_uri() . '/includes/admin/js/cache-stats-widget.js',
+			array( 'jquery' ),
+			wp_get_theme()->get( 'Version' ),
+			true
+		);
+
+		wp_localize_script(
+			'cache-stats-widget-script',
+			'cacheStatsWidgetSettings',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'cache_stats_widget_nonce' ),
+			)
+		);
+	}
+
+	/**
+	 * Get the cache size.
+	 *
+	 * @return string Formatted cache size.
+	 */
+	private function get_cache_size() {
+		if ( WP_DEBUG ) {
+			error_log( 'Calculating cache size.' );
+		}
+		$size = wp_cache_get( 'cache_size', 'athlete_dashboard_stats' );
+		return $size ? size_format( $size ) : '0 B';
+	}
+
+	/**
+	 * Get the number of cache hits.
+	 *
+	 * @return int Number of cache hits.
+	 */
+	private function get_cache_hits() {
+		if ( WP_DEBUG ) {
+			error_log( 'Retrieving cache hits.' );
+		}
+		return (int) wp_cache_get( 'cache_hits', 'athlete_dashboard_stats' );
+	}
+
+	/**
+	 * Get the number of cache misses.
+	 *
+	 * @return int Number of cache misses.
+	 */
+	private function get_cache_misses() {
+		if ( WP_DEBUG ) {
+			error_log( 'Retrieving cache misses.' );
+		}
+		return (int) wp_cache_get( 'cache_misses', 'athlete_dashboard_stats' );
+	}
+
+	/**
+	 * Get the cache hit ratio.
+	 *
+	 * @return string Formatted cache ratio.
+	 */
+	private function get_cache_ratio() {
+		if ( WP_DEBUG ) {
+			error_log( 'Calculating cache ratio.' );
+		}
+		$hits  = $this->get_cache_hits();
+		$total = $hits + $this->get_cache_misses();
+		return $total > 0 ? round( ( $hits / $total ) * 100, 2 ) . '%' : '0%';
+	}
+
+	/**
+	 * Get the number of cached objects.
+	 *
+	 * @return int Number of cached objects.
+	 */
+	private function get_object_count() {
+		if ( WP_DEBUG ) {
+			error_log( 'Counting cached objects.' );
+		}
+		return (int) wp_cache_get( 'object_count', 'athlete_dashboard_stats' );
+	}
+
+	/**
+	 * Get the memory usage.
+	 *
+	 * @return string Formatted memory usage.
+	 */
+	private function get_memory_usage() {
+		if ( WP_DEBUG ) {
+			error_log( 'Calculating memory usage.' );
+		}
+		$usage = wp_cache_get( 'memory_usage', 'athlete_dashboard_stats' );
+		return $usage ? size_format( $usage ) : '0 B';
+	}
+
+	/**
+	 * Get the last time the cache was cleared.
+	 *
+	 * @return string Formatted date and time.
+	 */
+	private function get_last_cleared() {
+		if ( WP_DEBUG ) {
+			error_log( 'Retrieving last cache clear time.' );
+		}
+		$timestamp = wp_cache_get( 'last_cleared', 'athlete_dashboard_stats' );
+		return $timestamp ? date_i18n(
+			get_option( 'date_format' ) . ' ' .
+			get_option( 'time_format' ),
+			$timestamp
+		) :
+							__( 'Never', 'athlete-dashboard' );
+	}
+
+	/**
+	 * Get the cache status.
+	 *
+	 * @return string Cache status message.
+	 */
+	private function get_cache_status() {
+		if ( WP_DEBUG ) {
+			error_log( 'Checking cache status.' );
+		}
+		return wp_cache_get( 'cache_enabled', 'athlete_dashboard_stats' ) ?
+				__( 'Enabled', 'athlete-dashboard' ) :
+				__( 'Disabled', 'athlete-dashboard' );
+	}
+}

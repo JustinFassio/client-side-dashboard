@@ -1,4 +1,4 @@
-import { Feature, FeatureContext, FeatureEvents } from '../contracts/Feature';
+import { Feature, FeatureContext } from '../contracts/Feature';
 import { Events } from './events';
 
 export class FeatureRegistry {

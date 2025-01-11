@@ -1,128 +1,218 @@
 <?php
 namespace AthleteDashboard\Core;
 
-if (!defined('ABSPATH')) {
-    exit;
+/**
+ * Bridge class for handling dashboard functionality.
+ *
+ * @package AthleteDashboard
+ * @subpackage Core
+ */
+
+// Global scope checks
+global $wp_debug;
+$wp_debug = defined( 'WP_DEBUG' ) && WP_DEBUG;
+
+if ( $wp_debug ) {
+	error_log( 'Loading DashboardBridge file: ' . __FILE__ );
 }
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+if ( $wp_debug ) {
+	error_log( 'Defining DashboardBridge class in namespace AthleteDashboard\\Core' );
+}
+
+/**
+ * DashboardBridge class.
+ *
+ * Handles routing and feature management for the dashboard.
+ */
 class DashboardBridge {
-    private static $instance = null;
-    private static $current_feature = null;
-    private $debug_log = [];
+	/** @var self|null Singleton instance. */
+	private static $instance = null;
 
-    public static function init() {
-        if (self::$instance === null) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
+	/** @var string|null Current active feature. */
+	private static $current_feature = null;
 
-    private function __construct() {
-        add_action('init', [$this, 'register_query_vars']);
-        add_action('template_redirect', [$this, 'handle_feature_routing']);
-        add_action('wp_footer', [$this, 'output_debug_log']);
-    }
+	/** @var array Debug log messages. */
+	private $debug_log = array();
 
-    public function register_query_vars() {
-        global $wp;
-        $wp->add_query_var('dashboard_feature');
-        $this->log_debug('Registered dashboard_feature query var');
-    }
+	/**
+	 * Test if the class is loaded correctly.
+	 *
+	 * @return bool Always returns true.
+	 */
+	public static function test_loaded() {
+		global $wp_debug;
+		if ( $wp_debug ) {
+			error_log( 'DashboardBridge::test_loaded() called' );
+		}
+		return true;
+	}
 
-    public function handle_feature_routing() {
-        if (!is_page_template('dashboard/templates/dashboard.php')) {
-            return;
-        }
+	/**
+	 * Initialize the bridge.
+	 *
+	 * @return self Instance of the bridge.
+	 */
+	public static function init() {
+		global $wp_debug;
+		if ( $wp_debug ) {
+			error_log( 'DashboardBridge::init() called' );
+		}
 
-        $feature = get_query_var('dashboard_feature');
-        $this->log_debug("Handling feature routing. Raw feature: " . ($feature ?: 'none'));
+		if ( self::$instance === null ) {
+			if ( $wp_debug ) {
+				error_log( 'Creating new DashboardBridge instance' );
+			}
+			self::$instance = new self();
+		}
+		return self::$instance;
+	}
 
-        if (!$feature) {
-            $feature = 'overview'; // Default feature
-            $this->log_debug("No feature specified, defaulting to: {$feature}");
-        }
+	/**
+	 * Constructor.
+	 */
+	private function __construct() {
+		add_action( 'init', array( $this, 'register_query_vars' ) );
+		add_action( 'template_redirect', array( $this, 'handle_feature_routing' ) );
+		add_action( 'wp_footer', array( $this, 'output_debug_log' ) );
+	}
 
-        $feature = sanitize_key($feature);
-        $available_features = self::get_available_features();
+	/**
+	 * Register query variables for feature routing.
+	 */
+	public function register_query_vars() {
+		global $wp;
+		$wp->add_query_var( 'dashboard_feature' );
+		$this->log_debug( 'Registered dashboard_feature query var.' );
+	}
 
-        if (!array_key_exists($feature, $available_features)) {
-            $this->log_debug("Invalid feature requested: {$feature}");
-            wp_die(
-                sprintf(
-                    __('Invalid feature "%s". Available features: %s', 'athlete-dashboard'),
-                    esc_html($feature),
-                    implode(', ', array_keys($available_features))
-                ),
-                __('Invalid Feature', 'athlete-dashboard'),
-                ['response' => 404]
-            );
-        }
+	/**
+	 * Handle feature routing based on query variables.
+	 */
+	public function handle_feature_routing() {
+		if ( ! is_page_template( 'dashboard/templates/dashboard.php' ) ) {
+			return;
+		}
 
-        self::$current_feature = $feature;
-        $this->log_debug("Feature set to: {$feature}");
+		$feature = get_query_var( 'dashboard_feature' );
+		$this->log_debug( 'Handling feature routing. Raw feature: ' . ( $feature ?: 'none' ) . '.' );
 
-        // Add feature-specific body class
-        add_filter('body_class', function($classes) use ($feature) {
-            $classes[] = "feature-{$feature}";
-            return $classes;
-        });
-    }
+		if ( ! $feature ) {
+			$feature = 'overview'; // Default feature.
+			$this->log_debug( "No feature specified, defaulting to: {$feature}." );
+		}
 
-    public static function get_current_feature() {
-        if (self::$current_feature === null) {
-            $feature = get_query_var('dashboard_feature', 'overview');
-            self::$current_feature = sanitize_key($feature);
-        }
-        return self::$current_feature;
-    }
+		$feature            = sanitize_key( $feature );
+		$available_features = self::get_available_features();
 
-    public static function get_available_features() {
-        $default_features = [
-            'overview' => __('Overview', 'athlete-dashboard'),
-            'profile' => __('Profile', 'athlete-dashboard'),
-            'workouts' => __('Workouts', 'athlete-dashboard'),
-            'nutrition' => __('Nutrition', 'athlete-dashboard'),
-        ];
+		if ( ! array_key_exists( $feature, $available_features ) ) {
+			$this->log_debug( "Invalid feature requested: {$feature}." );
+			wp_die(
+				esc_html__( 'Invalid dashboard feature requested.', 'athlete-dashboard' ),
+				esc_html__( 'Error', 'athlete-dashboard' ),
+				array( 'response' => 404 )
+			);
+		}
 
-        $features = apply_filters('athlete_dashboard_features', $default_features);
-        
-        // Ensure all features are properly sanitized
-        return array_combine(
-            array_map('sanitize_key', array_keys($features)),
-            array_map('sanitize_text_field', $features)
-        );
-    }
+		self::$current_feature = $feature;
+		$this->log_debug( "Set current feature to: {$feature}." );
 
-    private function log_debug($message) {
-        if (WP_DEBUG) {
-            $this->debug_log[] = date('Y-m-d H:i:s') . ' - ' . $message;
-            error_log('[Athlete Dashboard] ' . $message);
-        }
-    }
+		// Add feature-specific body class
+		add_filter(
+			'body_class',
+			function ( $classes ) use ( $feature ) {
+				$classes[] = "feature-{$feature}";
+				return $classes;
+			}
+		);
+	}
 
-    public function output_debug_log() {
-        if (WP_DEBUG && !empty($this->debug_log) && current_user_can('manage_options')) {
-            echo '<!-- Athlete Dashboard Debug Log -->' . PHP_EOL;
-            echo '<!--' . PHP_EOL;
-            foreach ($this->debug_log as $log) {
-                echo esc_html($log) . PHP_EOL;
-            }
-            echo '-->' . PHP_EOL;
-        }
-    }
+	/**
+	 * Get the current active feature.
+	 *
+	 * @return string|null Current feature slug.
+	 */
+	public static function get_current_feature() {
+		return self::$current_feature;
+	}
 
-    public static function get_feature_data($feature = null) {
-        $feature = $feature ?: self::get_current_feature();
-        if (!$feature) {
-            return [];
-        }
+	/**
+	 * Get available dashboard features.
+	 *
+	 * @return array Array of available features and their data.
+	 */
+	public static function get_available_features() {
+		return apply_filters(
+			'athlete_dashboard_features',
+			array(
+				'overview'  => array(
+					'title' => __( 'Overview', 'athlete-dashboard' ),
+					'icon'  => 'dashboard',
+				),
+				'profile'   => array(
+					'title' => __( 'Profile', 'athlete-dashboard' ),
+					'icon'  => 'person',
+				),
+				'equipment' => array(
+					'title' => __( 'Equipment', 'athlete-dashboard' ),
+					'icon'  => 'fitness_center',
+				),
+			)
+		);
+	}
 
-        $base_data = [
-            'name' => $feature,
-            'label' => self::get_available_features()[$feature] ?? $feature,
-            'timestamp' => time(),
-        ];
+	/**
+	 * Log a debug message.
+	 *
+	 * @param string $message Debug message to log.
+	 */
+	private function log_debug( $message ) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			$this->debug_log[] = $message;
+		}
+	}
 
-        return apply_filters("athlete_dashboard_{$feature}_data", $base_data);
-    }
-} 
+	/**
+	 * Output debug log messages in the footer.
+	 */
+	public function output_debug_log() {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG || empty( $this->debug_log ) ) {
+			return;
+		}
+
+		echo '<!-- Dashboard Debug Log:' . PHP_EOL;
+		foreach ( $this->debug_log as $message ) {
+			echo esc_html( $message ) . PHP_EOL;
+		}
+		echo '-->' . PHP_EOL;
+	}
+
+	/**
+	 * Get data for a specific feature.
+	 *
+	 * @param string|null $feature Feature slug. If null, uses current feature.
+	 * @return array|false Feature data or false if not found.
+	 */
+	public static function get_feature_data( $feature = null ) {
+		if ( $feature === null ) {
+			$feature = self::get_current_feature();
+		}
+
+		$features = self::get_available_features();
+		return isset( $features[ $feature ] ) ? $features[ $feature ] : false;
+	}
+
+	/**
+	 * Check API permission for requests.
+	 *
+	 * @param \WP_REST_Request $request The request object.
+	 * @return bool Whether the request has valid permissions.
+	 */
+	public static function check_api_permission( $request ) {
+		return is_user_logged_in() && wp_verify_nonce( $request->get_header( 'X-WP-Nonce' ), 'wp_rest' );
+	}
+}

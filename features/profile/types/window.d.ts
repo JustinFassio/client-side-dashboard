@@ -1,5 +1,4 @@
-import { DebugConfig, EnvironmentConfig, DashboardConfig } from '../../../dashboard/types/config';
-import { FeatureData } from '../../../dashboard/types/feature';
+import { DashboardConfig } from '../../../dashboard/types/config';
 
 interface AthleteDashboardData extends DashboardConfig {
     nonce: string;
@@ -8,12 +7,9 @@ interface AthleteDashboardData extends DashboardConfig {
     userId: number;
 }
 
-interface AthleteDashboardFeature extends FeatureData {}
-
 declare global {
     interface Window {
         athleteDashboardData: AthleteDashboardData;
-        athleteDashboardFeature?: AthleteDashboardFeature;
         wp: {
             data: {
                 dispatch: (storeName: string) => any;
@@ -21,8 +17,8 @@ declare global {
                 subscribe: (callback: () => void) => () => void;
             };
             hooks: {
-                addAction: (event: string, namespace: string, callback: Function) => void;
-                removeAction: (event: string, namespace: string, callback: Function) => void;
+                addAction: (event: string, namespace: string, callback: (...args: unknown[]) => void) => void;
+                removeAction: (event: string, namespace: string, callback: (...args: unknown[]) => void) => void;
             };
         };
     }

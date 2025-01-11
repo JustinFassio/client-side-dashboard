@@ -1,16 +1,16 @@
-import { ApiResponse, ApiError } from '../types/api';
-import { FeatureContext } from '../contracts/Feature';
+import { ApiResponse } from '../types/api';
+import { FeatureContext as _FeatureContext } from '../contracts/Feature';
 
 export class ApiClient {
     private static instance: ApiClient;
     private cache = new Map<string, { data: any; timestamp: number }>();
-    private context: FeatureContext;
+    private context: _FeatureContext;
 
-    private constructor(context: FeatureContext) {
+    private constructor(context: _FeatureContext) {
         this.context = context;
     }
 
-    static getInstance(context: FeatureContext): ApiClient {
+    static getInstance(context: _FeatureContext): ApiClient {
         if (!this.instance) {
             this.instance = new ApiClient(context);
         }

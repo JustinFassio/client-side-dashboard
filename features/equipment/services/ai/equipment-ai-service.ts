@@ -1,5 +1,4 @@
-import { Equipment, EquipmentSet, WorkoutZone } from '../../types/equipment-types';
-import { ApiResponse, ApiError } from '../../../../dashboard/types/api';
+import { Equipment } from '../../types/equipment-types';
 
 interface EquipmentRecommendation {
     type: 'purchase' | 'optimization' | 'maintenance';

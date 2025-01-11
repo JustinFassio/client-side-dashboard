@@ -2,10 +2,10 @@ import React from 'react';
 import './layout/styles.css';
 
 interface WorkoutGeneratorProps {
-    userId: number;
+    _userId: number;
 }
 
-export const WorkoutGenerator: React.FC<WorkoutGeneratorProps> = ({ userId }) => {
+export const WorkoutGenerator: React.FC<WorkoutGeneratorProps> = ({ _userId }) => {
     return (
         <div className="workout-generator">
             <header className="workout-header">

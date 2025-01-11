@@ -6,6 +6,18 @@ export const validateProfileField = (field: keyof ProfileData, value: any): stri
         return requiredFields.includes(field) ? 'Field cannot be empty' : null;
     }
 
+    // Pre-declare variables used in switch cases
+    const numValue = Number(value);
+    const validFitnessLevels = ['beginner', 'intermediate', 'advanced'];
+    const validActivityLevels = [
+        'sedentary',
+        'lightly_active',
+        'moderately_active',
+        'very_active',
+        'extra_active'
+    ];
+    const validGenders = ['male', 'female', 'other', 'prefer_not_to_say'];
+
     switch (field) {
         case 'email':
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) 
@@ -13,43 +25,31 @@ export const validateProfileField = (field: keyof ProfileData, value: any): stri
                 : 'Invalid email address';
 
         case 'age':
-            const age = Number(value);
-            return age >= 13 && age <= 120 
+            return numValue >= 13 && numValue <= 120 
                 ? null 
                 : 'Age must be between 13 and 120';
 
         case 'height':
-            const height = Number(value);
-            return height >= 100 && height <= 250 
+            return numValue >= 100 && numValue <= 250 
                 ? null 
                 : 'Height must be between 100cm and 250cm';
 
         case 'weight':
-            const weight = Number(value);
-            return weight >= 30 && weight <= 300 
+            return numValue >= 30 && numValue <= 300 
                 ? null 
                 : 'Weight must be between 30kg and 300kg';
 
         case 'fitnessLevel':
-            const validFitnessLevels = ['beginner', 'intermediate', 'advanced'];
             return validFitnessLevels.includes(value) 
                 ? null 
                 : 'Invalid fitness level';
 
         case 'activityLevel':
-            const validActivityLevels = [
-                'sedentary',
-                'lightly_active',
-                'moderately_active',
-                'very_active',
-                'extra_active'
-            ];
             return validActivityLevels.includes(value) 
                 ? null 
                 : 'Invalid activity level';
 
         case 'gender':
-            const validGenders = ['male', 'female', 'other', 'prefer_not_to_say'];
             return validGenders.includes(value) 
                 ? null 
                 : 'Invalid gender selection';

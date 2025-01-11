@@ -42,16 +42,16 @@ const ExerciseCard: React.FC<{ exercise: Exercise }> = ({ exercise }) => (
             <div className="equipment">
                 <strong>Equipment:</strong>
                 <ul>
-                    {exercise.equipment.map((item, index) => (
-                        <li key={index}>{item}</li>
+                    {exercise.equipment.map((item) => (
+                        <li key={item}>{item}</li>
                     ))}
                 </ul>
             </div>
             <div className="muscles">
                 <strong>Target Muscles:</strong>
                 <ul>
-                    {exercise.targetMuscles.map((muscle, index) => (
-                        <li key={index}>{muscle}</li>
+                    {exercise.targetMuscles.map((muscle) => (
+                        <li key={muscle}>{muscle}</li>
                     ))}
                 </ul>
             </div>
@@ -98,7 +98,7 @@ export const WorkoutPlanWidget: React.FC<WorkoutPlanWidgetProps> = ({
 
             <div className="exercises-list">
                 <h3>Exercises</h3>
-                {workout.exercises.map((exercise, index) => (
+                {workout.exercises.map((exercise) => (
                     <ExerciseCard key={exercise.id} exercise={exercise} />
                 ))}
             </div>

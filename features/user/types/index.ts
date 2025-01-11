@@ -1,8 +1,8 @@
 import {
-    ApiResponse,
+    _ApiResponse,
     FeatureConfig,
     User,
-    DashboardEvent,
+    _DashboardEvent,
     DashboardError,
     FeatureContext,
     Preferences,
@@ -120,7 +120,7 @@ export interface UserEventPayloads {
 /**
  * User events
  */
-export type UserEvent<T extends UserEventType> = DashboardEvent<UserEventPayloads[T]>;
+export type UserEvent<T extends UserEventType> = _DashboardEvent<UserEventPayloads[T]>;
 
 /**
  * User error codes

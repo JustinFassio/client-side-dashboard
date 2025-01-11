@@ -1,11 +1,6 @@
 import {
     ApiResponse,
-    FeatureConfig,
-    DashboardEvent,
-    DashboardError,
-    FeatureContext,
-    DateRange,
-    WidgetConfig
+    FeatureConfig
 } from '../../../dashboard/types';
 
 /**

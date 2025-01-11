@@ -1,0 +1,35 @@
+{
+    "name": "athlete-dashboard/child-theme",
+    "description": "Athlete Dashboard Child Theme",
+    "type": "wordpress-theme",
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "10up/wp_mock": "0.4.2",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpcompatibility/php-compatibility": "^9.3",
+        "phpunit/phpunit": "^9.6",
+        "wp-coding-standards/wpcs": "^3.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "AthleteDashboard\\": "includes/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AthleteDashboard\\Tests\\": "tests/php/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

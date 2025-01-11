@@ -1,4 +1,3 @@
-import { ApiResponse } from '../../../dashboard/types/api';
 import { WorkoutPlan, WorkoutPreferences, GeneratorSettings } from '../types/workout-types';
 
 class WorkoutService {

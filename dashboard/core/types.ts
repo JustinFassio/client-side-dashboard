@@ -6,6 +6,6 @@ export interface FeatureContext {
     navigate: (path: string) => void;
     isEnabled: () => boolean;
     dispatch: (namespace: string) => (event: any) => void;
-    addListener: (event: string, callback: Function) => void;
-    unsubscribe: (event: string, callback: Function) => void;
+    addListener: (event: string, callback: (...args: unknown[]) => void) => void;
+    unsubscribe: (event: string, callback: (...args: unknown[]) => void) => void;
 } 

@@ -1,31 +1,24 @@
 import { createElement } from '@wordpress/element';
 import { FeatureRegistry } from '../../dashboard/core/FeatureRegistry';
 import { DashboardShell } from '../../dashboard/components/DashboardShell';
-import { Config } from '../../dashboard/core/config';
+import { Config as _Config } from '../../dashboard/core/config';
 import '../../dashboard/styles/main.css';
 
-declare global {
-    interface Window {
-        athleteDashboardData: {
-            apiUrl: string;
-            nonce: string;
-            debug: boolean;
-            userId: number;
-            feature?: {
-                name: string;
-                label: string;
-            };
-        };
-    }
+interface DashboardContext {
+    apiUrl: string;
+    nonce: string;
+    debug: boolean;
+    userId: number;
+    dispatch: Window['wp']['data']['dispatch'];
 }
 
 async function initializeDashboard() {
-    const context = {
+    const context: DashboardContext = {
         apiUrl: window.athleteDashboardData.apiUrl,
         nonce: window.athleteDashboardData.nonce,
         debug: window.athleteDashboardData.debug,
         userId: window.athleteDashboardData.userId,
-        dispatch: (scope: string) => (action: any) => {
+        dispatch: (scope: string) => (action) => {
             console.log(`Dispatching action to ${scope}:`, action);
         }
     };
@@ -69,8 +62,7 @@ async function initializeDashboard() {
             context
         });
 
-        // @ts-ignore (wp.element.render is available)
-        wp.element.render(root, container);
+        window.wp.element.render(root, container);
 
     } catch (error) {
         console.error('[Dashboard] Failed to initialize:', error);

@@ -36,4 +36,4 @@ export interface FeatureEvents {
   'feature.navigate': { identifier: string };
   'feature.userChange': { identifier: string; userId: number };
   [key: string]: any;
-} 
+}

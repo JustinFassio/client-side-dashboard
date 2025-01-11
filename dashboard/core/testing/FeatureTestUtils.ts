@@ -27,7 +27,7 @@ export class DisabledFeature implements Feature {
     public readonly description = 'Disabled Feature';
     public isInitialized = false;
 
-    public async initialize(context: FeatureContext): Promise<void> {
+    public async initialize(_context: FeatureContext): Promise<void> {
         this.isInitialized = true;
     }
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { ProfileData } from '../types/profile';
 import { useUser } from '../../user/context/UserContext';
 import { ProfileService } from '../services/ProfileService';
@@ -60,7 +60,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         console.groupEnd();
     }, [user, isAuthenticated, userLoading]);
 
-    const loadProfile = async () => {
+    const loadProfile = useCallback(async () => {
         // Don't attempt to load if user context is still loading
         if (userLoading) {
             console.log('ProfileContext: User context still loading, waiting...');
@@ -128,7 +128,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
             console.log('Profile load complete. Loading state set to false.');
             console.groupEnd();
         }
-    };
+    }, [user, userLoading, isAuthenticated]);
 
     // Load profile when user changes - with debounce
     useEffect(() => {
@@ -152,14 +152,14 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         }, 100); // Small delay to allow for any rapid user changes
 
         return () => clearTimeout(timeoutId);
-    }, [user?.id, isAuthenticated, userLoading]);
+    }, [user?.id, isAuthenticated, userLoading, loadProfile]);
 
-    const refreshProfile = async () => {
+    const refreshProfile = useCallback(async () => {
         console.log('ProfileContext: Refreshing profile...');
         await loadProfile();
-    };
+    }, [loadProfile]);
 
-    const updateProfile = async (data: Partial<ProfileData>) => {
+    const updateProfile = useCallback(async (data: Partial<ProfileData>) => {
         if (!user?.id || !profile) {
             const error = 'User not authenticated or profile not loaded';
             console.error('ProfileContext: Update failed -', error);
@@ -195,7 +195,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         } finally {
             console.groupEnd();
         }
-    };
+    }, [user?.id, profile, refreshUser]);
 
     const value = useMemo(() => ({
         profile,
@@ -203,7 +203,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         refreshProfile,
         isLoading,
         error
-    }), [profile, isLoading, error]);
+    }), [profile, isLoading, error, updateProfile, refreshProfile]);
 
     return (
         <ProfileContext.Provider value={value}>

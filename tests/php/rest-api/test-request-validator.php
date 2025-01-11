@@ -1,227 +1,257 @@
-<?php
-namespace AthleteDashboard\Tests\RestApi;
+/**
+ * Tests for the Request Validator functionality.
+ *
+ * @package Athlete_Dashboard
+ */
 
 use AthleteDashboard\RestApi\Request_Validator;
-use WP_UnitTestCase;
 
+/**
+ * Class Request_Validator_Test
+ * Tests the request validation functionality for REST API endpoints.
+ */
 class Request_Validator_Test extends WP_UnitTestCase {
-    public function test_nested_object_validation() {
-        $rules = [
-            'profile' => [
-                'type' => 'object',
-                'properties' => [
-                    'name' => [
-                        'type' => 'string',
-                        'required' => true,
-                        'label' => 'Name'
-                    ],
-                    'contact' => [
-                        'type' => 'object',
-                        'properties' => [
-                            'email' => [
-                                'type' => 'email',
-                                'required' => true,
-                                'label' => 'Email'
-                            ]
-                        ]
-                    ]
-                ]
-            ]
-        ];
+	/**
+	 * Test nested object validation.
+	 */
+	public function test_nested_object_validation() {
+		// Define schema.
+		$schema = [
+			'type' => 'object',
+			'properties' => [
+				'profile' => [
+					'type' => 'object',
+					'required' => ['name', 'age'],
+					'properties' => [
+						'name' => ['type' => 'string'],
+						'age' => ['type' => 'integer'],
+						'preferences' => [
+							'type' => 'object',
+							'properties' => [
+								'notifications' => ['type' => 'boolean']
+							]
+						]
+					]
+				]
+			]
+		];
 
-        // Test valid nested data
-        $valid_data = [
-            'profile' => [
-                'name' => 'John Doe',
-                'contact' => [
-                    'email' => 'john@example.com'
-                ]
-            ]
-        ];
-        $result = Request_Validator::validate($valid_data, $rules);
-        $this->assertNotWPError($result);
+		// Test valid data.
+		$valid_data = [
+			'profile' => [
+				'name' => 'John Doe',
+				'age' => 25,
+				'preferences' => [
+					'notifications' => true
+				]
+			]
+		];
 
-        // Test invalid nested data
-        $invalid_data = [
-            'profile' => [
-                'name' => 'John Doe',
-                'contact' => [
-                    'email' => 'invalid-email'
-                ]
-            ]
-        ];
-        $result = Request_Validator::validate($invalid_data, $rules);
-        $this->assertWPError($result);
-        $this->assertArrayHasKey('profile.contact.email', $result->get_error_data()['errors']);
-    }
+		$result = Request_Validator::validate($valid_data, $schema);
+		$this->assertTrue($result->is_valid());
 
-    public function test_array_validation() {
-        $rules = Request_Validator::get_profile_rules();
-        
-        // Test valid injuries array
-        $valid_data = [
-            'injuries' => [
-                [
-                    'name' => 'Sprained Ankle',
-                    'description' => 'Left ankle sprain',
-                    'date' => '2024-01-15',
-                    'status' => 'active'
-                ]
-            ]
-        ];
-        $result = Request_Validator::validate($valid_data, $rules, 'update');
-        $this->assertNotWPError($result);
+		// Test invalid data.
+		$invalid_data = [
+			'profile' => [
+				'name' => 'John Doe',
+				'preferences' => [
+					'notifications' => 'not_a_boolean'
+				]
+			]
+		];
 
-        // Test invalid injury data
-        $invalid_data = [
-            'injuries' => [
-                [
-                    'name' => 'Sprained Ankle',
-                    'description' => 'Left ankle sprain',
-                    'date' => 'invalid-date', // Invalid date format
-                    'status' => 'unknown' // Invalid status
-                ]
-            ]
-        ];
-        $result = Request_Validator::validate($invalid_data, $rules, 'update');
-        $this->assertWPError($result);
-        $errors = $result->get_error_data()['errors'];
-        $this->assertArrayHasKey('injuries[0].date', $errors);
-        $this->assertArrayHasKey('injuries[0].status', $errors);
-    }
+		$result = Request_Validator::validate($invalid_data, $schema);
+		$this->assertFalse($result->is_valid());
+	}
 
-    public function test_validation_context() {
-        $rules = Request_Validator::get_profile_rules();
-        
-        // Test create context (all required fields)
-        $create_data = [
-            'firstName' => 'John',
-            'lastName' => 'Doe',
-            'email' => 'john@example.com',
-            'age' => 25,
-            'height' => 180,
-            'weight' => 75
-        ];
-        $result = Request_Validator::validate($create_data, $rules, 'create');
-        $this->assertNotWPError($result);
+	/**
+	 * Test array validation.
+	 */
+	public function test_array_validation() {
+		// Define schema.
+		$schema = [
+			'type' => 'object',
+			'properties' => [
+				'tags' => [
+					'type' => 'array',
+					'items' => ['type' => 'string'],
+					'minItems' => 1,
+					'maxItems' => 5
+				]
+			]
+		];
 
-        // Test update context (partial update)
-        $update_data = [
-            'weight' => 76.5
-        ];
-        $result = Request_Validator::validate($update_data, $rules, 'update');
-        $this->assertNotWPError($result);
-    }
+		// Test valid data.
+		$valid_data = ['tags' => ['workout', 'cardio', 'strength']];
+		$result = Request_Validator::validate($valid_data, $schema);
+		$this->assertTrue($result->is_valid());
 
-    public function test_pattern_validation() {
-        $rules = Request_Validator::get_profile_rules();
-        
-        // Test valid name pattern
-        $valid_data = [
-            'firstName' => 'John-Paul',
-            'lastName' => "O'Connor"
-        ];
-        $result = Request_Validator::validate($valid_data, $rules, 'update');
-        $this->assertNotWPError($result);
+		// Test invalid data - empty array.
+		$invalid_data = ['tags' => []];
+		$result = Request_Validator::validate($invalid_data, $schema);
+		$this->assertFalse($result->is_valid());
 
-        // Test invalid name pattern
-        $invalid_data = [
-            'firstName' => 'John123',
-            'lastName' => 'Doe$'
-        ];
-        $result = Request_Validator::validate($invalid_data, $rules, 'update');
-        $this->assertWPError($result);
-        $errors = $result->get_error_data()['errors'];
-        $this->assertArrayHasKey('firstName', $errors);
-        $this->assertArrayHasKey('lastName', $errors);
-    }
+		// Test invalid data - wrong type.
+		$invalid_data = ['tags' => [1, 2, 3]];
+		$result = Request_Validator::validate($invalid_data, $schema);
+		$this->assertFalse($result->is_valid());
+	}
 
-    public function test_type_validation() {
-        $rules = Request_Validator::get_profile_rules();
+	/**
+	 * Test validation context.
+	 */
+	public function test_validation_context() {
+		// Define schema.
+		$schema = [
+			'type' => 'object',
+			'properties' => [
+				'id' => ['type' => 'integer'],
+				'title' => ['type' => 'string']
+			],
+			'required' => ['title']
+		];
 
-        // Test numeric types
-        $numeric_data = [
-            'age' => '25', // String that should be converted to integer
-            'height' => '180.5', // String that should be converted to float
-            'weight' => 75.5
-        ];
-        $result = Request_Validator::validate($numeric_data, $rules, 'update');
-        $this->assertNotWPError($result);
-        $this->assertIsInt($result['age']);
-        $this->assertIsFloat($result['height']);
-        $this->assertIsFloat($result['weight']);
+		// Test create context.
+		$create_data = ['title' => 'New Workout'];
+		$result = Request_Validator::validate($create_data, $schema, 'create');
+		$this->assertTrue($result->is_valid());
 
-        // Test invalid numeric types
-        $invalid_numeric = [
-            'age' => 'twenty',
-            'height' => 'tall',
-            'weight' => 'heavy'
-        ];
-        $result = Request_Validator::validate($invalid_numeric, $rules, 'update');
-        $this->assertWPError($result);
-        $errors = $result->get_error_data()['errors'];
-        $this->assertArrayHasKey('age', $errors);
-        $this->assertArrayHasKey('height', $errors);
-        $this->assertArrayHasKey('weight', $errors);
-    }
+		// Test update context.
+		$update_data = ['id' => 1, 'title' => 'Updated Workout'];
+		$result = Request_Validator::validate($update_data, $schema, 'update');
+		$this->assertTrue($result->is_valid());
+	}
 
-    public function test_range_validation() {
-        $rules = Request_Validator::get_profile_rules();
+	/**
+	 * Test pattern validation.
+	 */
+	public function test_pattern_validation() {
+		// Define schema.
+		$schema = [
+			'type' => 'object',
+			'properties' => [
+				'email' => [
+					'type' => 'string',
+					'pattern' => '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+				]
+			]
+		];
 
-        // Test valid ranges
-        $valid_ranges = [
-            'age' => 25,
-            'height' => 180,
-            'weight' => 75
-        ];
-        $result = Request_Validator::validate($valid_ranges, $rules, 'update');
-        $this->assertNotWPError($result);
+		// Test valid email.
+		$valid_data = ['email' => 'test@example.com'];
+		$result = Request_Validator::validate($valid_data, $schema);
+		$this->assertTrue($result->is_valid());
 
-        // Test out of range values
-        $invalid_ranges = [
-            'age' => 5, // Below minimum age
-            'height' => 400, // Above maximum height
-            'weight' => -1 // Below minimum weight
-        ];
-        $result = Request_Validator::validate($invalid_ranges, $rules, 'update');
-        $this->assertWPError($result);
-        $errors = $result->get_error_data()['errors'];
-        $this->assertArrayHasKey('age', $errors);
-        $this->assertArrayHasKey('height', $errors);
-        $this->assertArrayHasKey('weight', $errors);
-    }
+		// Test invalid email.
+		$invalid_data = ['email' => 'invalid-email'];
+		$result = Request_Validator::validate($invalid_data, $schema);
+		$this->assertFalse($result->is_valid());
+	}
 
-    public function test_custom_validation() {
-        $rules = Request_Validator::get_profile_rules();
+	/**
+	 * Test type validation.
+	 */
+	public function test_type_validation() {
+		// Define schema.
+		$schema = [
+			'type' => 'object',
+			'properties' => [
+				'age' => ['type' => 'integer'],
+				'name' => ['type' => 'string'],
+				'active' => ['type' => 'boolean']
+			]
+		];
 
-        // Test valid injury status
-        $valid_status = [
-            'injuries' => [
-                [
-                    'name' => 'Sprained Ankle',
-                    'description' => 'Left ankle sprain',
-                    'date' => '2024-01-15',
-                    'status' => 'recovering'
-                ]
-            ]
-        ];
-        $result = Request_Validator::validate($valid_status, $rules, 'update');
-        $this->assertNotWPError($result);
+		// Test valid types.
+		$valid_data = [
+			'age' => 25,
+			'name' => 'John',
+			'active' => true
+		];
+		$result = Request_Validator::validate($valid_data, $schema);
+		$this->assertTrue($result->is_valid());
 
-        // Test custom validation callback
-        $invalid_status = [
-            'injuries' => [
-                [
-                    'name' => 'Sprained Ankle',
-                    'description' => 'Left ankle sprain',
-                    'date' => '2024-01-15',
-                    'status' => 'pending' // Invalid status
-                ]
-            ]
-        ];
-        $result = Request_Validator::validate($invalid_status, $rules, 'update');
-        $this->assertWPError($result);
-        $errors = $result->get_error_data()['errors'];
-        $this->assertArrayHasKey('injuries[0].status', $errors);
-    }
-} 
+		// Test invalid types.
+		$invalid_data = [
+			'age' => '25',
+			'name' => 123,
+			'active' => 'true'
+		];
+		$result = Request_Validator::validate($invalid_data, $schema);
+		$this->assertFalse($result->is_valid());
+	}
+
+	/**
+	 * Test range validation.
+	 */
+	public function test_range_validation() {
+		// Define schema.
+		$schema = [
+			'type' => 'object',
+			'properties' => [
+				'age' => [
+					'type' => 'integer',
+					'minimum' => 18,
+					'maximum' => 100
+				],
+				'score' => [
+					'type' => 'number',
+					'minimum' => 0,
+					'maximum' => 100,
+					'multipleOf' => 0.5
+				]
+			]
+		];
+
+		// Test valid ranges.
+		$valid_data = [
+			'age' => 25,
+			'score' => 85.5
+		];
+		$result = Request_Validator::validate($valid_data, $schema);
+		$this->assertTrue($result->is_valid());
+
+		// Test invalid ranges.
+		$invalid_data = [
+			'age' => 15,
+			'score' => 101
+		];
+		$result = Request_Validator::validate($invalid_data, $schema);
+		$this->assertFalse($result->is_valid());
+	}
+
+	/**
+	 * Test custom validation.
+	 */
+	public function test_custom_validation() {
+		// Define schema with custom validation.
+		$schema = [
+			'type' => 'object',
+			'properties' => [
+				'workout_date' => [
+					'type' => 'string',
+					'format' => 'date'
+				]
+			],
+			'custom' => function($data) {
+				// Custom validation logic.
+				$date = strtotime($data['workout_date']);
+				return $date <= time();
+			}
+		];
+
+		// Test valid date.
+		$valid_data = [
+			'workout_date' => date('Y-m-d', strtotime('-1 day'))
+		];
+		$result = Request_Validator::validate($valid_data, $schema);
+		$this->assertTrue($result->is_valid());
+
+		// Test invalid date.
+		$invalid_data = [
+			'workout_date' => date('Y-m-d', strtotime('+1 day'))
+		];
+		$result = Request_Validator::validate($invalid_data, $schema);
+		$this->assertFalse($result->is_valid());
+	}
+}

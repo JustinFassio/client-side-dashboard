@@ -1,10 +1,10 @@
 import React from 'react';
-import { Feature, FeatureMetadata } from '../../dashboard/contracts/Feature';
+import { Feature } from '../../dashboard/contracts/Feature';
 import { EquipmentManager } from './components/EquipmentManager';
 
 export class EquipmentManagerFeature implements Feature {
     public readonly identifier = 'equipment-manager';
-    public readonly metadata: FeatureMetadata = {
+    public readonly metadata = {
         name: 'AI Equipment Manager',
         description: 'Intelligently manage and optimize your workout equipment',
         order: 3
@@ -71,7 +71,7 @@ export class EquipmentManagerFeature implements Feature {
                     </div>
 
                     <p className="preview-note">
-                        We're building an intelligent equipment management system that helps you make
+                        We&apos;re building an intelligent equipment management system that helps you make
                         the most of your workout space and equipment. Stay tuned for the launch of this
                         powerful feature that will revolutionize how you organize and utilize your fitness gear!
                     </p>

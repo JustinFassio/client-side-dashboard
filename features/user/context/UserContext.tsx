@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
 
 interface User {
     id: number;
@@ -42,7 +42,7 @@ export function UserProvider({ children }: UserProviderProps) {
     const lastFetchTimeRef = useRef(0);
     const MIN_FETCH_INTERVAL = 1000; // Minimum time between fetches in milliseconds
 
-    const fetchUserData = async () => {
+    const fetchUserData = useCallback(async () => {
         // Prevent concurrent fetches and throttle requests
         const now = Date.now();
         if (isFetchingRef.current || (now - lastFetchTimeRef.current) < MIN_FETCH_INTERVAL) {
@@ -118,7 +118,7 @@ export function UserProvider({ children }: UserProviderProps) {
         } finally {
             isFetchingRef.current = false;
         }
-    };
+    }, []); // No dependencies needed as it only uses refs and window object
 
     const checkAuth = useCallback(async () => {
         // Skip if already authenticated
@@ -127,7 +127,6 @@ export function UserProvider({ children }: UserProviderProps) {
             return true;
         }
 
-        // Don't skip if loading - we want to complete the initial load
         try {
             console.group('UserContext: Check Auth');
             console.log('Current state:', state);
@@ -171,7 +170,7 @@ export function UserProvider({ children }: UserProviderProps) {
         } finally {
             console.groupEnd();
         }
-    }, [state.isAuthenticated, state.user, state.isLoading]);
+    }, [fetchUserData, state.isAuthenticated, state.isLoading, state.user]);
 
     const refreshUser = useCallback(async () => {
         // Skip if already loading
@@ -209,7 +208,7 @@ export function UserProvider({ children }: UserProviderProps) {
         } finally {
             console.groupEnd();
         }
-    }, [state.isLoading]);
+    }, [fetchUserData, state.isLoading]);
 
     const logout = useCallback(async () => {
         if (state.isLoading) {
@@ -264,7 +263,7 @@ export function UserProvider({ children }: UserProviderProps) {
                 isAuthenticated: false
             });
         });
-    }, []); // Empty dependency array - only run once
+    }, [checkAuth]); // Added checkAuth as dependency
 
     // Debug logging for state changes - but throttle to prevent spam
     const lastLogTimeRef = useRef(0);
@@ -283,7 +282,7 @@ export function UserProvider({ children }: UserProviderProps) {
         console.groupEnd();
     }, [state]);
 
-    const value = React.useMemo(() => ({
+    const value = useMemo(() => ({
         ...state,
         checkAuth,
         logout,

@@ -1,6 +1,6 @@
-import { AuthEventType, LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, User } from '../types';
-import { AuthServiceError, errorHandlers, shouldRetry } from './errors';
-import { ApiConfig, RequestOptions, RetryConfig } from './types';
+import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, User } from '../types';
+import { AuthServiceError, shouldRetry } from './errors';
+import { ApiConfig, RequestOptions } from './types';
 import { EventEmitter } from '../../../dashboard/events';
 import { RateLimiter } from './rateLimiting';
 
