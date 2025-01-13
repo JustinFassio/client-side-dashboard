@@ -1,35 +1,32 @@
 {
     "name": "athlete-dashboard/child-theme",
-    "description": "Athlete Dashboard Child Theme",
+    "description": "Child theme for the Athlete Dashboard",
     "type": "wordpress-theme",
     "require": {
         "php": ">=7.4"
     },
     "require-dev": {
-        "10up/wp_mock": "0.4.2",
-        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
-        "phpcompatibility/php-compatibility": "^9.3",
-        "phpunit/phpunit": "^9.6",
-        "wp-coding-standards/wpcs": "^3.1"
+        "yoast/phpunit-polyfills": "^1.1",
+        "wp-phpunit/wp-phpunit": "^6.3",
+        "mockery/mockery": "^1.6"
     },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "autoload": {
         "psr-4": {
-            "AthleteDashboard\\": "includes/"
+            "AthleteDashboard\\": "includes/",
+            "AthleteDashboard\\Core\\": "dashboard/core/",
+            "AthleteDashboard\\Features\\Profile\\": "features/profile/"
         }
     },
     "autoload-dev": {
         "psr-4": {
             "AthleteDashboard\\Tests\\": "tests/php/"
         }
-    },
-    "config": {
-        "optimize-autoloader": true,
-        "preferred-install": "dist",
-        "sort-packages": true,
-        "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
-        }
-    },
-    "minimum-stability": "dev",
-    "prefer-stable": true
+    }
 }

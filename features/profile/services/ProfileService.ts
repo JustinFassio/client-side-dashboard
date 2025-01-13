@@ -1,4 +1,5 @@
 import { ProfileData, ProfileErrorCode } from '../types/profile';
+import { ProfileConfig, getFullEndpointUrl } from '../config';
 
 export class ProfileError extends Error {
     constructor(
@@ -31,7 +32,7 @@ export class ProfileService {
             console.group('ProfileService: fetchProfile');
             console.log('Fetching profile for user:', userId);
             
-            const endpoint = `${this.apiUrl}/athlete-dashboard/v1/profile/${userId}`;
+            const endpoint = `${this.apiUrl}/${ProfileConfig.endpoints.full}`;
             console.log('API URL:', endpoint);
             console.log('Headers:', {
                 'X-WP-Nonce': this.nonce ? '[PRESENT]' : '[MISSING]'
@@ -91,7 +92,7 @@ export class ProfileService {
             console.log('Updating profile for user:', userId);
             console.log('Update data:', data);
             
-            const endpoint = `${this.apiUrl}/athlete-dashboard/v1/profile/${userId}`;
+            const endpoint = `${this.apiUrl}/${ProfileConfig.endpoints.base}`;
             console.log('API URL:', endpoint);
             console.log('Headers:', {
                 'Content-Type': 'application/json',

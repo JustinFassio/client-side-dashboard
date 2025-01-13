@@ -220,3 +220,63 @@ enum ProfileErrorCodes {
 - 1.1.0: Added profile image support
 - 1.0.1: Fixed validation issues
 - 1.0.0: Initial release 
+
+# Profile Feature Migration Guide
+
+## Overview
+The profile feature is being migrated from legacy endpoints to a new, more robust implementation. This document outlines the migration process and provides guidance for developers.
+
+## Deprecated Components
+The following components are marked for deprecation in version 1.0.0:
+
+1. `includes/rest-api/class-athlete-dashboard-profile-endpoints.php`
+   - Legacy profile endpoints class
+   - Will be removed in future versions
+   - Currently maintained for backward compatibility
+
+2. `includes/rest-api.php` profile endpoints
+   - Legacy REST API endpoints
+   - Will be removed in future versions
+   - Currently maintained for backward compatibility
+
+## New Implementation
+The new profile feature implementation is located in:
+- `features/profile/api/class-profile-endpoints.php`
+- Namespace: `AthleteProfile\API`
+- Main class: `ProfileEndpoints`
+
+### Endpoint Mapping
+Legacy endpoints are being replaced with the following new endpoints:
+
+| Legacy Endpoint | New Endpoint |
+|----------------|--------------|
+| `custom/v1/profile` | `athlete-dashboard/v1/profile/full` |
+| `athlete-dashboard/v1/profile` | `athlete-dashboard/v1/profile/basic` |
+
+### Migration Steps
+1. Update any custom code to use the new `AthleteProfile\API\ProfileEndpoints` class
+2. Replace legacy endpoint URLs with their new counterparts
+3. Test thoroughly with both implementations during transition
+4. Monitor debug logs for any remaining usage of deprecated endpoints
+
+### Debug Logging
+Debug logs have been added to track usage of deprecated endpoints. Enable `WP_DEBUG` to view these logs.
+
+Example debug log messages:
+```
+[Deprecated] Legacy profile endpoints initialized
+[Deprecated] Legacy get_profile endpoint called
+```
+
+## Timeline
+- Phase 1 (Current): Documentation and deprecation notices
+- Phase 2: Feature parity and testing
+- Phase 3: Frontend migration
+- Phase 4: Legacy code removal
+
+## Support
+For any issues or questions during migration, please:
+1. Check the debug logs for deprecated endpoint usage
+2. Review the new implementation in `features/profile/api/`
+3. Test endpoints using the provided test routes
+4. Contact the development team for assistance 

@@ -18,7 +18,9 @@
     "clean": "rm -rf build"
   },
   "jest": {
-    "setupFilesAfterEnv": ["<rootDir>/jest.setup.ts"]
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ]
   },
   "repository": {
     "type": "git",
@@ -66,7 +68,7 @@
     "@typescript-eslint/parser": "^8.19.1",
     "@wordpress/env": "^8.0.0",
     "@wordpress/scripts": "^26.0.0",
-    "css-loader": "^6.8.1",
+    "css-loader": "^7.1.2",
     "css-minimizer-webpack-plugin": "^7.0.0",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.37.3",

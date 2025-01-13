@@ -23,7 +23,6 @@ $test_log_messages = array();
 // Initialize Logger first
 echo "\nBootstrap - Initializing Logger";
 \AthleteDashboard\Tests\Logger::getInstance();
-
 // Define error_log function to use our global array
 if ( ! function_exists( 'error_log' ) ) {
 	/**
@@ -281,6 +280,5 @@ if ( ! function_exists( 'wp_strip_all_tags' ) ) {
 		return trim( $string );
 	}
 }
-
 // Load any additional test helpers
 require_once __DIR__ . '/php/helpers.php';

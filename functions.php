@@ -26,7 +26,8 @@ function init_cache_stats_widget() {
 add_action( 'init', 'init_cache_stats_widget' );
 
 // Load feature configurations
-require_once get_stylesheet_directory() . '/features/profile/config.php';
+require_once get_stylesheet_directory() . '/features/profile/Config/Config.php';
+require_once get_stylesheet_directory() . '/features/profile/api/ProfileEndpoints.php';
 
 // Load REST API dependencies
 require_once get_stylesheet_directory() . '/includes/rest-api/class-rate-limiter.php';
@@ -38,7 +39,7 @@ require_once get_stylesheet_directory() . '/includes/rest-api/class-overview-con
 require_once get_stylesheet_directory() . '/includes/rest-api/class-profile-controller.php';
 
 // Load feature endpoints
-require_once get_stylesheet_directory() . '/features/profile/api/class-profile-endpoints.php';
+require_once get_stylesheet_directory() . '/features/equipment/api/class-equipment-endpoints.php';
 
 // Load REST API file
 require_once get_stylesheet_directory() . '/includes/rest-api.php';
@@ -49,7 +50,8 @@ require_once get_stylesheet_directory() . '/includes/class-rest-api.php';
 use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
 use AthleteDashboard\Core\DashboardBridge;
-use AthleteDashboard\Features\Profile\Config as ProfileConfig;
+use AthleteDashboard\Features\Profile\Config\Config as ProfileConfig;
+use AthleteDashboard\Features\Profile\api\ProfileEndpoints;
 
 // Add dashboard feature query var
 function athlete_dashboard_add_query_vars( $vars ) {
@@ -238,24 +240,24 @@ add_action(
 	'rest_api_init',
 	function () {
 		// Initialize profile endpoints
-		AthleteProfile\API\ProfileEndpoints::init();
-		
+		AthleteDashboard\Features\Profile\api\ProfileEndpoints::init();
+
 		// Log registration and API details
-		if (defined('WP_DEBUG') && WP_DEBUG) {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 			Debug::log( 'Profile endpoints initialized', 'api' );
-			Debug::log( 'REST API URL: ' . rest_url('athlete-dashboard/v1/profile'), 'api' );
+			Debug::log( 'REST API URL: ' . rest_url( 'athlete-dashboard/v1/profile' ), 'api' );
 			Debug::log( 'Current user: ' . get_current_user_id(), 'api' );
-			
+
 			// Test the endpoint registration
-			$server = rest_get_server();
-			$routes = $server->get_routes();
+			$server         = rest_get_server();
+			$routes         = $server->get_routes();
 			$profile_routes = array_filter(
-				array_keys($routes),
-				function($route) {
-					return strpos($route, 'athlete-dashboard/v1/profile') === 0;
+				array_keys( $routes ),
+				function ( $route ) {
+					return strpos( $route, 'athlete-dashboard/v1/profile' ) === 0;
 				}
 			);
-			Debug::log('Registered profile routes: ' . implode(', ', $profile_routes), 'api');
+			Debug::log( 'Registered profile routes: ' . implode( ', ', $profile_routes ), 'api' );
 		}
 	},
 	5  // Higher priority to ensure it runs after core REST API initialization

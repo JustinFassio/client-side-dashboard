@@ -10,7 +10,10 @@ export interface FieldMapping {
 export const ProfileConfig = {
     endpoints: {
         base: 'athlete-dashboard/v1/profile',
-        test: 'athlete-dashboard/v1/profile/test'
+        test: 'athlete-dashboard/v1/profile/test',
+        user: 'athlete-dashboard/v1/profile/user',
+        full: 'athlete-dashboard/v1/profile/full',
+        basic: 'athlete-dashboard/v1/profile/basic'
     },
     meta: {
         key: '_athlete_profile_data',
