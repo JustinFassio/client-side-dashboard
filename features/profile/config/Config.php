@@ -16,6 +16,51 @@ use AthleteDashboard\Core\Config\Debug;
  */
 class Config {
 	/**
+	 * Debug context definitions for the Profile feature.
+	 *
+	 * Contexts are organized by functional area to maintain Feature-First principles:
+	 * - general: Basic feature-level operations and initialization
+	 * - api: REST API endpoint registration and routing
+	 * - data: Data operations (CRUD) on profile data
+	 * - auth: Authentication and authorization checks
+	 * - events: Event-driven operations and hooks
+	 *
+	 * @var array
+	 */
+	private static $DEBUG_CONTEXTS = array(
+		'general' => 'profile',          // Use for feature initialization and general operations
+		'api'     => 'profile:api',      // Use for API endpoint registration and routing
+		'data'    => 'profile:data',     // Use for profile data operations (get/update)
+		'auth'    => 'profile:auth',     // Use for authentication and permission checks
+		'events'  => 'profile:events',   // Use for WordPress actions and event handling
+	);
+
+	/**
+	 * Get debug contexts for the Profile feature.
+	 *
+	 * Used to retrieve all available debug contexts for the Profile feature.
+	 * This helps maintain consistency in debug logging across the feature.
+	 *
+	 * @return array Debug contexts mapping context keys to their full names.
+	 */
+	public static function get_debug_contexts(): array {
+		return self::$DEBUG_CONTEXTS;
+	}
+
+	/**
+	 * Get a specific debug context.
+	 *
+	 * Retrieves the full context name for a given context key.
+	 * Falls back to the general profile context if the specific context isn't found.
+	 *
+	 * @param string $context Context key (e.g., 'api', 'data', 'auth').
+	 * @return string Debug context string (e.g., 'profile:api', 'profile:data').
+	 */
+	public static function get_debug_context( string $context ): string {
+		return self::$DEBUG_CONTEXTS[ $context ] ?? self::$DEBUG_CONTEXTS['general'];
+	}
+
+	/**
 	 * Profile field configuration.
 	 *
 	 * @var array

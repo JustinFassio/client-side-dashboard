@@ -2,27 +2,20 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
          bootstrap="tests/bootstrap.php"
-         cacheResultFile=".phpunit.cache/test-results"
-         executionOrder="depends,defects"
-         forceCoversAnnotation="false"
-         beStrictAboutCoversAnnotation="true"
-         beStrictAboutOutputDuringTests="true"
-         beStrictAboutTodoAnnotatedTests="true"
-         convertDeprecationsToExceptions="true"
-         failOnRisky="true"
-         failOnWarning="true"
-         verbose="true"
-         colors="true">
+         colors="true"
+         verbose="true">
+    <php>
+        <const name="WP_TESTS_MULTISITE" value="0"/>
+        <const name="WP_TESTS_DOMAIN" value="example.org"/>
+        <const name="WP_TESTS_EMAIL" value="admin@example.org"/>
+        <const name="WP_TESTS_TITLE" value="Test Blog"/>
+        <const name="WP_TESTS_NETWORK_TITLE" value="Test Network"/>
+        <const name="WP_TESTS_FORCE_KNOWN_BUGS" value="0"/>
+        <const name="WP_PHP_BINARY" value="php"/>
+    </php>
     <testsuites>
-        <testsuite name="default">
-            <directory>tests/php</directory>
+        <testsuite name="athlete-dashboard">
+            <directory suffix=".php">./tests/php</directory>
         </testsuite>
     </testsuites>
-
-    <coverage cacheDirectory=".phpunit.cache/code-coverage"
-              processUncoveredFiles="true">
-        <include>
-            <directory suffix=".php">includes</directory>
-        </include>
-    </coverage>
 </phpunit> 

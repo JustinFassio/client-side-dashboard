@@ -27,7 +27,7 @@ add_action( 'init', 'init_cache_stats_widget' );
 
 // Load feature configurations
 require_once get_stylesheet_directory() . '/features/profile/Config/Config.php';
-require_once get_stylesheet_directory() . '/features/profile/api/ProfileEndpoints.php';
+require_once get_stylesheet_directory() . '/features/profile/api/class-profile-endpoints.php';
 
 // Load REST API dependencies
 require_once get_stylesheet_directory() . '/includes/rest-api/class-rate-limiter.php';
@@ -51,7 +51,7 @@ use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
 use AthleteDashboard\Core\DashboardBridge;
 use AthleteDashboard\Features\Profile\Config\Config as ProfileConfig;
-use AthleteDashboard\Features\Profile\api\ProfileEndpoints;
+use AthleteDashboard\Features\Profile\api\Profile_Endpoints;
 
 // Add dashboard feature query var
 function athlete_dashboard_add_query_vars( $vars ) {
@@ -240,7 +240,7 @@ add_action(
 	'rest_api_init',
 	function () {
 		// Initialize profile endpoints
-		AthleteDashboard\Features\Profile\api\ProfileEndpoints::init();
+		AthleteDashboard\Features\Profile\api\Profile_Endpoints::init();
 
 		// Log registration and API details
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

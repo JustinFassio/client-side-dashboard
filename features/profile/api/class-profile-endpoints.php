@@ -15,11 +15,11 @@ use WP_Error;
 use WP_REST_Server;
 
 /**
- * Class ProfileEndpoints
+ * Class Profile_Endpoints
  *
  * Handles REST API endpoints for managing athlete profiles.
  */
-class ProfileEndpoints {
+class Profile_Endpoints {
 	/**
 	 * API namespace for all endpoints.
 	 *
@@ -57,16 +57,19 @@ class ProfileEndpoints {
 	 */
 	public static function init() {
 		if ( self::$initialized ) {
-			self::log_debug( 'ProfileEndpoints already initialized, skipping.' );
+			Debug::log( 'Profile endpoints already initialized', 'profile' );
 			return;
 		}
 
-		self::log_debug( 'Initializing ProfileEndpoints.' );
+		Debug::log(
+			sprintf( 'Initializing endpoints [namespace=%s, route=%s]', self::NAMESPACE, self::ROUTE ),
+			'profile'
+		);
 
 		// Register endpoints when WordPress initializes the REST API.
 		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
 
-		self::log_debug_action( 'init', 'WordPress init: ProfileEndpoints loaded.' );
+		Debug::log( 'Endpoints initialized and registered with rest_api_init', 'profile' );
 
 		self::$initialized = true;
 	}
@@ -84,9 +87,10 @@ class ProfileEndpoints {
 	 * @return void
 	 */
 	public static function register_routes() {
-		self::log_debug( 'Registering profile endpoints.' );
-		self::log_debug( 'Namespace: ' . self::NAMESPACE );
-		self::log_debug( 'Route: ' . self::ROUTE );
+		Debug::log(
+			sprintf( 'Registering REST routes [namespace=%s, route=%s]', self::NAMESPACE, self::ROUTE ),
+			'profile'
+		);
 
 		// Public test endpoint for debugging
 		register_rest_route(
@@ -109,6 +113,7 @@ class ProfileEndpoints {
 
 		// Test endpoint for debugging (only when WP_DEBUG is enabled)
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			Debug::log( 'Registering debug test endpoint', 'profile' );
 			register_rest_route(
 				self::NAMESPACE,
 				'/' . self::ROUTE . '/test',
@@ -139,6 +144,7 @@ class ProfileEndpoints {
 		}
 
 		// Main profile endpoints
+		Debug::log( 'Registering main profile endpoints', 'profile' );
 		register_rest_route(
 			self::NAMESPACE,
 			'/' . self::ROUTE,
@@ -157,6 +163,7 @@ class ProfileEndpoints {
 		);
 
 		// User data endpoints
+		Debug::log( 'Registering user data endpoints', 'profile' );
 		register_rest_route(
 			self::NAMESPACE,
 			'/' . self::ROUTE . '/user',
@@ -175,6 +182,7 @@ class ProfileEndpoints {
 		);
 
 		// Combined data endpoint
+		Debug::log( 'Registering combined data endpoint', 'profile' );
 		register_rest_route(
 			self::NAMESPACE,
 			'/' . self::ROUTE . '/full',
@@ -186,6 +194,7 @@ class ProfileEndpoints {
 		);
 
 		// Basic data endpoint
+		Debug::log( 'Registering basic data endpoint', 'profile' );
 		register_rest_route(
 			self::NAMESPACE,
 			'/' . self::ROUTE . '/basic',
@@ -196,7 +205,7 @@ class ProfileEndpoints {
 			)
 		);
 
-		self::log_debug( 'Profile endpoints registered successfully.' );
+		Debug::log( 'REST routes registration complete', 'profile' );
 	}
 
 	/**
@@ -208,10 +217,20 @@ class ProfileEndpoints {
 	 * @return bool True if user is authenticated, false otherwise.
 	 */
 	public static function check_auth() {
+		$user_id = get_current_user_id();
+
 		if ( ! is_user_logged_in() ) {
-			self::log_debug( 'Unauthorized profile API access attempt.' );
+			Debug::log(
+				sprintf( 'Unauthorized access attempt [user_id=%d]', $user_id ),
+				'profile'
+			);
 			return false;
 		}
+
+		Debug::log(
+			sprintf( 'Access granted [user_id=%d]', $user_id ),
+			'profile'
+		);
 		return true;
 	}
 
@@ -227,6 +246,7 @@ class ProfileEndpoints {
 		$user_id = get_current_user_id();
 
 		if ( ! $user_id ) {
+			Debug::log( 'Profile fetch failed: no user found', 'profile' );
 			return new WP_Error(
 				'no_user',
 				'User not found',
@@ -234,17 +254,18 @@ class ProfileEndpoints {
 			);
 		}
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( "Fetching profile for user: $user_id" );
-		}
+		Debug::log( sprintf( 'Fetching profile [user_id=%d]', $user_id ), 'profile' );
 
 		try {
 			$profile_data = self::get_profile_data( $user_id );
-
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( "Profile data retrieved successfully for user: $user_id" );
-				error_log( 'Profile data: ' . wp_json_encode( $profile_data ) );
-			}
+			Debug::log(
+				sprintf(
+					'Profile data retrieved [user_id=%d, data_size=%d]',
+					$user_id,
+					count( $profile_data )
+				),
+				'profile'
+			);
 
 			// Ensure age is properly cast to integer
 			if ( isset( $profile_data['age'] ) ) {
@@ -279,9 +300,14 @@ class ProfileEndpoints {
 				)
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Error fetching profile: ' . $e->getMessage() );
-			}
+			Debug::log(
+				sprintf(
+					'Profile fetch failed: %s [user_id=%d]',
+					$e->getMessage(),
+					$user_id
+				),
+				'profile'
+			);
 			return new WP_Error(
 				'profile_fetch_error',
 				'Failed to fetch profile data',
@@ -303,17 +329,16 @@ class ProfileEndpoints {
 		$user_id = get_current_user_id();
 		$data    = $request->get_json_params();
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '=== Profile Update Request ===' );
-			error_log( "User ID: $user_id" );
-			error_log( 'Raw request data: ' . wp_json_encode( $request->get_body() ) );
-			error_log( 'Parsed JSON data: ' . wp_json_encode( $data ) );
-		}
+		Debug::log(
+			sprintf( 'Updating profile [user_id=%d]', $user_id ),
+			'profile'
+		);
 
 		if ( empty( $data ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'No profile data provided in request.' );
-			}
+			Debug::log(
+				sprintf( 'Profile update failed: no data provided [user_id=%d]', $user_id ),
+				'profile'
+			);
 			return new WP_Error(
 				'invalid_params',
 				'No profile data provided',
@@ -326,38 +351,54 @@ class ProfileEndpoints {
 			if ( isset( $data['age'] ) ) {
 				$original_age = $data['age'];
 				$data['age']  = absint( $data['age'] );
-
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( "Age conversion: $original_age -> {$data['age']}" );
-				}
+				Debug::log(
+					sprintf(
+						'Converting age [user_id=%d, original=%s, converted=%d]',
+						$user_id,
+						$original_age,
+						$data['age']
+					),
+					'profile'
+				);
 			}
 
+			// Validate profile data
 			$validation = self::validate_profile_data( $data );
 			if ( is_wp_error( $validation ) ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Profile validation failed: ' . $validation->get_error_message() );
-					error_log( 'Validation errors: ' . wp_json_encode( $validation->get_error_data() ) );
-				}
+				Debug::log(
+					sprintf(
+						'Profile validation failed [user_id=%d, errors=%s]',
+						$user_id,
+						wp_json_encode( $validation->get_error_data() )
+					),
+					'profile'
+				);
 				return $validation;
 			}
+			Debug::log(
+				sprintf( 'Profile validation passed [user_id=%d]', $user_id ),
+				'profile'
+			);
 
+			// Get and merge current data
 			$current_data = self::get_profile_data( $user_id );
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Current profile data: ' . wp_json_encode( $current_data ) );
-			}
-
 			$updated_data = array_merge( $current_data, $data );
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Merged profile data: ' . wp_json_encode( $updated_data ) );
-				error_log( 'Saving profile data to meta key: ' . self::META_KEY );
-			}
+			Debug::log(
+				sprintf(
+					'Merging profile data [user_id=%d, fields=%d]',
+					$user_id,
+					count( $updated_data )
+				),
+				'profile'
+			);
 
+			// Update user meta
 			$update_success = update_user_meta( $user_id, self::META_KEY, $updated_data );
-
 			if ( $update_success === false ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Failed to update profile data in user meta.' );
-				}
+				Debug::log(
+					sprintf( 'Profile update failed: meta update failed [user_id=%d]', $user_id ),
+					'profile'
+				);
 				return new WP_Error(
 					'update_failed',
 					'Failed to update profile',
@@ -365,7 +406,7 @@ class ProfileEndpoints {
 				);
 			}
 
-			// Get user data to ensure consistent response format
+			// Get user data for response
 			$user = get_userdata( $user_id );
 			$meta = get_user_meta( $user_id );
 
@@ -384,10 +425,10 @@ class ProfileEndpoints {
 				)
 			);
 
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( "Profile updated successfully for user: $user_id" );
-				error_log( '=== End Profile Update ===' );
-			}
+			Debug::log(
+				sprintf( 'Profile updated successfully [user_id=%d]', $user_id ),
+				'profile'
+			);
 
 			return rest_ensure_response(
 				array(
@@ -398,8 +439,14 @@ class ProfileEndpoints {
 				)
 			);
 		} catch ( \Exception $e ) {
-			error_log( 'Error updating profile: ' . $e->getMessage() );
-			error_log( 'Error trace: ' . $e->getTraceAsString() );
+			Debug::log(
+				sprintf(
+					'Profile update failed: %s [user_id=%d]',
+					$e->getMessage(),
+					$user_id
+				),
+				'profile'
+			);
 			return new WP_Error(
 				'profile_update_error',
 				'Failed to update profile',
@@ -420,33 +467,62 @@ class ProfileEndpoints {
 	 */
 	private static function get_profile_data( $user_id ) {
 		if ( empty( $user_id ) ) {
+			Debug::log(
+				sprintf( 'Profile data fetch failed: invalid user ID [user_id=%d]', $user_id ),
+				'profile'
+			);
 			throw new \Exception( 'Invalid user ID provided.' );
 		}
 
 		try {
+			Debug::log(
+				sprintf( 'Fetching profile data [user_id=%d]', $user_id ),
+				'profile'
+			);
+
 			$profile_data = get_user_meta( $user_id, self::META_KEY, true );
 
 			// If no data exists, return empty array as default
 			if ( empty( $profile_data ) ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( "No profile data found for user: $user_id" );
-				}
+				Debug::log(
+					sprintf( 'No profile data found [user_id=%d]', $user_id ),
+					'profile'
+				);
 				return array();
 			}
 
 			// Ensure we have an array
 			if ( ! is_array( $profile_data ) ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( "Invalid profile data format for user: $user_id" );
-				}
+				Debug::log(
+					sprintf(
+						'Invalid profile data format [user_id=%d, type=%s]',
+						$user_id,
+						gettype( $profile_data )
+					),
+					'profile'
+				);
 				return array();
 			}
 
+			Debug::log(
+				sprintf(
+					'Profile data retrieved successfully [user_id=%d, fields=%d]',
+					$user_id,
+					count( $profile_data )
+				),
+				'profile'
+			);
+
 			return $profile_data;
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Error retrieving profile data: ' . $e->getMessage() );
-			}
+			Debug::log(
+				sprintf(
+					'Profile data fetch failed: %s [user_id=%d]',
+					$e->getMessage(),
+					$user_id
+				),
+				'profile'
+			);
 			throw $e;
 		}
 	}
@@ -622,6 +698,10 @@ class ProfileEndpoints {
 		$user_id = get_current_user_id();
 
 		if ( ! $user_id ) {
+			Debug::log(
+				sprintf( 'User data fetch failed: no user found [user_id=%d]', $user_id ),
+				'profile'
+			);
 			return new WP_Error(
 				'no_user',
 				'User not found',
@@ -629,16 +709,15 @@ class ProfileEndpoints {
 			);
 		}
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( "Fetching user data for ID: $user_id" );
-		}
+		Debug::log( sprintf( 'Fetching user data [user_id=%d]', $user_id ), 'profile' );
 
 		try {
 			$user = get_userdata( $user_id );
 			if ( ! $user ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( "User not found for ID: $user_id" );
-				}
+				Debug::log(
+					sprintf( 'User data fetch failed: user not found [user_id=%d]', $user_id ),
+					'profile'
+				);
 				return new WP_Error(
 					'user_not_found',
 					'User not found',
@@ -658,6 +737,15 @@ class ProfileEndpoints {
 				'displayName' => $user->display_name,
 			);
 
+			Debug::log(
+				sprintf(
+					'User data retrieved [user_id=%d, fields=%d]',
+					$user_id,
+					count( $user_data )
+				),
+				'profile'
+			);
+
 			return rest_ensure_response(
 				array(
 					'success' => true,
@@ -667,9 +755,14 @@ class ProfileEndpoints {
 				)
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Error fetching user data: ' . $e->getMessage() );
-			}
+			Debug::log(
+				sprintf(
+					'User data fetch failed: %s [user_id=%d]',
+					$e->getMessage(),
+					$user_id
+				),
+				'profile'
+			);
 			return new WP_Error(
 				'user_fetch_error',
 				'Failed to fetch user data',
@@ -691,16 +784,16 @@ class ProfileEndpoints {
 		$user_id = get_current_user_id();
 		$data    = $request->get_json_params();
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( '=== User Data Update Request ===' );
-			error_log( "User ID: $user_id" );
-			error_log( 'Update data: ' . wp_json_encode( $data ) );
-		}
+		Debug::log(
+			sprintf( 'Updating user data [user_id=%d]', $user_id ),
+			'profile'
+		);
 
 		if ( empty( $data ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'No user data provided in request' );
-			}
+			Debug::log(
+				sprintf( 'User data update failed: no data provided [user_id=%d]', $user_id ),
+				'profile'
+			);
 			return new WP_Error(
 				'invalid_params',
 				'No user data provided',
@@ -711,9 +804,10 @@ class ProfileEndpoints {
 		try {
 			$user = get_userdata( $user_id );
 			if ( ! $user ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( "User not found for ID: $user_id" );
-				}
+				Debug::log(
+					sprintf( 'User data update failed: user not found [user_id=%d]', $user_id ),
+					'profile'
+				);
 				return new WP_Error(
 					'user_not_found',
 					'User not found',
@@ -728,17 +822,29 @@ class ProfileEndpoints {
 				'user_email'   => 'email',
 			);
 
-			$user_data = array( 'ID' => $user_id );
+			Debug::log(
+				sprintf(
+					'Validating user data [user_id=%d, fields=%s]',
+					$user_id,
+					implode( ',', array_keys( $data ) )
+				),
+				'profile'
+			);
+
+			$user_data      = array( 'ID' => $user_id );
+			$updated_fields = array();
 			foreach ( $updateable_fields as $wp_field => $request_field ) {
 				if ( isset( $data[ $request_field ] ) ) {
 					$user_data[ $wp_field ] = sanitize_text_field( $data[ $request_field ] );
+					$updated_fields[]       = $wp_field;
 				}
 			}
 
 			if ( count( $user_data ) === 1 ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'No valid fields to update' );
-				}
+				Debug::log(
+					sprintf( 'User data update failed: no valid fields [user_id=%d]', $user_id ),
+					'profile'
+				);
 				return new WP_Error(
 					'invalid_params',
 					'No valid fields to update',
@@ -746,11 +852,25 @@ class ProfileEndpoints {
 				);
 			}
 
+			Debug::log(
+				sprintf(
+					'Updating user fields [user_id=%d, fields=%s]',
+					$user_id,
+					implode( ',', $updated_fields )
+				),
+				'profile'
+			);
+
 			$result = wp_update_user( $user_data );
 			if ( is_wp_error( $result ) ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Failed to update user: ' . $result->get_error_message() );
-				}
+				Debug::log(
+					sprintf(
+						'User update failed: %s [user_id=%d]',
+						$result->get_error_message(),
+						$user_id
+					),
+					'profile'
+				);
 				return $result;
 			}
 
@@ -768,10 +888,14 @@ class ProfileEndpoints {
 				'displayName' => $updated_user->display_name,
 			);
 
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( "User data updated successfully for ID: $user_id" );
-				error_log( '=== End User Data Update ===' );
-			}
+			Debug::log(
+				sprintf(
+					'User data update complete [user_id=%d, updated_fields=%d]',
+					$user_id,
+					count( $updated_fields )
+				),
+				'profile'
+			);
 
 			return rest_ensure_response(
 				array(
@@ -782,9 +906,14 @@ class ProfileEndpoints {
 				)
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Error updating user data: ' . $e->getMessage() );
-			}
+			Debug::log(
+				sprintf(
+					'User data update failed: %s [user_id=%d]',
+					$e->getMessage(),
+					$user_id
+				),
+				'profile'
+			);
 			return new WP_Error(
 				'update_error',
 				'Failed to update user data',
@@ -805,6 +934,10 @@ class ProfileEndpoints {
 		$user_id = get_current_user_id();
 
 		if ( ! $user_id ) {
+			Debug::log(
+				sprintf( 'Basic data fetch failed: no user found [user_id=%d]', $user_id ),
+				'profile'
+			);
 			return new WP_Error(
 				'no_user',
 				'User not found',
@@ -812,29 +945,77 @@ class ProfileEndpoints {
 			);
 		}
 
-		$user = get_userdata( $user_id );
-		$meta = get_user_meta( $user_id );
+		Debug::log( sprintf( 'Fetching basic data [user_id=%d]', $user_id ), 'profile' );
 
-		// Match the legacy endpoint response format exactly
-		$response = array(
-			'id'          => $user_id,
-			'name'        => $user->display_name,
-			'username'    => $user->user_login,
-			'email'       => $user->user_email,
-			'roles'       => $user->roles,
-			'firstName'   => $meta['first_name'][0] ?? '',
-			'lastName'    => $meta['last_name'][0] ?? '',
-			'displayName' => $user->display_name,
-		);
+		try {
+			$user = get_userdata( $user_id );
+			if ( ! $user ) {
+				Debug::log(
+					sprintf( 'Basic data fetch failed: user not found [user_id=%d]', $user_id ),
+					'profile'
+				);
+				return new WP_Error(
+					'user_not_found',
+					'User not found',
+					array( 'status' => 404 )
+				);
+			}
 
-		return rest_ensure_response(
-			array(
-				'success' => true,
-				'data'    => array(
-					'profile' => $response,
+			$meta = get_user_meta( $user_id );
+
+			// Match the legacy endpoint response format exactly
+			$basic_data = array(
+				'id'          => $user_id,
+				'name'        => $user->display_name,
+				'username'    => $user->user_login,
+				'email'       => $user->user_email,
+				'roles'       => $user->roles,
+				'firstName'   => $meta['first_name'][0] ?? '',
+				'lastName'    => $meta['last_name'][0] ?? '',
+				'displayName' => $user->display_name,
+			);
+
+			Debug::log(
+				sprintf(
+					'Retrieved user data [user_id=%d, fields=%s]',
+					$user_id,
+					implode( ',', array_keys( $basic_data ) )
 				),
-			)
-		);
+				'profile'
+			);
+
+			Debug::log(
+				sprintf(
+					'Basic data fetch complete [user_id=%d, fields=%d]',
+					$user_id,
+					count( $basic_data )
+				),
+				'profile'
+			);
+
+			return rest_ensure_response(
+				array(
+					'success' => true,
+					'data'    => array(
+						'profile' => $basic_data,
+					),
+				)
+			);
+		} catch ( \Exception $e ) {
+			Debug::log(
+				sprintf(
+					'Basic data fetch failed: %s [user_id=%d]',
+					$e->getMessage(),
+					$user_id
+				),
+				'profile'
+			);
+			return new WP_Error(
+				'basic_data_fetch_error',
+				'Failed to fetch basic profile data',
+				array( 'status' => 500 )
+			);
+		}
 	}
 
 	/**
@@ -849,6 +1030,10 @@ class ProfileEndpoints {
 		$user_id = get_current_user_id();
 
 		if ( ! $user_id ) {
+			Debug::log(
+				sprintf( 'Combined data fetch failed: no user found [user_id=%d]', $user_id ),
+				'profile'
+			);
 			return new WP_Error(
 				'no_user',
 				'User not found',
@@ -856,27 +1041,74 @@ class ProfileEndpoints {
 			);
 		}
 
+		Debug::log( sprintf( 'Fetching combined data [user_id=%d]', $user_id ), 'profile' );
+
 		try {
 			// Get basic user data
+			Debug::log( sprintf( 'Fetching user data [user_id=%d]', $user_id ), 'profile' );
 			$user = get_userdata( $user_id );
-			$meta = get_user_meta( $user_id );
+			if ( ! $user ) {
+				Debug::log(
+					sprintf( 'User data fetch failed: user not found [user_id=%d]', $user_id ),
+					'profile'
+				);
+				return new WP_Error(
+					'user_not_found',
+					'User not found',
+					array( 'status' => 404 )
+				);
+			}
+			$meta      = get_user_meta( $user_id );
+			$user_data = array(
+				'id'          => $user_id,
+				'name'        => $user->display_name,
+				'username'    => $user->user_login,
+				'email'       => $user->user_email,
+				'roles'       => $user->roles,
+				'firstName'   => $meta['first_name'][0] ?? '',
+				'lastName'    => $meta['last_name'][0] ?? '',
+				'displayName' => $user->display_name,
+			);
+			Debug::log(
+				sprintf(
+					'User data retrieved [user_id=%d, fields=%d]',
+					$user_id,
+					count( $user_data )
+				),
+				'profile'
+			);
 
 			// Get additional profile data
+			Debug::log( sprintf( 'Fetching profile data [user_id=%d]', $user_id ), 'profile' );
 			$profile_data = self::get_profile_data( $user_id );
+			Debug::log(
+				sprintf(
+					'Profile data retrieved [user_id=%d, fields=%d]',
+					$user_id,
+					count( $profile_data )
+				),
+				'profile'
+			);
 
 			// Combine the data, ensuring basic user data takes precedence
-			$response = array_merge(
-				$profile_data,
-				array(
-					'id'          => $user_id,
-					'name'        => $user->display_name,
-					'username'    => $user->user_login,
-					'email'       => $user->user_email,
-					'roles'       => $user->roles,
-					'firstName'   => $meta['first_name'][0] ?? '',
-					'lastName'    => $meta['last_name'][0] ?? '',
-					'displayName' => $user->display_name,
-				)
+			Debug::log(
+				sprintf(
+					'Combining data [user_id=%d, profile_fields=%d, user_fields=%d]',
+					$user_id,
+					count( $profile_data ),
+					count( $user_data )
+				),
+				'profile'
+			);
+			$response = array_merge( $profile_data, $user_data );
+
+			Debug::log(
+				sprintf(
+					'Combined data fetch complete [user_id=%d, total_fields=%d]',
+					$user_id,
+					count( $response )
+				),
+				'profile'
 			);
 
 			return rest_ensure_response(
@@ -888,9 +1120,14 @@ class ProfileEndpoints {
 				)
 			);
 		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( 'Error getting combined profile data: ' . $e->getMessage() );
-			}
+			Debug::log(
+				sprintf(
+					'Combined data fetch failed: %s [user_id=%d]',
+					$e->getMessage(),
+					$user_id
+				),
+				'profile'
+			);
 			return new WP_Error(
 				'profile_fetch_error',
 				'Failed to fetch profile data',
@@ -898,40 +1135,4 @@ class ProfileEndpoints {
 			);
 		}
 	}
-
-	/**
-	 * Log debug message if WP_DEBUG is enabled.
-	 *
-	 * @param string $message Debug message to log.
-	 * @return void
-	 */
-	private static function log_debug( $message ) {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( $message );
-		}
-	}
-
-	/**
-	 * Add debug logging action if WP_DEBUG is enabled.
-	 *
-	 * @param string $hook Action hook name.
-	 * @param string $message Debug message to log.
-	 * @return void
-	 */
-	private static function log_debug_action( $hook, $message ) {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			add_action(
-				$hook,
-				function () use ( $message ) {
-					error_log( $message );
-				}
-			);
-		}
-	}
 }
-
-// Initialize endpoints
-ProfileEndpoints::init();
-
-// Debug log when this file is loaded
-error_log( 'Profile endpoints file loaded' );
