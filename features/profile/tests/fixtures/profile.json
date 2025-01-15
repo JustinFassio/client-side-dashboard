@@ -1,0 +1,42 @@
+{
+    "valid_profiles": [
+        {
+            "user_id": 1,
+            "email": "test@example.com",
+            "first_name": "Test",
+            "last_name": "User",
+            "height": 180,
+            "weight": 75,
+            "age": 30,
+            "gender": "male",
+            "fitness_level": "intermediate",
+            "goals": ["strength", "endurance"]
+        },
+        {
+            "user_id": 2,
+            "email": "jane@example.com",
+            "first_name": "Jane",
+            "last_name": "Smith",
+            "height": 165,
+            "weight": 60,
+            "age": 25,
+            "gender": "female",
+            "fitness_level": "advanced",
+            "goals": ["weight_loss", "flexibility"]
+        }
+    ],
+    "invalid_profiles": [
+        {
+            "user_id": 3,
+            "email": "invalid-email",
+            "first_name": "",
+            "last_name": "",
+            "height": -1,
+            "weight": 0,
+            "age": 17,
+            "gender": "invalid",
+            "fitness_level": "unknown",
+            "goals": []
+        }
+    ]
+} 

@@ -19,4 +19,5 @@ export interface UserContextValue extends UserState {
     checkAuth: () => Promise<boolean>;
     logout: () => Promise<void>;
     refreshUser: () => Promise<void>;
+    updateUserProfile: (data: Partial<User>) => Promise<User>;
 } 

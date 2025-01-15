@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { User, UserState, UserContextValue } from '../types';
 import { AuthService } from '../services/auth-service';
+import { ProfileService } from '../../profile/services/ProfileService';
 
 // Initialize with default values to avoid the _currentValue error
 const defaultContextValue: UserContextValue = {
@@ -10,7 +11,10 @@ const defaultContextValue: UserContextValue = {
     isAuthenticated: false,
     checkAuth: async () => false,
     logout: async () => {},
-    refreshUser: async () => {}
+    refreshUser: async () => {},
+    updateUserProfile: async (data: Partial<User>): Promise<User> => {
+        throw new Error('UserContext not initialized');
+    }
 };
 
 export const UserContext = createContext<UserContextValue>(defaultContextValue);
@@ -176,6 +180,61 @@ export function UserProvider({ children }: UserProviderProps) {
         }
     }, [state.isLoading]);
 
+    const updateUserProfile = useCallback(async (profileData: Partial<User>): Promise<User> => {
+        if (!state.user?.id) {
+            throw new Error('Cannot update profile: No user logged in');
+        }
+
+        try {
+            console.group('UserContext: Update Profile');
+            console.log('Current user:', state.user);
+            console.log('Update data:', profileData);
+
+            // Handle email preservation with proper null handling
+            const dataWithEmail = {
+                ...profileData,
+                // Only preserve email if not explicitly being updated
+                email: 'email' in profileData 
+                    ? (profileData.email?.trim() || null) 
+                    : state.user.email
+            };
+
+            console.log('Processed update data:', dataWithEmail);
+
+            const profileService = new ProfileService(
+                window.athleteDashboardData.apiUrl,
+                window.athleteDashboardData.nonce
+            );
+
+            const updatedProfile = await profileService.updateProfile(
+                state.user.id,
+                dataWithEmail
+            );
+
+            // Update local user state with new profile data while preserving roles
+            const updatedUser: User = {
+                ...state.user,
+                ...updatedProfile,
+                roles: state.user.roles, // Preserve existing roles
+                // Ensure email is never null in User state
+                email: updatedProfile.email || state.user.email
+            };
+
+            setState(prev => ({
+                ...prev,
+                user: updatedUser
+            }));
+
+            console.log('Profile updated successfully:', updatedUser);
+            return updatedUser;
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            throw error;
+        } finally {
+            console.groupEnd();
+        }
+    }, [state.user]);
+
     // Initial auth check - only run once on mount
     useEffect(() => {
         console.log('UserContext: Initial auth check');
@@ -194,7 +253,8 @@ export function UserProvider({ children }: UserProviderProps) {
         ...state,
         checkAuth,
         logout,
-        refreshUser
+        refreshUser,
+        updateUserProfile
     };
 
     return (

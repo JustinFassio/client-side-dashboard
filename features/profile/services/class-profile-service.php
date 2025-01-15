@@ -13,6 +13,8 @@ use AthleteDashboard\Features\Profile\Repository\Profile_Repository;
 use AthleteDashboard\Features\Profile\Validation\Profile_Validator;
 use WP_Error;
 use WP_User;
+use AthleteDashboard\Core\Cache\Cache_Service;
+use AthleteDashboard\Core\Cache\Cache_Category;
 
 /**
  * Class for handling profile business logic.
@@ -61,7 +63,12 @@ class Profile_Service implements Profile_Service_Interface {
 				);
 			}
 
-			return $this->repository->get_profile( $user_id );
+			$cache_key = Cache_Service::generate_user_key( $user_id, 'profile' );
+			return Cache_Service::remember(
+				$cache_key,
+				fn() => $this->repository->get_profile( $user_id ),
+				['category' => Cache_Service::CATEGORY_CRITICAL]
+			);
 		} catch ( Profile_Service_Exception $e ) {
 			return $e->to_wp_error();
 		} catch ( \Exception $e ) {
@@ -174,7 +181,12 @@ class Profile_Service implements Profile_Service_Interface {
 				);
 			}
 
-			return $this->repository->get_profile_meta( $user_id, $key, $single );
+			$cache_key = Cache_Service::generate_user_key( $user_id, "meta_{$key}" );
+			return Cache_Service::remember(
+				$cache_key,
+				fn() => $this->repository->get_profile_meta( $user_id, $key, $single ),
+				['category' => Cache_Service::CATEGORY_FREQUENT]
+			);
 		} catch ( Profile_Service_Exception $e ) {
 			return $e->to_wp_error();
 		} catch ( \Exception $e ) {

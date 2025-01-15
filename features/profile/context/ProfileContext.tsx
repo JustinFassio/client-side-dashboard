@@ -168,10 +168,20 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
         try {
             console.group('ProfileContext: Updating Profile');
+            console.log('Current profile:', profile);
             console.log('Update data:', data);
             setError(null);
 
-            const updatedData = await profileService.updateProfile(user.id, data);
+            // Normalize email value
+            const normalizedData = {
+                ...data,
+                // Convert empty strings to null, preserve undefined
+                email: data.email === undefined ? undefined : (data.email?.trim() || null)
+            };
+
+            console.log('Normalized update data:', normalizedData);
+
+            const updatedData = await profileService.updateProfile(user.id, normalizedData);
             console.log('Profile update successful:', updatedData);
 
             // Merge updated data with existing profile

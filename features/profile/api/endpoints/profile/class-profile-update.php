@@ -27,33 +27,37 @@ class Profile_Update extends Base_Endpoint {
 	 *
 	 * @var array
 	 */
-	private array $field_validators = array(
-		'email'       => array(
-			'sanitize' => 'sanitize_email',
-			'validate' => 'is_email',
-		),
-		'firstName'   => array(
-			'sanitize' => 'sanitize_text_field',
-			'length'   => array(
-				'min' => 1,
-				'max' => 50,
+	private $field_validators;
+
+	public function __construct() {
+		$this->field_validators = array(
+			'email'       => array(
+				'sanitize' => 'sanitize_email',
+				'validate' => 'is_email',
 			),
-		),
-		'lastName'    => array(
-			'sanitize' => 'sanitize_text_field',
-			'length'   => array(
-				'min' => 1,
-				'max' => 50,
+			'firstName'   => array(
+				'sanitize' => 'sanitize_text_field',
+				'length'   => array(
+					'min' => 1,
+					'max' => 50,
+				),
 			),
-		),
-		'displayName' => array(
-			'sanitize' => 'sanitize_text_field',
-			'length'   => array(
-				'min' => 1,
-				'max' => 100,
+			'lastName'    => array(
+				'sanitize' => 'sanitize_text_field',
+				'length'   => array(
+					'min' => 1,
+					'max' => 50,
+				),
 			),
-		),
-	);
+			'displayName' => array(
+				'sanitize' => 'sanitize_text_field',
+				'length'   => array(
+					'min' => 1,
+					'max' => 100,
+				),
+			),
+		);
+	}
 
 	/**
 	 * Get the endpoint's REST route.
@@ -275,7 +279,6 @@ class Profile_Update extends Base_Endpoint {
 					'description' => __( 'User email address.', 'athlete-dashboard' ),
 				),
 			),
-			'additionalProperties' => false,
 		);
 
 		return $this->schema;

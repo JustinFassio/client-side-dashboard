@@ -75,10 +75,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
                     type="email"
                     aria-invalid={errors.email ? "true" : "false"}
                     {...register("email", { 
-                        required: "Email is required",
-                        pattern: {
-                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                            message: "Invalid email address"
+                        required: false,
+                        validate: {
+                            format: (value) => {
+                                if (!value?.trim()) return true;
+                                return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value) || "Invalid email address";
+                            }
                         }
                     })}
                 />

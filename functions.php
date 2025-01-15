@@ -25,10 +25,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Load Composer autoloader
 require_once get_stylesheet_directory() . '/vendor/autoload.php';
 
+// Load core contracts
+require_once get_stylesheet_directory() . '/features/core/contracts/interface-feature-contract.php';
+require_once get_stylesheet_directory() . '/features/core/contracts/class-abstract-feature.php';
+
 // Load core configurations.
 require_once get_stylesheet_directory() . '/dashboard/core/config/debug.php';
 require_once get_stylesheet_directory() . '/dashboard/core/config/environment.php';
 require_once get_stylesheet_directory() . '/dashboard/core/dashboardbridge.php';
+
+// Load Redis configuration
+require_once get_stylesheet_directory() . '/includes/config/redis-config.php';
 
 // Load cache services.
 require_once get_stylesheet_directory() . '/includes/services/class-cache-service.php';
@@ -55,6 +62,14 @@ function init_cache_stats_widget() {
 	}
 }
 add_action( 'init', 'init_cache_stats_widget' );
+
+/**
+ * Initialize cache service.
+ */
+function init_cache_service() {
+	AthleteDashboard\Services\Cache_Service::init();
+}
+add_action( 'init', 'init_cache_service', 5 ); // Run before cache stats widget initialization
 
 // Load feature configurations.
 require_once get_stylesheet_directory() . '/features/profile/Config/Config.php';

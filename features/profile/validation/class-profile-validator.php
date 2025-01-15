@@ -118,11 +118,45 @@ class Profile_Validator extends Base_Validator {
 	 * @return bool|WP_Error True if valid, WP_Error if validation fails.
 	 */
 	public function validate_email( array $data ): bool|WP_Error {
+		error_log(sprintf(
+			'Athlete Dashboard [profile]: Validating email [exists=%s, value=%s]',
+			isset($data['email']) ? 'true' : 'false',
+			isset($data['email']) ? $data['email'] : 'not_set'
+		));
+
 		if ( ! isset( $data['email'] ) ) {
+			error_log('Athlete Dashboard [profile]: Email validation skipped - email not set');
 			return true; // Email is optional in profile.
 		}
 
-		return $this->validate_string( $data['email'], 'Email', 5, 255, false );
+		// First validate string length
+		$string_validation = $this->validate_string( $data['email'], 'Email', 5, 255, false );
+		if ( $string_validation instanceof WP_Error ) {
+			error_log(sprintf(
+				'Athlete Dashboard [profile]: Email string validation failed [error=%s]',
+				$string_validation->get_error_message()
+			));
+			return $string_validation;
+		}
+
+		// Then validate email format using our standard pattern
+		if ( ! preg_match( self::EMAIL_PATTERN, $data['email'] ) ) {
+			error_log(sprintf(
+				'Athlete Dashboard [profile]: Email format validation failed [email=%s]',
+				$data['email']
+			));
+			return new WP_Error(
+				'invalid_email_format',
+				'Invalid email address format',
+				array( 'status' => 400 )
+			);
+		}
+
+		error_log(sprintf(
+			'Athlete Dashboard [profile]: Email validation passed [email=%s]',
+			$data['email']
+		));
+		return true;
 	}
 
 	/**

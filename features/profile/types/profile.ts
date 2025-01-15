@@ -22,7 +22,7 @@ export interface ProfileData {
     // Core WordPress fields
     id: number;
     username: string;
-    email: string;
+    email: string | null;
     displayName: string;
     firstName: string;
     lastName: string;

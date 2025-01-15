@@ -3,7 +3,9 @@
     "description": "Child theme for the Athlete Dashboard",
     "type": "wordpress-theme",
     "require": {
-        "php": ">=7.4"
+        "php": ">=7.4",
+        "automattic/jetpack-autoloader": "^2.10",
+        "wpackagist-plugin/redis-cache": "^2.4"
     },
     "require-dev": {
         "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
@@ -19,7 +21,8 @@
         "preferred-install": "dist",
         "sort-packages": true,
         "allow-plugins": {
-            "dealerdirect/phpcodesniffer-composer-installer": true
+            "dealerdirect/phpcodesniffer-composer-installer": true,
+            "automattic/jetpack-autoloader": true
         }
     },
     "minimum-stability": "dev",
@@ -32,12 +35,30 @@
         ],
         "psr-4": {
             "AthleteDashboard\\": "includes/",
-            "AthleteDashboard\\Core\\": "dashboard/core/"
+            "AthleteDashboard\\Core\\": "dashboard/core/",
+            "AthleteDashboard\\Features\\Core\\Contracts\\": "features/core/contracts/",
+            "AthleteDashboard\\Features\\": "features/"
         }
     },
     "autoload-dev": {
         "psr-4": {
             "AthleteDashboard\\Tests\\": "tests/php/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:single": "phpunit --filter"
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://wpackagist.org",
+            "only": ["wpackagist-plugin/*"]
+        }
+    ],
+    "extra": {
+        "installer-paths": {
+            "../../../plugins/{$name}/": ["type:wordpress-plugin"]
         }
     }
 }

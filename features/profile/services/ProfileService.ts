@@ -17,6 +17,7 @@ export class ProfileError extends Error {
 export class ProfileService {
     private readonly apiUrl: string;
     private readonly nonce: string;
+    private currentUserData: ProfileData | null = null;
 
     constructor(apiUrl: string, nonce: string) {
         this.apiUrl = apiUrl.replace(/\/$/, '');
@@ -90,7 +91,17 @@ export class ProfileService {
         try {
             console.group('ProfileService: updateProfile');
             console.log('Updating profile for user:', userId);
-            console.log('Update data:', data);
+            
+            // Add detailed email logging
+            console.group('Profile Update Request');
+            console.log('Request Data:', {
+                userId,
+                email: data.email, // Log email specifically
+                emailType: typeof data.email,
+                emailExists: 'email' in data,
+                fullData: data
+            });
+            console.groupEnd();
             
             const endpoint = `${this.apiUrl}/${ProfileConfig.endpoints.base}`;
             console.log('API URL:', endpoint);
@@ -100,7 +111,11 @@ export class ProfileService {
             });
 
             const denormalizedData = this.denormalizeProfileData(data);
-            console.log('Denormalized data for backend:', denormalizedData);
+            console.log('Denormalized data for backend:', {
+                ...denormalizedData,
+                email: denormalizedData.email, // Log email after denormalization
+                emailType: typeof denormalizedData.email
+            });
             
             const response = await fetch(endpoint, {
                 method: 'POST',
@@ -198,6 +213,9 @@ export class ProfileService {
                 : []
         };
 
+        // Store the current user data for future reference
+        this.currentUserData = normalizedData;
+        
         console.log('Normalized data:', normalizedData);
         console.groupEnd();
         return normalizedData;
@@ -205,17 +223,35 @@ export class ProfileService {
 
     private denormalizeProfileData(data: Partial<ProfileData>): Record<string, any> {
         console.group('ProfileService: denormalizeProfileData');
-        console.log('Data to denormalize:', data);
+        
+        // Get current email for preservation logic
+        const currentEmail = this.currentUserData?.email || '';
+        
+        // Handle email preservation
+        const emailExists = 'email' in data;
+        const email = emailExists 
+            ? (data.email?.trim() || null)  // Convert empty/whitespace to null
+            : currentEmail;
+        
+        console.log('Email preservation:', {
+            inputEmail: data.email,
+            inputEmailType: typeof data.email,
+            currentEmail,
+            emailExists,
+            finalEmail: email,
+            finalEmailType: typeof email,
+            wasPreserved: !emailExists,
+            trimmedLength: data.email?.trim().length
+        });
 
         // Convert camelCase to snake_case for backend
         const denormalized: Record<string, any> = {
-            // Core WordPress fields remain as is
             id: data.id,
-            username: data.username,
-            email: data.email,
-            display_name: data.displayName,
-            first_name: data.firstName,
-            last_name: data.lastName,
+            username: data.username || '',
+            email,  // Use preserved or null email
+            display_name: data.displayName || '',
+            first_name: data.firstName || '',
+            last_name: data.lastName || '',
 
             // Custom profile fields
             phone: data.phone,
@@ -241,9 +277,9 @@ export class ProfileService {
             }))
         };
 
-        // Remove undefined values
+        // Remove undefined and null values
         Object.keys(denormalized).forEach(key => {
-            if (denormalized[key] === undefined) {
+            if (denormalized[key] === undefined || denormalized[key] === null) {
                 delete denormalized[key];
             }
         });
