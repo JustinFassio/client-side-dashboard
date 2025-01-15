@@ -7,57 +7,46 @@
 
 namespace AthleteDashboard\Features\Profile;
 
-use AthleteDashboard\Core\Container;
-use AthleteDashboard\Core\Feature;
+use AthleteDashboard\Features\Profile\API\Profile_Routes;
+use AthleteDashboard\Features\Profile\API\CLI\Migration_Commands;
 
 /**
+ * Class Profile_Feature
+ *
  * Main class for the Profile feature.
  */
-class Profile_Feature implements Feature {
+class Profile_Feature {
 	/**
-	 * Bootstrap instance.
+	 * Profile routes instance.
 	 *
-	 * @var Profile_Bootstrap
+	 * @var Profile_Routes
 	 */
-	private Profile_Bootstrap $bootstrap;
+	private Profile_Routes $routes;
 
 	/**
 	 * Constructor.
+	 *
+	 * @param Profile_Routes $routes Profile routes instance.
 	 */
-	public function __construct() {
-		$this->bootstrap = new Profile_Bootstrap();
+	public function __construct( Profile_Routes $routes ) {
+		$this->routes = $routes;
 	}
 
 	/**
-	 * Bootstrap the feature.
+	 * Initialize the feature.
 	 *
-	 * @param Container $container Service container instance.
+	 * @return void
 	 */
-	public function bootstrap( Container $container ): void {
-		// Register services
-		$this->bootstrap->register_services( $container );
+	public function init(): void {
+		// Initialize routes
+		$this->routes->init();
 
-		// Register event listeners
-		$this->bootstrap->register_events( $container );
-
-		// Register REST API endpoints
-		add_action(
-			'rest_api_init',
-			function () use ( $container ) {
-				$this->register_rest_routes( $container );
-			}
-		);
-	}
-
-	/**
-	 * Register REST API routes.
-	 *
-	 * @param Container $container Service container instance.
-	 */
-	private function register_rest_routes( Container $container ): void {
-		$endpoints = new Api\Profile_Endpoints(
-			$container->get( Services\Profile_Service::class )
-		);
-		$endpoints->register_routes();
+		// Register CLI commands if WP-CLI is available
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			\WP_CLI::add_command(
+				'athlete-profile',
+				new Migration_Commands( $this->routes )
+			);
+		}
 	}
 }

@@ -10,7 +10,7 @@ namespace AthleteDashboard\Features\Profile\Services;
 use WP_Error;
 
 /**
- * Interface for profile service operations.
+ * Interface for profile service.
  */
 interface Profile_Service_Interface {
 	/**
@@ -42,9 +42,9 @@ interface Profile_Service_Interface {
 	 * Validate profile data.
 	 *
 	 * @param array $data Profile data to validate.
-	 * @return true|WP_Error True if valid, error on failure.
+	 * @return bool|WP_Error True if valid, error on failure.
 	 */
-	public function validate_profile( array $data ): true|WP_Error;
+	public function validate_profile( array $data ): bool|WP_Error;
 
 	/**
 	 * Check if a profile exists.
@@ -73,4 +73,37 @@ interface Profile_Service_Interface {
 	 * @return bool|WP_Error True on success, error on failure.
 	 */
 	public function update_profile_meta( int $user_id, string $key, mixed $value ): bool|WP_Error;
+
+	/**
+	 * Get user data.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array|WP_Error User data or error on failure.
+	 */
+	public function get_user_data( int $user_id ): array|WP_Error;
+
+	/**
+	 * Update user data.
+	 *
+	 * @param int   $user_id User ID.
+	 * @param array $data    User data to update.
+	 * @return array|WP_Error Updated user data or error on failure.
+	 */
+	public function update_user_data( int $user_id, array $data ): array|WP_Error;
+
+	/**
+	 * Get combined profile and user data.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array|WP_Error Combined data or error on failure.
+	 */
+	public function get_combined_data( int $user_id ): array|WP_Error;
+
+	/**
+	 * Get basic profile data.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array|WP_Error Basic profile data or error on failure.
+	 */
+	public function get_basic_data( int $user_id ): array|WP_Error;
 }

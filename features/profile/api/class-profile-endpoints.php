@@ -1135,4 +1135,84 @@ class Profile_Endpoints {
 			);
 		}
 	}
+
+	/**
+	 * Register remaining routes (excluding migrated endpoints).
+	 *
+	 * @return void
+	 */
+	public function register_remaining_routes(): void {
+		// Main profile endpoints
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE,
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'get_profile' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, 'update_profile' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+			)
+		);
+
+		// User data update endpoint (GET is now handled by new implementation)
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/user',
+			array(
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( self::class, 'update_user_data' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+			)
+		);
+
+		// Combined data endpoint
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/full',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_combined_data' ),
+				'permission_callback' => array( self::class, 'check_auth' ),
+			)
+		);
+
+		// Basic data endpoint
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/basic',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_basic_data' ),
+				'permission_callback' => array( self::class, 'check_auth' ),
+			)
+		);
+	}
+
+	/**
+	 * Register the legacy get user route.
+	 *
+	 * @deprecated Use new User_Get endpoint instead
+	 * @return void
+	 */
+	public function register_get_user_route(): void {
+		register_rest_route(
+			self::NAMESPACE,
+			'/' . self::ROUTE . '/user',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( self::class, 'get_user_data' ),
+					'permission_callback' => array( self::class, 'check_auth' ),
+				),
+			)
+		);
+	}
 }

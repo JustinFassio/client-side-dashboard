@@ -1,86 +1,85 @@
 <?php
 /**
- * Profile routes class.
+ * Profile Routes class.
  *
  * @package AthleteDashboard\Features\Profile\API
  */
 
 namespace AthleteDashboard\Features\Profile\API;
 
+use AthleteDashboard\Features\Profile\API\Registry\Endpoint_Registry;
+use AthleteDashboard\Features\Profile\API\Endpoints\User\User_Get;
+use AthleteDashboard\Features\Profile\Services\Profile_Service;
+
 /**
- * Class for registering profile REST API routes.
+ * Class Profile_Routes
+ *
+ * Handles registration of profile-related REST API routes.
  */
 class Profile_Routes {
 	/**
-	 * API Namespace.
+	 * Profile service instance.
 	 *
-	 * @var string
+	 * @var Profile_Service
 	 */
-	private const API_NAMESPACE = 'athlete-dashboard/v1';
+	private Profile_Service $service;
 
 	/**
-	 * Base route.
+	 * Response factory instance.
 	 *
-	 * @var string
+	 * @var Response_Factory
 	 */
-	private const BASE_ROUTE = 'profile';
+	private Response_Factory $response_factory;
 
 	/**
-	 * Profile controller instance.
+	 * Endpoint registry instance.
 	 *
-	 * @var Profile_Controller
+	 * @var Endpoint_Registry
 	 */
-	private $controller;
+	private Endpoint_Registry $registry;
+
+	/**
+	 * Legacy endpoints instance.
+	 *
+	 * @var Profile_Endpoints
+	 */
+	private Profile_Endpoints $legacy_endpoints;
 
 	/**
 	 * Constructor.
+	 *
+	 * @param Profile_Service   $service          Profile service instance.
+	 * @param Response_Factory  $response_factory Response factory instance.
+	 * @param Endpoint_Registry $registry         Endpoint registry instance.
 	 */
-	public function __construct() {
-		$this->controller = new Profile_Controller();
+	public function __construct(
+		Profile_Service $service,
+		Response_Factory $response_factory,
+		Endpoint_Registry $registry
+	) {
+		$this->service          = $service;
+		$this->response_factory = $response_factory;
+		$this->registry         = $registry;
+		$this->legacy_endpoints = new Profile_Endpoints();
 	}
 
 	/**
 	 * Initialize routes.
 	 */
-	public function init() {
+	public function init(): void {
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 	}
 
 	/**
-	 * Register REST API routes.
+	 * Register routes.
 	 */
-	public function register_routes() {
-		// Get profile endpoint.
-		register_rest_route(
-			self::API_NAMESPACE,
-			'/' . self::BASE_ROUTE,
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( $this->controller, 'get_profile' ),
-				'permission_callback' => '__return_true',
-			)
+	public function register_routes(): void {
+		// Register new User Get endpoint
+		$this->registry->register_endpoint(
+			new User_Get( $this->service, $this->response_factory )
 		);
 
-		// Update profile endpoint.
-		register_rest_route(
-			self::API_NAMESPACE,
-			'/' . self::BASE_ROUTE,
-			array(
-				'methods'             => 'POST',
-				'callback'            => array( $this->controller, 'update_profile' ),
-				'permission_callback' => '__return_true',
-			)
-		);
-
-		// Get combined data endpoint.
-		register_rest_route(
-			self::API_NAMESPACE,
-			'/' . self::BASE_ROUTE . '/combined',
-			array(
-				'methods'             => 'GET',
-				'callback'            => array( $this->controller, 'get_combined_data' ),
-				'permission_callback' => '__return_true',
-			)
-		);
+		// Register remaining legacy routes
+		$this->legacy_endpoints->register_remaining_routes();
 	}
 }

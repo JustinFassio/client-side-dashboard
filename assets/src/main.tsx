@@ -1,7 +1,7 @@
 import { createElement } from '@wordpress/element';
 import { FeatureRegistry } from '../../dashboard/core/FeatureRegistry';
-import { DashboardShell } from '../../dashboard/components/DashboardShell';
 import { Config as _Config } from '../../dashboard/core/config';
+import { DashboardRoot } from './DashboardRoot';
 import '../../dashboard/styles/main.css';
 
 interface DashboardContext {
@@ -57,7 +57,7 @@ async function initializeDashboard() {
             throw new Error('Dashboard container not found');
         }
 
-        const root = createElement(DashboardShell, {
+        const root = createElement(DashboardRoot, {
             registry,
             context
         });

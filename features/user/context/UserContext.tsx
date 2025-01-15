@@ -1,29 +1,19 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { User, UserState, UserContextValue } from '../types';
+import { AuthService } from '../services/auth-service';
 
-interface User {
-    id: number;
-    username: string;
-    email: string;
-    displayName: string;
-    firstName: string;
-    lastName: string;
-    roles: string[];
-}
+// Initialize with default values to avoid the _currentValue error
+const defaultContextValue: UserContextValue = {
+    user: null,
+    isLoading: true,
+    error: null,
+    isAuthenticated: false,
+    checkAuth: async () => false,
+    logout: async () => {},
+    refreshUser: async () => {}
+};
 
-interface UserState {
-    user: User | null;
-    isLoading: boolean;
-    error: Error | null;
-    isAuthenticated: boolean;
-}
-
-interface UserContextValue extends UserState {
-    checkAuth: () => Promise<boolean>;
-    logout: () => Promise<void>;
-    refreshUser: () => Promise<void>;
-}
-
-const UserContext = createContext<UserContextValue | null>(null);
+export const UserContext = createContext<UserContextValue>(defaultContextValue);
 
 interface UserProviderProps {
     children: React.ReactNode;
@@ -54,71 +44,16 @@ export function UserProvider({ children }: UserProviderProps) {
         lastFetchTimeRef.current = now;
 
         try {
-            console.group('UserContext: Fetch User Data');
-            const endpoint = '/wp-json/wp/v2/users/me';
-            const nonce = window.athleteDashboardData?.nonce || '';
-            
-            console.log('API Endpoint:', endpoint);
-            console.log('athleteDashboardData:', window.athleteDashboardData);
-            console.log('Nonce present:', !!nonce);
-            
-            const response = await fetch(endpoint, {
-                headers: {
-                    'X-WP-Nonce': nonce
-                }
-            });
-
-            console.log('Response status:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-            
-            const responseText = await response.text();
-            console.log('Raw response:', responseText);
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    console.log('User not authenticated - redirecting to login');
-                    window.location.href = '/wp-login.php';
-                    return null;
-                }
-                throw new Error(`Failed to fetch user data: ${response.status} ${response.statusText}`);
-            }
-
-            let userData;
-            try {
-                userData = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error('Error parsing user data:', parseError);
-                throw new Error('Invalid JSON response from server');
-            }
-
-            if (!userData?.id) {
-                console.error('Invalid user data received:', userData);
-                throw new Error('Invalid user data: missing ID');
-            }
-
-            console.log('User data received:', userData);
-            
-            const user: User = {
-                id: userData.id,
-                username: userData.username || '',
-                email: userData.email || '',
-                displayName: userData.name || '',
-                firstName: userData.first_name || '',
-                lastName: userData.last_name || '',
-                roles: userData.roles || []
-            };
-
-            console.log('Normalized user data:', user);
-            console.groupEnd();
+            const authService = AuthService.getInstance();
+            const user = await authService.getCurrentUser();
             return user;
         } catch (error) {
             console.error('Error fetching user data:', error);
-            console.groupEnd();
             throw error;
         } finally {
             isFetchingRef.current = false;
         }
-    }, []); // No dependencies needed as it only uses refs and window object
+    }, []); // No dependencies needed as it only uses refs
 
     const checkAuth = useCallback(async () => {
         // Skip if already authenticated
@@ -220,16 +155,8 @@ export function UserProvider({ children }: UserProviderProps) {
             console.group('UserContext: Logout');
             setState(prev => ({ ...prev, isLoading: true }));
             
-            const response = await fetch('/wp-login.php?action=logout', {
-                method: 'POST',
-                headers: {
-                    'X-WP-Nonce': window.athleteDashboardData?.nonce || ''
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Logout failed');
-            }
+            const authService = AuthService.getInstance();
+            await authService.logout();
 
             setState({
                 user: null,
@@ -237,8 +164,6 @@ export function UserProvider({ children }: UserProviderProps) {
                 error: null,
                 isAuthenticated: false
             });
-
-            window.location.href = '/wp-login.php';
         } catch (error) {
             console.error('Error during logout:', error);
             setState(prev => ({
@@ -265,29 +190,12 @@ export function UserProvider({ children }: UserProviderProps) {
         });
     }, [checkAuth]); // Added checkAuth as dependency
 
-    // Debug logging for state changes - but throttle to prevent spam
-    const lastLogTimeRef = useRef(0);
-    useEffect(() => {
-        const now = Date.now();
-        if (now - lastLogTimeRef.current < 1000) {
-            return; // Skip logging if less than 1 second has passed
-        }
-        lastLogTimeRef.current = now;
-
-        console.group('UserContext: State Change');
-        console.log('User:', state.user);
-        console.log('Is Loading:', state.isLoading);
-        console.log('Is Authenticated:', state.isAuthenticated);
-        console.log('Error:', state.error);
-        console.groupEnd();
-    }, [state]);
-
-    const value = useMemo(() => ({
+    const value = {
         ...state,
         checkAuth,
         logout,
         refreshUser
-    }), [state, checkAuth, logout, refreshUser]);
+    };
 
     return (
         <UserContext.Provider value={value}>

@@ -25,10 +25,14 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "autoload": {
+        "classmap": [
+            "features/profile/api/endpoints/",
+            "features/profile/api/",
+            "features/profile/"
+        ],
         "psr-4": {
             "AthleteDashboard\\": "includes/",
-            "AthleteDashboard\\Core\\": "dashboard/core/",
-            "AthleteDashboard\\Features\\Profile\\": "features/profile/"
+            "AthleteDashboard\\Core\\": "dashboard/core/"
         }
     },
     "autoload-dev": {

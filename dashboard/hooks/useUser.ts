@@ -1,31 +1,57 @@
-import { useState, useEffect } from 'react';
-import { ApiClient } from '../services/api';
-import { API_ROUTES } from '../constants/api';
-import { UserData } from '../types/api';
+import { useContext } from 'react';
+import { UserContext } from '../../features/user/context/UserContext';
 import { FeatureContext } from '../contracts/Feature';
+import { UserData } from '../types/api';
 
+/**
+ * Hook to access the current user's data and authentication state.
+ * This hook integrates with the User feature's context system to provide
+ * consistent user data across the application.
+ *
+ * @param context - The feature context containing debug and configuration settings
+ * @returns An object containing user data, loading state, and any error messages
+ *
+ * @example
+ * ```typescript
+ * const { user, isLoading, error } = useUser(context);
+ *
+ * if (isLoading) return <LoadingSpinner />;
+ * if (error) return <ErrorMessage message={error} />;
+ * if (!user) return <NotAuthenticated />;
+ *
+ * return <div>Welcome, {user.name}!</div>;
+ * ```
+ *
+ * @throws {Error} If used outside of a UserProvider context
+ */
 export const useUser = (context: FeatureContext) => {
-    const [user, setUser] = useState<UserData | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    if (context.debug) {
+        console.log('[useUser] Accessing user context');
+    }
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            const api = ApiClient.getInstance(context);
-            const { data, error } = await api.fetchWithCache<UserData>(API_ROUTES.PROFILE);
+    const userContext = useContext(UserContext);
+    
+    if (!userContext) {
+        throw new Error('useUser must be used within a UserProvider');
+    }
 
-            if (error) {
-                setError(error.message);
-                setUser(null);
-            } else {
-                setUser(data);
-                setError(null);
-            }
-            setIsLoading(false);
-        };
+    if (context.debug) {
+        console.log('[useUser] Current state:', {
+            hasUser: !!userContext.user,
+            isLoading: userContext.isLoading,
+            hasError: !!userContext.error,
+            isAuthenticated: userContext.isAuthenticated
+        });
+    }
 
-        fetchUser();
-    }, [context]);
-
-    return { user, isLoading, error };
+    return {
+        user: userContext.user ? {
+            id: userContext.user.id,
+            name: userContext.user.displayName,
+            email: userContext.user.email,
+            roles: userContext.user.roles
+        } as UserData : null,
+        isLoading: userContext.isLoading,
+        error: userContext.error?.message || null
+    };
 }; 
