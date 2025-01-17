@@ -59,6 +59,19 @@ if ( WP_DEBUG ) {
 	error_log( 'Feature data: ' . wp_json_encode( $feature_data ) );
 }
 
+// Pass dashboard data to JavaScript
+wp_localize_script(
+	'athlete-dashboard-script',
+	'athleteDashboardData',
+	array(
+		'nonce'   => wp_create_nonce( 'wp_rest' ),
+		'siteUrl' => get_site_url(),
+		'apiUrl'  => rest_url(),
+		'userId'  => get_current_user_id(),
+		'debug'   => WP_DEBUG,
+	)
+);
+
 // Pass feature data to JavaScript
 wp_localize_script( 'athlete-dashboard-script', 'athleteDashboardFeature', $feature_data );
 

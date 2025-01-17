@@ -6,8 +6,8 @@ import { LoadingState } from '../../../../dashboard/components/LoadingState';
 import { ErrorBoundary } from '../../../../dashboard/components/ErrorBoundary';
 import { BasicSection } from '../form/sections/BasicSection';
 import { MedicalSection } from '../form/sections/MedicalSection';
-import { PhysicalSection } from '../form/sections/PhysicalSection';
 import { AccountSection } from '../form/sections/AccountSection';
+import { PhysicalSection } from '../physical/PhysicalSection';
 import { InjuryTracker } from '../InjuryTracker';
 import { validateProfileField } from '../../utils/validation';
 import { ProfileData, Injury } from '../../types/profile';
@@ -98,6 +98,17 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
         setSaveError(null);
     };
 
+    const handlePhysicalChange = (physicalData: any) => {
+        setLocalProfile(prev => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                physical: physicalData
+            };
+        });
+        setSaveError(null);
+    };
+
     const handleSave = async () => {
         try {
             setSaveError(null);
@@ -144,10 +155,6 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
                         data={localProfile}
                         onChange={handleFieldChange}
                     />
-                    <PhysicalSection
-                        data={localProfile}
-                        onChange={handleFieldChange}
-                    />
                     <MedicalSection
                         data={localProfile}
                         onChange={handleFieldChange}
@@ -155,6 +162,9 @@ export const ProfileLayout: React.FC<ProfileLayoutProps> = ({
                     <AccountSection
                         data={localProfile}
                         onChange={handleFieldChange}
+                    />
+                    <PhysicalSection
+                        userId={user.id}
                     />
                     <InjuryTracker
                         injuries={localProfile.injuries || []}

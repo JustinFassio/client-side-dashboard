@@ -118,33 +118,39 @@ class Profile_Validator extends Base_Validator {
 	 * @return bool|WP_Error True if valid, WP_Error if validation fails.
 	 */
 	public function validate_email( array $data ): bool|WP_Error {
-		error_log(sprintf(
-			'Athlete Dashboard [profile]: Validating email [exists=%s, value=%s]',
-			isset($data['email']) ? 'true' : 'false',
-			isset($data['email']) ? $data['email'] : 'not_set'
-		));
+		error_log(
+			sprintf(
+				'Athlete Dashboard [profile]: Validating email [exists=%s, value=%s]',
+				isset( $data['email'] ) ? 'true' : 'false',
+				isset( $data['email'] ) ? $data['email'] : 'not_set'
+			)
+		);
 
 		if ( ! isset( $data['email'] ) ) {
-			error_log('Athlete Dashboard [profile]: Email validation skipped - email not set');
+			error_log( 'Athlete Dashboard [profile]: Email validation skipped - email not set' );
 			return true; // Email is optional in profile.
 		}
 
 		// First validate string length
 		$string_validation = $this->validate_string( $data['email'], 'Email', 5, 255, false );
 		if ( $string_validation instanceof WP_Error ) {
-			error_log(sprintf(
-				'Athlete Dashboard [profile]: Email string validation failed [error=%s]',
-				$string_validation->get_error_message()
-			));
+			error_log(
+				sprintf(
+					'Athlete Dashboard [profile]: Email string validation failed [error=%s]',
+					$string_validation->get_error_message()
+				)
+			);
 			return $string_validation;
 		}
 
 		// Then validate email format using our standard pattern
 		if ( ! preg_match( self::EMAIL_PATTERN, $data['email'] ) ) {
-			error_log(sprintf(
-				'Athlete Dashboard [profile]: Email format validation failed [email=%s]',
-				$data['email']
-			));
+			error_log(
+				sprintf(
+					'Athlete Dashboard [profile]: Email format validation failed [email=%s]',
+					$data['email']
+				)
+			);
 			return new WP_Error(
 				'invalid_email_format',
 				'Invalid email address format',
@@ -152,10 +158,12 @@ class Profile_Validator extends Base_Validator {
 			);
 		}
 
-		error_log(sprintf(
-			'Athlete Dashboard [profile]: Email validation passed [email=%s]',
-			$data['email']
-		));
+		error_log(
+			sprintf(
+				'Athlete Dashboard [profile]: Email validation passed [email=%s]',
+				$data['email']
+			)
+		);
 		return true;
 	}
 
@@ -300,13 +308,19 @@ class Profile_Validator extends Base_Validator {
 		$bmi = $weight_kg / ( $height_m * $height_m );
 
 		if ( $bmi < self::MIN_BMI || $bmi > self::MAX_BMI ) {
-			return $this->create_error(
+			return new WP_Error(
 				self::ERROR_INVALID_BMI,
 				sprintf(
 					'BMI value %.1f is outside the acceptable range (%.1f - %.1f).',
 					$bmi,
 					self::MIN_BMI,
 					self::MAX_BMI
+				),
+				array(
+					'bmi'     => $bmi,
+					'min_bmi' => self::MIN_BMI,
+					'max_bmi' => self::MAX_BMI,
+					'status'  => 400,
 				)
 			);
 		}
@@ -374,5 +388,161 @@ class Profile_Validator extends Base_Validator {
 		}
 
 		return $sanitized;
+	}
+
+	/**
+	 * Validate user data.
+	 *
+	 * @param array $data User data to validate.
+	 * @return bool|WP_Error True if valid, WP_Error if validation fails.
+	 */
+	public function validate_user_data( array $data ): bool|WP_Error {
+		Debug::log( 'Starting user data validation.', $this->get_debug_tag() );
+
+		$array_check = $this->validate_array_input( $data );
+		if ( $array_check instanceof WP_Error ) {
+			return $array_check;
+		}
+
+		$validation_results = array(
+			$this->validate_email( $data ),
+			$this->validate_display_name( $data ),
+			$this->validate_first_name( $data ),
+			$this->validate_last_name( $data ),
+			$this->validate_nickname( $data ),
+		);
+
+		foreach ( $validation_results as $result ) {
+			if ( $result instanceof WP_Error ) {
+				return $result;
+			}
+		}
+
+		Debug::log( 'User data validation successful.', $this->get_debug_tag() );
+		return true;
+	}
+
+	/**
+	 * Validate nickname.
+	 *
+	 * @param array $data User data containing nickname.
+	 * @return bool|WP_Error True if valid, WP_Error if validation fails.
+	 */
+	public function validate_nickname( array $data ): bool|WP_Error {
+		if ( ! isset( $data['nickname'] ) ) {
+			return true; // Nickname is optional.
+		}
+
+		return $this->validate_string( $data['nickname'], 'Nickname', 0, 50, false );
+	}
+
+	/**
+	 * Validate demographics data.
+	 *
+	 * Validates age, gender, and other demographic information.
+	 *
+	 * @since 1.0.0
+	 * @param array $data Profile data containing demographics.
+	 * @return bool|WP_Error True if valid, WP_Error if validation fails.
+	 */
+	public function validate_demographics( array $data ): bool|WP_Error {
+		if ( isset( $data['age'] ) ) {
+			$result = $this->validate_number( $data['age'], 'Age', self::MIN_AGE, self::MAX_AGE, false );
+			if ( $result instanceof WP_Error ) {
+				return $result;
+			}
+		}
+
+		if ( isset( $data['gender'] ) ) {
+			$result = $this->validate_enum( $data['gender'], 'Gender', self::ALLOWED_GENDERS, false );
+			if ( $result instanceof WP_Error ) {
+				return $result;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Validate medical conditions data.
+	 *
+	 * Validates medical conditions and related information.
+	 *
+	 * @since 1.0.0
+	 * @param array $data Profile data containing medical conditions.
+	 * @return bool|WP_Error True if valid, WP_Error if validation fails.
+	 */
+	public function validate_medical_conditions( array $data ): bool|WP_Error {
+		if ( ! isset( $data['medical_conditions'] ) ) {
+			return true;
+		}
+
+		if ( ! is_array( $data['medical_conditions'] ) ) {
+			return new WP_Error(
+				'invalid_medical_conditions',
+				'Medical conditions must be an array',
+				array( 'status' => 400 )
+			);
+		}
+
+		foreach ( $data['medical_conditions'] as $condition ) {
+			if ( ! is_array( $condition ) ) {
+				return new WP_Error(
+					'invalid_medical_condition_format',
+					'Each medical condition must be an array',
+					array( 'status' => 400 )
+				);
+			}
+
+			if ( ! isset( $condition['type'] ) || ! is_string( $condition['type'] ) ) {
+				return new WP_Error(
+					'invalid_medical_condition_type',
+					'Medical condition type must be a string',
+					array( 'status' => 400 )
+				);
+			}
+
+			if ( isset( $condition['description'] ) ) {
+				$result = $this->validate_string( $condition['description'], 'Medical condition description', 0, 1000, false );
+				if ( $result instanceof WP_Error ) {
+					return $result;
+				}
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Convert units between metric and imperial.
+	 *
+	 * @since 1.0.0
+	 * @param array  $data Physical data to convert.
+	 * @param string $to_units Target unit system ('metric' or 'imperial').
+	 * @return array Converted data.
+	 */
+	public function convert_units( array $data, string $to_units ): array {
+		$from_units = $data['units'] ?? 'metric';
+
+		if ( $from_units === $to_units ) {
+			return $data;
+		}
+
+		$converted          = $data;
+		$converted['units'] = $to_units;
+
+		if ( isset( $data['height'] ) ) {
+			$converted['height'] = $to_units === 'imperial'
+				? $data['height'] / 2.54  // cm to inches
+				: $data['height'] * 2.54; // inches to cm
+		}
+
+		if ( isset( $data['weight'] ) ) {
+			$converted['weight'] = $to_units === 'imperial'
+				? $data['weight'] / 0.453592  // kg to lbs
+				: $data['weight'] * 0.453592; // lbs to kg
+		}
+
+		return $converted;
 	}
 }

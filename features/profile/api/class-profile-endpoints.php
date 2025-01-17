@@ -162,49 +162,6 @@ class Profile_Endpoints {
 			)
 		);
 
-		// User data endpoints
-		Debug::log( 'Registering user data endpoints', 'profile' );
-		register_rest_route(
-			self::NAMESPACE,
-			'/' . self::ROUTE . '/user',
-			array(
-				array(
-					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'get_user_data' ),
-					'permission_callback' => array( self::class, 'check_auth' ),
-				),
-				array(
-					'methods'             => WP_REST_Server::CREATABLE,
-					'callback'            => array( self::class, 'update_user_data' ),
-					'permission_callback' => array( self::class, 'check_auth' ),
-				),
-			)
-		);
-
-		// Combined data endpoint
-		Debug::log( 'Registering combined data endpoint', 'profile' );
-		register_rest_route(
-			self::NAMESPACE,
-			'/' . self::ROUTE . '/full',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( self::class, 'get_combined_data' ),
-				'permission_callback' => array( self::class, 'check_auth' ),
-			)
-		);
-
-		// Basic data endpoint
-		Debug::log( 'Registering basic data endpoint', 'profile' );
-		register_rest_route(
-			self::NAMESPACE,
-			'/' . self::ROUTE . '/basic',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( self::class, 'get_basic_data' ),
-				'permission_callback' => array( self::class, 'check_auth' ),
-			)
-		);
-
 		Debug::log( 'REST routes registration complete', 'profile' );
 	}
 
@@ -236,9 +193,6 @@ class Profile_Endpoints {
 
 	/**
 	 * Get profile data for the current user.
-	 *
-	 * Retrieves the complete profile data for the currently logged-in user,
-	 * including any custom fields and preferences.
 	 *
 	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
 	 */
@@ -318,9 +272,6 @@ class Profile_Endpoints {
 
 	/**
 	 * Update profile data for the current user.
-	 *
-	 * Updates the profile data for the currently logged-in user with the provided data.
-	 * Validates the input data before saving and merges it with existing data.
 	 *
 	 * @param WP_REST_Request $request The request object containing the profile data to update.
 	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
@@ -456,46 +407,20 @@ class Profile_Endpoints {
 	}
 
 	/**
-	 * Get profile data for a specific user.
+	 * Get profile data for a user.
 	 *
-	 * Retrieves the stored profile data for the specified user ID.
-	 * If no data exists, returns an empty array as the default.
-	 *
-	 * @param int $user_id The ID of the user to get profile data for.
-	 * @return array The user's profile data or an empty array if none exists.
-	 * @throws \Exception If there's an error retrieving the profile data.
+	 * @param int $user_id The user ID to get profile data for.
+	 * @return array The profile data.
+	 * @throws \Exception If there is an error getting the profile data.
 	 */
 	private static function get_profile_data( $user_id ) {
-		if ( empty( $user_id ) ) {
-			Debug::log(
-				sprintf( 'Profile data fetch failed: invalid user ID [user_id=%d]', $user_id ),
-				'profile'
-			);
-			throw new \Exception( 'Invalid user ID provided.' );
-		}
-
 		try {
-			Debug::log(
-				sprintf( 'Fetching profile data [user_id=%d]', $user_id ),
-				'profile'
-			);
+			$profile_data = get_user_meta( $user_id, self::PROFILE_META_KEY, true );
 
-			$profile_data = get_user_meta( $user_id, self::META_KEY, true );
-
-			// If no data exists, return empty array as default
-			if ( empty( $profile_data ) ) {
-				Debug::log(
-					sprintf( 'No profile data found [user_id=%d]', $user_id ),
-					'profile'
-				);
-				return array();
-			}
-
-			// Ensure we have an array
 			if ( ! is_array( $profile_data ) ) {
 				Debug::log(
 					sprintf(
-						'Invalid profile data format [user_id=%d, type=%s]',
+						'Profile data is not an array [user_id=%d, type=%s]',
 						$user_id,
 						gettype( $profile_data )
 					),
@@ -530,9 +455,6 @@ class Profile_Endpoints {
 	/**
 	 * Validate profile data before saving.
 	 *
-	 * Performs validation checks on the profile data to ensure it meets
-	 * the required format and constraints.
-	 *
 	 * @param array $data The profile data to validate.
 	 * @return true|WP_Error True if validation passes, WP_Error if validation fails.
 	 */
@@ -548,8 +470,6 @@ class Profile_Endpoints {
 		$errors = array();
 
 		// Define allowed values for various fields
-		$allowed_units           = array( 'imperial', 'metric' );
-		$allowed_fitness_levels  = array( 'beginner', 'intermediate', 'advanced', 'expert' );
 		$allowed_activity_levels = array( 'sedentary', 'light', 'moderate', 'very_active', 'extra_active' );
 		$allowed_genders         = array( 'male', 'female', 'other', 'prefer_not_to_say', '' );
 
@@ -571,20 +491,6 @@ class Profile_Endpoints {
 			$age = absint( $data['age'] );
 			if ( $age < 13 || $age > 120 ) {
 				$errors['age'] = 'Age must be between 13 and 120';
-			}
-		}
-
-		if ( isset( $data['height'] ) ) {
-			$height = absint( $data['height'] );
-			if ( $height < 50 || $height > 300 ) {
-				$errors['height'] = 'Height must be between 50cm and 300cm';
-			}
-		}
-
-		if ( isset( $data['weight'] ) ) {
-			$weight = absint( $data['weight'] );
-			if ( $weight < 20 || $weight > 500 ) {
-				$errors['weight'] = 'Weight must be between 20kg and 500kg';
 			}
 		}
 
@@ -613,21 +519,7 @@ class Profile_Endpoints {
 			}
 		}
 
-		// Validate preference fields
-		if ( isset( $data['preferredUnits'] ) && ! in_array( $data['preferredUnits'], $allowed_units, true ) ) {
-			$errors['preferredUnits'] = sprintf(
-				'Invalid units preference. Allowed values: %s',
-				implode( ', ', $allowed_units )
-			);
-		}
-
-		if ( isset( $data['fitnessLevel'] ) && ! in_array( $data['fitnessLevel'], $allowed_fitness_levels, true ) ) {
-			$errors['fitnessLevel'] = sprintf(
-				'Invalid fitness level. Allowed values: %s',
-				implode( ', ', $allowed_fitness_levels )
-			);
-		}
-
+		// Validate activity level
 		if ( isset( $data['activityLevel'] ) && ! in_array( $data['activityLevel'], $allowed_activity_levels, true ) ) {
 			$errors['activityLevel'] = sprintf(
 				'Invalid activity level. Allowed values: %s',
@@ -656,21 +548,6 @@ class Profile_Endpoints {
 			}
 		}
 
-		// Validate physical metrics if present
-		if ( isset( $data['physicalMetrics'] ) ) {
-			if ( ! is_array( $data['physicalMetrics'] ) ) {
-				$errors['physicalMetrics'] = 'Physical metrics must be an array';
-			} else {
-				foreach ( $data['physicalMetrics'] as $index => $metric ) {
-					if ( ! isset( $metric['type'], $metric['value'], $metric['unit'], $metric['date'] ) ) {
-						$errors[ 'physicalMetrics_' . $index ] = 'Each metric must have type, value, unit, and date';
-					} elseif ( ! is_numeric( $metric['value'] ) || $metric['value'] < 0 ) {
-						$errors[ 'physicalMetrics_' . $index . '_value' ] = 'Metric value must be a positive number';
-					}
-				}
-			}
-		}
-
 		// Return validation errors if any found
 		if ( ! empty( $errors ) ) {
 			return new WP_Error(
@@ -684,91 +561,6 @@ class Profile_Endpoints {
 		}
 
 		return true;
-	}
-
-	/**
-	 * Get user data for the current user.
-	 *
-	 * Retrieves basic user information from WordPress core for the currently
-	 * logged-in user.
-	 *
-	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
-	 */
-	public static function get_user_data() {
-		$user_id = get_current_user_id();
-
-		if ( ! $user_id ) {
-			Debug::log(
-				sprintf( 'User data fetch failed: no user found [user_id=%d]', $user_id ),
-				'profile'
-			);
-			return new WP_Error(
-				'no_user',
-				'User not found',
-				array( 'status' => 404 )
-			);
-		}
-
-		Debug::log( sprintf( 'Fetching user data [user_id=%d]', $user_id ), 'profile' );
-
-		try {
-			$user = get_userdata( $user_id );
-			if ( ! $user ) {
-				Debug::log(
-					sprintf( 'User data fetch failed: user not found [user_id=%d]', $user_id ),
-					'profile'
-				);
-				return new WP_Error(
-					'user_not_found',
-					'User not found',
-					array( 'status' => 404 )
-				);
-			}
-
-			$meta      = get_user_meta( $user_id );
-			$user_data = array(
-				'id'          => $user_id,
-				'name'        => $user->display_name,
-				'username'    => $user->user_login,
-				'email'       => $user->user_email,
-				'roles'       => $user->roles,
-				'firstName'   => $meta['first_name'][0] ?? '',
-				'lastName'    => $meta['last_name'][0] ?? '',
-				'displayName' => $user->display_name,
-			);
-
-			Debug::log(
-				sprintf(
-					'User data retrieved [user_id=%d, fields=%d]',
-					$user_id,
-					count( $user_data )
-				),
-				'profile'
-			);
-
-			return rest_ensure_response(
-				array(
-					'success' => true,
-					'data'    => array(
-						'profile' => $user_data,
-					),
-				)
-			);
-		} catch ( \Exception $e ) {
-			Debug::log(
-				sprintf(
-					'User data fetch failed: %s [user_id=%d]',
-					$e->getMessage(),
-					$user_id
-				),
-				'profile'
-			);
-			return new WP_Error(
-				'user_fetch_error',
-				'Failed to fetch user data',
-				array( 'status' => 500 )
-			);
-		}
 	}
 
 	/**
@@ -923,221 +715,7 @@ class Profile_Endpoints {
 	}
 
 	/**
-	 * Get basic profile data.
-	 *
-	 * Returns the basic profile data that matches the legacy endpoint format
-	 * for backward compatibility.
-	 *
-	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
-	 */
-	public static function get_basic_data() {
-		$user_id = get_current_user_id();
-
-		if ( ! $user_id ) {
-			Debug::log(
-				sprintf( 'Basic data fetch failed: no user found [user_id=%d]', $user_id ),
-				'profile'
-			);
-			return new WP_Error(
-				'no_user',
-				'User not found',
-				array( 'status' => 404 )
-			);
-		}
-
-		Debug::log( sprintf( 'Fetching basic data [user_id=%d]', $user_id ), 'profile' );
-
-		try {
-			$user = get_userdata( $user_id );
-			if ( ! $user ) {
-				Debug::log(
-					sprintf( 'Basic data fetch failed: user not found [user_id=%d]', $user_id ),
-					'profile'
-				);
-				return new WP_Error(
-					'user_not_found',
-					'User not found',
-					array( 'status' => 404 )
-				);
-			}
-
-			$meta = get_user_meta( $user_id );
-
-			// Match the legacy endpoint response format exactly
-			$basic_data = array(
-				'id'          => $user_id,
-				'name'        => $user->display_name,
-				'username'    => $user->user_login,
-				'email'       => $user->user_email,
-				'roles'       => $user->roles,
-				'firstName'   => $meta['first_name'][0] ?? '',
-				'lastName'    => $meta['last_name'][0] ?? '',
-				'displayName' => $user->display_name,
-			);
-
-			Debug::log(
-				sprintf(
-					'Retrieved user data [user_id=%d, fields=%s]',
-					$user_id,
-					implode( ',', array_keys( $basic_data ) )
-				),
-				'profile'
-			);
-
-			Debug::log(
-				sprintf(
-					'Basic data fetch complete [user_id=%d, fields=%d]',
-					$user_id,
-					count( $basic_data )
-				),
-				'profile'
-			);
-
-			return rest_ensure_response(
-				array(
-					'success' => true,
-					'data'    => array(
-						'profile' => $basic_data,
-					),
-				)
-			);
-		} catch ( \Exception $e ) {
-			Debug::log(
-				sprintf(
-					'Basic data fetch failed: %s [user_id=%d]',
-					$e->getMessage(),
-					$user_id
-				),
-				'profile'
-			);
-			return new WP_Error(
-				'basic_data_fetch_error',
-				'Failed to fetch basic profile data',
-				array( 'status' => 500 )
-			);
-		}
-	}
-
-	/**
-	 * Get combined profile and user data.
-	 *
-	 * Returns both the basic user data and any additional profile data
-	 * stored in user meta.
-	 *
-	 * @return WP_REST_Response|WP_Error Response object on success, or error object on failure.
-	 */
-	public static function get_combined_data() {
-		$user_id = get_current_user_id();
-
-		if ( ! $user_id ) {
-			Debug::log(
-				sprintf( 'Combined data fetch failed: no user found [user_id=%d]', $user_id ),
-				'profile'
-			);
-			return new WP_Error(
-				'no_user',
-				'User not found',
-				array( 'status' => 404 )
-			);
-		}
-
-		Debug::log( sprintf( 'Fetching combined data [user_id=%d]', $user_id ), 'profile' );
-
-		try {
-			// Get basic user data
-			Debug::log( sprintf( 'Fetching user data [user_id=%d]', $user_id ), 'profile' );
-			$user = get_userdata( $user_id );
-			if ( ! $user ) {
-				Debug::log(
-					sprintf( 'User data fetch failed: user not found [user_id=%d]', $user_id ),
-					'profile'
-				);
-				return new WP_Error(
-					'user_not_found',
-					'User not found',
-					array( 'status' => 404 )
-				);
-			}
-			$meta      = get_user_meta( $user_id );
-			$user_data = array(
-				'id'          => $user_id,
-				'name'        => $user->display_name,
-				'username'    => $user->user_login,
-				'email'       => $user->user_email,
-				'roles'       => $user->roles,
-				'firstName'   => $meta['first_name'][0] ?? '',
-				'lastName'    => $meta['last_name'][0] ?? '',
-				'displayName' => $user->display_name,
-			);
-			Debug::log(
-				sprintf(
-					'User data retrieved [user_id=%d, fields=%d]',
-					$user_id,
-					count( $user_data )
-				),
-				'profile'
-			);
-
-			// Get additional profile data
-			Debug::log( sprintf( 'Fetching profile data [user_id=%d]', $user_id ), 'profile' );
-			$profile_data = self::get_profile_data( $user_id );
-			Debug::log(
-				sprintf(
-					'Profile data retrieved [user_id=%d, fields=%d]',
-					$user_id,
-					count( $profile_data )
-				),
-				'profile'
-			);
-
-			// Combine the data, ensuring basic user data takes precedence
-			Debug::log(
-				sprintf(
-					'Combining data [user_id=%d, profile_fields=%d, user_fields=%d]',
-					$user_id,
-					count( $profile_data ),
-					count( $user_data )
-				),
-				'profile'
-			);
-			$response = array_merge( $profile_data, $user_data );
-
-			Debug::log(
-				sprintf(
-					'Combined data fetch complete [user_id=%d, total_fields=%d]',
-					$user_id,
-					count( $response )
-				),
-				'profile'
-			);
-
-			return rest_ensure_response(
-				array(
-					'success' => true,
-					'data'    => array(
-						'profile' => $response,
-					),
-				)
-			);
-		} catch ( \Exception $e ) {
-			Debug::log(
-				sprintf(
-					'Combined data fetch failed: %s [user_id=%d]',
-					$e->getMessage(),
-					$user_id
-				),
-				'profile'
-			);
-			return new WP_Error(
-				'profile_fetch_error',
-				'Failed to fetch profile data',
-				array( 'status' => 500 )
-			);
-		}
-	}
-
-	/**
-	 * Register remaining routes (excluding migrated endpoints).
+	 * Register remaining routes.
 	 *
 	 * @return void
 	 */
@@ -1160,7 +738,7 @@ class Profile_Endpoints {
 			)
 		);
 
-		// User data update endpoint (GET is now handled by new implementation)
+		// User data update endpoint
 		register_rest_route(
 			self::NAMESPACE,
 			'/' . self::ROUTE . '/user',
@@ -1168,48 +746,6 @@ class Profile_Endpoints {
 				array(
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( self::class, 'update_user_data' ),
-					'permission_callback' => array( self::class, 'check_auth' ),
-				),
-			)
-		);
-
-		// Combined data endpoint
-		register_rest_route(
-			self::NAMESPACE,
-			'/' . self::ROUTE . '/full',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( self::class, 'get_combined_data' ),
-				'permission_callback' => array( self::class, 'check_auth' ),
-			)
-		);
-
-		// Basic data endpoint
-		register_rest_route(
-			self::NAMESPACE,
-			'/' . self::ROUTE . '/basic',
-			array(
-				'methods'             => WP_REST_Server::READABLE,
-				'callback'            => array( self::class, 'get_basic_data' ),
-				'permission_callback' => array( self::class, 'check_auth' ),
-			)
-		);
-	}
-
-	/**
-	 * Register the legacy get user route.
-	 *
-	 * @deprecated Use new User_Get endpoint instead
-	 * @return void
-	 */
-	public function register_get_user_route(): void {
-		register_rest_route(
-			self::NAMESPACE,
-			'/' . self::ROUTE . '/user',
-			array(
-				array(
-					'methods'             => WP_REST_Server::READABLE,
-					'callback'            => array( self::class, 'get_user_data' ),
 					'permission_callback' => array( self::class, 'check_auth' ),
 				),
 			)

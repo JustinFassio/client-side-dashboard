@@ -19,6 +19,20 @@ export class ProfileService {
     private readonly nonce: string;
     private currentUserData: ProfileData | null = null;
 
+    // Field groups for data validation
+    private readonly CORE_FIELDS = [
+        'username',
+        'email',
+        'displayName',
+        'firstName',
+        'lastName'
+    ] as const;
+
+    private readonly EXTENDED_FIELDS = [
+        'nickname',
+        'roles'
+    ] as const;
+
     constructor(apiUrl: string, nonce: string) {
         this.apiUrl = apiUrl.replace(/\/$/, '');
         this.nonce = nonce;
@@ -33,7 +47,8 @@ export class ProfileService {
             console.group('ProfileService: fetchProfile');
             console.log('Fetching profile for user:', userId);
             
-            const endpoint = `${this.apiUrl}/${ProfileConfig.endpoints.full}`;
+            const endpoint = `${this.apiUrl}/athlete-dashboard/v1/profile/user`;
+                
             console.log('API URL:', endpoint);
             console.log('Headers:', {
                 'X-WP-Nonce': this.nonce ? '[PRESENT]' : '[MISSING]'
@@ -173,25 +188,58 @@ export class ProfileService {
         console.log('Raw data received:', data);
 
         // Extract profile data from the response structure
-        const profileData = data.data?.profile || data;
+        const profileData = data.data?.profile || data.data || data;
         console.log('Extracted profile data:', profileData);
+
+        // Detect response format
+        const isNewEndpoint = 'user_login' in profileData;
+        console.log('[ProfileService] Response format:', 'new');
+
+        // Validate required fields
+        const hasRequiredFields = 'user_login' in profileData || 'username' in profileData;
+            
+        if (!hasRequiredFields) {
+            console.error('[ProfileService] Missing required fields in response');
+            console.groupEnd();
+            throw new ProfileError({
+                code: 'INVALID_RESPONSE',
+                message: 'Profile data is missing required fields'
+            });
+        }
+
+        // Log raw field values for debugging
+        console.log('Raw field values:', {
+            username: {
+                user_login: profileData.user_login,
+                username: profileData.username
+            },
+            displayName: {
+                display_name: profileData.display_name,
+                name: profileData.name,
+                displayName: profileData.displayName
+            },
+            email: {
+                user_email: profileData.user_email,
+                email: profileData.email
+            }
+        });
 
         // Convert string values to appropriate types
         const normalizedData: ProfileData = {
             // Core WordPress fields
             id: Number(profileData.id) || 0,
-            username: profileData.username || '',
-            email: profileData.email || '',
-            displayName: profileData.displayName || profileData.display_name || '',
-            firstName: profileData.firstName || profileData.first_name || '',
-            lastName: profileData.lastName || profileData.last_name || '',
+            username: profileData.user_login || profileData.username || '',
+            email: profileData.user_email || profileData.email || '',
+            displayName: profileData.display_name || profileData.name || '',
+            firstName: profileData.first_name || profileData.firstName || '',
+            lastName: profileData.last_name || profileData.lastName || '',
+            nickname: profileData.nickname || '',
+            roles: Array.isArray(profileData.roles) ? profileData.roles : [],
 
-            // Custom profile fields
+            // Custom profile fields remain unchanged
             phone: profileData.phone || '',
             age: Number(profileData.age) || 0,
             dateOfBirth: profileData.date_of_birth || '',
-            height: Number(profileData.height) || 0,
-            weight: Number(profileData.weight) || 0,
             gender: profileData.gender || '',
             dominantSide: profileData.dominant_side || '',
             medicalClearance: Boolean(profileData.medical_clearance),
@@ -213,10 +261,26 @@ export class ProfileService {
                 : []
         };
 
+        // Log normalization results for verification
+        console.log('Field normalization results:', {
+            username: {
+                raw: profileData.user_login,
+                normalized: normalizedData.username
+            },
+            displayName: {
+                raw: profileData.display_name,
+                normalized: normalizedData.displayName
+            },
+            email: {
+                raw: profileData.user_email,
+                normalized: normalizedData.email
+            }
+        });
+
         // Store the current user data for future reference
         this.currentUserData = normalizedData;
         
-        console.log('Normalized data:', normalizedData);
+        console.log('Final normalized data:', normalizedData);
         console.groupEnd();
         return normalizedData;
     }
@@ -257,8 +321,6 @@ export class ProfileService {
             phone: data.phone,
             age: data.age,
             date_of_birth: data.dateOfBirth,
-            height: data.height,
-            weight: data.weight,
             gender: data.gender,
             dominant_side: data.dominantSide,
             medical_clearance: data.medicalClearance,

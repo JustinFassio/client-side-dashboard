@@ -1,38 +1,21 @@
 /**
- * Physical metrics interface
- */
-export interface PhysicalMetric {
-    type: 'height' | 'weight';
-    value: number;
-    unit: string;
-    date: string;
-}
-
-export interface PhysicalMetrics {
-    height: PhysicalMetric;
-    weight: PhysicalMetric;
-    bodyFat?: PhysicalMetric;
-    muscleMass?: PhysicalMetric;
-}
-
-/**
  * Core profile data interface aligned with WordPress backend
  */
 export interface ProfileData {
-    // Core WordPress fields
+    // Core WordPress user fields
     id: number;
-    username: string;
-    email: string | null;
-    displayName: string;
-    firstName: string;
-    lastName: string;
+    username: string;           // wp_users.user_login
+    email: string | null;       // wp_users.user_email
+    displayName: string;        // wp_users.display_name
+    firstName: string;          // wp_usermeta.first_name
+    lastName: string;          // wp_usermeta.last_name
+    nickname: string;          // wp_usermeta.nickname
+    roles: string[];           // wp_usermeta.wp_capabilities
 
     // Custom profile fields
     phone: string;
     age: number;
     dateOfBirth: string;
-    height: number;
-    weight: number;
     gender: 'male' | 'female' | 'other' | '';
     dominantSide: 'left' | 'right' | '';
     medicalClearance: boolean;
@@ -49,9 +32,9 @@ export interface Injury {
     type: string;
     description: string;
     date: string;
-    severity?: 'low' | 'medium' | 'high';
-    isCustom: boolean;
-    status: 'active' | 'recovered';
+    severity: string;
+    status: string;
+    isCustom?: boolean;
 }
 
 export interface FormValidationResult {
@@ -76,10 +59,11 @@ export interface ProfileState {
  * Profile error types
  */
 export type ProfileErrorCode = 
-    | 'VALIDATION_ERROR'
-    | 'AUTH_ERROR'
     | 'NETWORK_ERROR'
-    | 'SERVER_ERROR';
+    | 'VALIDATION_ERROR'
+    | 'NOT_FOUND'
+    | 'INVALID_RESPONSE'
+    | 'UNAUTHORIZED';
 
 export interface ProfileError {
     code: ProfileErrorCode;
@@ -229,28 +213,6 @@ export const PROFILE_CONFIG: Record<keyof ProfileData, ProfileFieldConfig> = {
         type: 'date',
         required: false
     },
-    height: {
-        name: 'height',
-        label: 'Height (cm)',
-        type: 'number',
-        required: false,
-        validation: {
-            min: 50,
-            max: 250,
-            message: 'Height must be between 50cm and 250cm'
-        }
-    },
-    weight: {
-        name: 'weight',
-        label: 'Weight (kg)',
-        type: 'number',
-        required: false,
-        validation: {
-            min: 30,
-            max: 200,
-            message: 'Weight must be between 30kg and 200kg'
-        }
-    },
     gender: {
         name: 'gender',
         label: 'Gender',
@@ -307,5 +269,57 @@ export const PROFILE_CONFIG: Record<keyof ProfileData, ProfileFieldConfig> = {
         label: 'Injuries',
         type: 'text',
         required: false
+    },
+    nickname: {
+        name: 'nickname',
+        label: 'Nickname',
+        type: 'text',
+        required: false,
+        validation: {
+            min: 2,
+            max: 50
+        }
+    },
+    roles: {
+        name: 'roles',
+        label: 'Roles',
+        type: 'text',
+        required: true,
+        editable: false
     }
 }; 
+
+/**
+ * Interface representing a comparison between old and new endpoint responses
+ * Used during development to verify field mappings and data consistency
+ */
+export interface EndpointComparison {
+    /** Normalized profile data from the old endpoint */
+    oldEndpoint: ProfileData | null;
+    /** Normalized profile data from the new endpoint */
+    newEndpoint: ProfileData | null;
+    /** Array of field differences between the two endpoints */
+    differences: {
+        /** The field name that differs */
+        field: string;
+        /** The value from the old endpoint */
+        oldValue: any;
+        /** The value from the new endpoint */
+        newValue: any;
+    }[];
+    /** Whether all core fields match between endpoints */
+    fieldsMatch: boolean;
+}
+
+/**
+ * Interface representing the result of an endpoint comparison operation
+ * Includes both the comparison data and operation status
+ */
+export interface ComparisonResult {
+    /** Whether the comparison operation completed successfully */
+    success: boolean;
+    /** The detailed comparison results if successful */
+    comparison?: EndpointComparison;
+    /** Error message if the comparison failed */
+    error?: string;
+} 

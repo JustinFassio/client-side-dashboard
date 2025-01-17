@@ -1,186 +1,229 @@
 /* Profile Layout Styles */
 .profile-layout {
+    max-width: 1200px;
+    margin: 0 auto;
     padding: 2rem;
-    background: var(--background-dark);
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-    color: var(--text-light);
 }
 
-.profile-header {
+.profile-layout h1 {
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+    font-size: 2rem;
+}
+
+.profile-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
     margin-bottom: 2rem;
 }
 
-.profile-header h1 {
-    color: var(--primary-color);
-    font-size: 2rem;
-    margin: 0 0 0.5rem;
-}
-
-.profile-header p {
-    color: var(--text-dim);
-    font-size: 1.1rem;
-}
-
-.profile-content {
-    display: grid;
-    grid-gap: 2rem;
-    grid-template-columns: 1fr;
-}
-
-.profile-loading,
-.profile-error {
-    text-align: center;
-    padding: 2rem;
-}
-
-.loading-spinner {
-    display: inline-block;
-    width: 50px;
-    height: 50px;
-    border: 4px solid var(--border-color);
-    border-top: 4px solid var(--primary-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-.retry-button {
-    margin-top: 1rem;
-    padding: 0.5rem 1.5rem;
-    background-color: var(--primary-color);
-    color: var(--background-dark);
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-.retry-button:hover {
-    background-color: var(--primary-hover);
-}
-
-.debug-info {
-    margin-top: 2rem;
-    padding: 1rem;
-    background: var(--background-darker);
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.9rem;
-    color: var(--text-dim);
-    overflow-x: auto;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Form Sections */
-.form-section {
-    background: var(--background-darker);
+.profile-section {
+    background: var(--surface-background);
+    border-radius: var(--border-radius);
     padding: 1.5rem;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
 }
 
-.form-section h2 {
-    color: var(--text-light);
-    margin: 0 0 1.5rem;
+.profile-section h2 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
     font-size: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
 }
 
-.form-group {
+.profile-section .form-group {
     margin-bottom: 1.5rem;
 }
 
-.form-group:last-child {
-    margin-bottom: 0;
-}
-
-.form-group label {
+.profile-section label {
     display: block;
     margin-bottom: 0.5rem;
-    color: var(--text-dim);
-    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
-.form-control {
+.profile-section input[type="text"],
+.profile-section input[type="email"],
+.profile-section input[type="number"],
+.profile-section select {
     width: 100%;
     padding: 0.75rem;
-    background: var(--background-dark);
     border: 1px solid var(--border-color);
-    border-radius: 4px;
-    color: var(--text-light);
+    border-radius: var(--border-radius-sm);
+    background: var(--input-background);
+    color: var(--text-primary);
     font-size: 1rem;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.form-control:focus {
-    outline: none;
+.profile-section input[type="text"]:focus,
+.profile-section input[type="email"]:focus,
+.profile-section input[type="number"]:focus,
+.profile-section select:focus {
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-alpha);
+    outline: none;
 }
 
-.form-control::placeholder {
-    color: var(--text-dim);
+.profile-section input[type="checkbox"] {
+    margin-right: 0.5rem;
 }
 
-/* Responsive Design */
-@media (min-width: 768px) {
-    .profile-content {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media (min-width: 1200px) {
-    .profile-content {
-        grid-template-columns: repeat(3, 1fr);
-    }
-}
-
-.profile-actions {
-    margin-top: 2rem;
-    display: flex;
-    justify-content: flex-end;
+.profile-error {
+    background: var(--error-background);
+    color: var(--error-text);
     padding: 1rem;
-    background: var(--background-darker);
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
 }
 
-.save-button {
-    padding: 0.75rem 2rem;
-    background-color: var(--primary-color);
-    color: var(--background-darker);
+.profile-error h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.profile-error p {
+    margin: 0 0 1rem;
+}
+
+.retry-button {
+    background: var(--error-text);
+    color: white;
     border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
     cursor: pointer;
-    transition: all 0.2s ease;
+    font-weight: 500;
+    transition: opacity 0.2s;
 }
 
-.save-button:hover:not(:disabled) {
-    background-color: var(--primary-hover);
-    color: var(--background-darker);
-    transform: translateY(-1px);
+.retry-button:hover {
+    opacity: 0.9;
 }
 
-.save-button:disabled {
-    background-color: var(--text-dim);
+.retry-button:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
-    opacity: 0.7;
 }
 
 .save-error {
-    margin: 1rem 0;
-    padding: 1rem;
-    background-color: var(--error-background);
-    border: 1px solid var(--error-border);
-    border-radius: 4px;
+    background: var(--error-background);
     color: var(--error-text);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
 }
 
-.save-error p {
-    margin: 0;
-    font-size: 0.9rem;
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.save-button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.save-button:hover {
+    background: var(--primary-color-dark);
+}
+
+.save-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Physical Section Styles */
+.physical-section {
+    grid-column: span 2;
+}
+
+.physical-section .measurement-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.physical-section .form-group {
+    margin-bottom: 1rem;
+}
+
+.physical-section .unit-toggle {
+    margin-bottom: 1.5rem;
+}
+
+.physical-section .history-view {
+    margin-top: 2rem;
+}
+
+.physical-section .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.physical-section .history-table th,
+.physical-section .history-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.physical-section .history-table th {
+    background: var(--surface-background-alt);
+    font-weight: 500;
+}
+
+.physical-section .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.physical-section .pagination button {
+    background: var(--surface-background-alt);
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.physical-section .pagination button:hover {
+    background: var(--surface-background-hover);
+}
+
+.physical-section .pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .profile-layout {
+        padding: 1rem;
+    }
+
+    .profile-sections {
+        grid-template-columns: 1fr;
+    }
+
+    .physical-section {
+        grid-column: span 1;
+    }
+
+    .physical-section .measurement-form {
+        grid-template-columns: 1fr;
+    }
 } 

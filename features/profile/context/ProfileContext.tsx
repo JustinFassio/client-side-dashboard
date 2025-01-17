@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { ProfileData } from '../types/profile';
+import { ProfileData, ComparisonResult } from '../types/profile';
 import { useUser } from '../../user/context/UserContext';
 import { ProfileService } from '../services/ProfileService';
 
@@ -9,6 +9,7 @@ interface ProfileContextValue {
     refreshProfile: () => Promise<void>;
     isLoading: boolean;
     error: string | null;
+    loadProfile: () => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextValue | null>(null);
@@ -16,8 +17,6 @@ const ProfileContext = createContext<ProfileContextValue | null>(null);
 const DEFAULT_PROFILE: Partial<ProfileData> = {
     age: 0,
     gender: '',
-    height: 0,
-    weight: 0,
     medicalNotes: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
@@ -28,17 +27,48 @@ interface ProfileProviderProps {
     children: React.ReactNode;
 }
 
-// Create a singleton instance of ProfileService
-const profileService = new ProfileService(
-    window.athleteDashboardData?.apiUrl || '/wp-json',
-    window.athleteDashboardData?.nonce || ''
-);
-
 export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) => {
     const { user, isAuthenticated, isLoading: userLoading, refreshUser } = useUser();
     const [profile, setProfile] = useState<ProfileData | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Initialize profile service
+    const profileService = useMemo(() => {
+        const apiUrl = window.athleteDashboardData?.apiUrl || '';
+        const nonce = window.athleteDashboardData?.nonce || '';
+        
+        console.log('ProfileContext: Initializing service with:', {
+            apiUrl: apiUrl ? '[SET]' : '[MISSING]',
+            nonce: nonce ? '[SET]' : '[MISSING]'
+        });
+        
+        return new ProfileService(apiUrl, nonce);
+    }, []);
+
+    // Monitor endpoint performance
+    const endpointStats = useRef({
+        totalRequests: 0,
+        successfulRequests: 0,
+        failedRequests: 0,
+        lastError: null as string | null
+    });
+
+    // Log endpoint statistics after each profile load attempt
+    useEffect(() => {
+        if (!isLoading) {
+            const stats = endpointStats.current;
+            console.log('ProfileContext: Endpoint Statistics', {
+                total: stats.totalRequests,
+                successful: stats.successfulRequests,
+                failed: stats.failedRequests,
+                successRate: stats.totalRequests ? 
+                    ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1) + '%' : 
+                    'N/A',
+                lastError: stats.lastError
+            });
+        }
+    }, [isLoading]);
 
     // Use refs to prevent duplicate requests
     const isLoadingRef = useRef(false);
@@ -84,6 +114,7 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
         isLoadingRef.current = true;
         lastLoadTimeRef.current = now;
+        endpointStats.current.totalRequests++;
 
         try {
             console.group('ProfileContext: Loading Profile');
@@ -94,8 +125,12 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
             setIsLoading(true);
             setError(null);
 
+            const startTime = performance.now();
             const profileData = await profileService.fetchProfile(user.id);
+            const endTime = performance.now();
+            
             console.log('Profile data received:', profileData);
+            console.log('Request duration:', Math.round(endTime - startTime), 'ms');
 
             if (!profileData) {
                 throw new Error('No profile data received from server');
@@ -116,12 +151,16 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
 
             console.log('Merged profile data:', mergedProfile);
             setProfile(mergedProfile as ProfileData);
+            endpointStats.current.successfulRequests++;
+            endpointStats.current.lastError = null;
         } catch (err) {
             const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
             console.error('Error loading profile:', err);
             console.error('Error message:', errorMessage);
             setError(errorMessage);
             setProfile(null);
+            endpointStats.current.failedRequests++;
+            endpointStats.current.lastError = errorMessage;
         } finally {
             setIsLoading(false);
             isLoadingRef.current = false;
@@ -207,13 +246,38 @@ export const ProfileProvider: React.FC<ProfileProviderProps> = ({ children }) =>
         }
     }, [user?.id, profile, refreshUser]);
 
+    const mergeProfileData = (newData: ProfileData) => {
+        console.log('ProfileContext: Merging profile data', {
+            current: profile,
+            new: newData
+        });
+
+        // Preserve core user fields
+        const mergedData = {
+            ...profile,
+            ...newData,
+            // Ensure core user fields are not overwritten with empty values
+            username: newData.username || profile?.username || '',
+            email: newData.email || profile?.email || '',
+            firstName: newData.firstName || profile?.firstName || '',
+            lastName: newData.lastName || profile?.lastName || '',
+            displayName: newData.displayName || profile?.displayName || '',
+            roles: newData.roles || profile?.roles || []
+        };
+
+        console.log('ProfileContext: Merged result', mergedData);
+        
+        setProfile(mergedData);
+    };
+
     const value = useMemo(() => ({
         profile,
         updateProfile,
         refreshProfile,
         isLoading,
-        error
-    }), [profile, isLoading, error, updateProfile, refreshProfile]);
+        error,
+        loadProfile
+    }), [profile, isLoading, error, updateProfile, refreshProfile, loadProfile]);
 
     return (
         <ProfileContext.Provider value={value}>

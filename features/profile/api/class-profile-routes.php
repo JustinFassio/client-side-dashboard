@@ -10,6 +10,8 @@ namespace AthleteDashboard\Features\Profile\API;
 use AthleteDashboard\Features\Profile\API\Registry\Endpoint_Registry;
 use AthleteDashboard\Features\Profile\API\Endpoints\User\User_Get;
 use AthleteDashboard\Features\Profile\Services\Profile_Service;
+use AthleteDashboard\Features\Profile\API\Profile_Endpoints;
+use AthleteDashboard\Features\Profile\API\Response_Factory;
 
 /**
  * Class Profile_Routes
@@ -39,13 +41,6 @@ class Profile_Routes {
 	private Endpoint_Registry $registry;
 
 	/**
-	 * Legacy endpoints instance.
-	 *
-	 * @var Profile_Endpoints
-	 */
-	private Profile_Endpoints $legacy_endpoints;
-
-	/**
 	 * Constructor.
 	 *
 	 * @param Profile_Service   $service          Profile service instance.
@@ -60,7 +55,6 @@ class Profile_Routes {
 		$this->service          = $service;
 		$this->response_factory = $response_factory;
 		$this->registry         = $registry;
-		$this->legacy_endpoints = new Profile_Endpoints();
 	}
 
 	/**
@@ -80,6 +74,6 @@ class Profile_Routes {
 		);
 
 		// Register remaining legacy routes
-		$this->legacy_endpoints->register_remaining_routes();
+		Profile_Endpoints::register_routes();
 	}
 }

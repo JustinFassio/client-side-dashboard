@@ -15,6 +15,7 @@ interface FormFieldProps {
     min?: number;
     max?: number;
     isArray?: boolean;
+    hint?: string;
 }
 
 export const FormField: React.FC<FormFieldProps> = ({
@@ -29,7 +30,8 @@ export const FormField: React.FC<FormFieldProps> = ({
     disabled,
     min,
     max,
-    isArray = false
+    isArray = false,
+    hint
 }) => {
     const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { value: newValue, type: inputType } = event.target;
@@ -54,12 +56,12 @@ export const FormField: React.FC<FormFieldProps> = ({
     const hasError = validation?.errors && validation.errors.length > 0;
     const fieldClassName = `form-field ${hasError ? 'has-error' : ''}`;
 
-    // For array fields, get the first value if it exists
-    const displayValue = isArray && Array.isArray(value) ? (value[0] || '') : (value || '');
+    // Ensure string values are properly displayed
+    const displayValue = value ?? '';  // Convert null/undefined to empty string
 
     return (
         <div className={fieldClassName}>
-            <label htmlFor={name}>{label}</label>
+            <label htmlFor={name}>{label}{required && <span className="required">*</span>}</label>
             
             {type === 'select' ? (
                 <select
@@ -82,7 +84,7 @@ export const FormField: React.FC<FormFieldProps> = ({
                     type={type}
                     id={name}
                     name={name}
-                    value={value || ''}
+                    value={displayValue}
                     onChange={handleChange}
                     required={required}
                     disabled={disabled}
@@ -90,6 +92,8 @@ export const FormField: React.FC<FormFieldProps> = ({
                     max={max}
                 />
             )}
+            
+            {hint && <p className="form-field__hint">{hint}</p>}
             
             {hasError && validation.errors.map((error, index) => (
                 <div key={index} className="field-error">

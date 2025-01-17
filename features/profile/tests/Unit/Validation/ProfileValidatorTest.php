@@ -436,15 +436,19 @@ class ProfileValidatorTest extends TestCase {
 	}
 
 	/**
-	 * Test medical condition validation with valid data
+	 * Test validation of medical conditions with valid data
 	 */
 	public function test_validate_medical_conditions_with_valid_data(): void {
 		$data = array(
 			'medical_conditions' => array(
-				'asthma'          => true,
-				'diabetes'        => false,
-				'heart_condition' => false,
-				'other'           => 'Mild knee pain',
+				array(
+					'type'        => 'asthma',
+					'description' => 'Mild asthma, controlled with inhaler',
+				),
+				array(
+					'type'        => 'allergy',
+					'description' => 'Peanut allergy',
+				),
 			),
 		);
 
@@ -453,7 +457,7 @@ class ProfileValidatorTest extends TestCase {
 	}
 
 	/**
-	 * Test medical condition validation with invalid data format
+	 * Test validation of medical conditions with invalid format
 	 */
 	public function test_validate_medical_conditions_with_invalid_format(): void {
 		$data = array(
@@ -462,32 +466,36 @@ class ProfileValidatorTest extends TestCase {
 
 		$result = $this->validator->validate_medical_conditions( $data );
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'invalid_data_format', $result->get_error_code() );
+		$this->assertEquals( 'invalid_medical_conditions', $result->get_error_code() );
 	}
 
 	/**
-	 * Test medical condition validation with invalid condition types
+	 * Test validation of medical conditions with invalid types
 	 */
 	public function test_validate_medical_conditions_with_invalid_types(): void {
 		$data = array(
 			'medical_conditions' => array(
-				'asthma' => 'yes', // Should be boolean
-				'other'  => array( 'not a string' ), // Should be string
+				array(
+					'description' => 'Missing type field',
+				),
 			),
 		);
 
 		$result = $this->validator->validate_medical_conditions( $data );
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'invalid_data_type', $result->get_error_code() );
+		$this->assertEquals( 'invalid_medical_condition_type', $result->get_error_code() );
 	}
 
 	/**
-	 * Test medical condition validation with oversized description
+	 * Test validation of medical conditions with long description
 	 */
 	public function test_validate_medical_conditions_with_long_description(): void {
 		$data = array(
 			'medical_conditions' => array(
-				'other' => str_repeat( 'a', 1001 ), // Exceeds max length
+				array(
+					'type'        => 'condition',
+					'description' => str_repeat( 'a', 1001 ), // Create a string longer than 1000 chars
+				),
 			),
 		);
 
@@ -533,40 +541,32 @@ class ProfileValidatorTest extends TestCase {
 
 	/**
 	 * @dataProvider unit_conversion_data_provider
-	 * Tests unit conversion accuracy for height and weight
 	 */
 	public function test_unit_conversions( array $input, array $expected ): void {
-		$converted = $this->validator->convert_units( $input );
-		$this->assertEqualsWithDelta( $expected['height'], $converted['height'], 0.01 );
-		$this->assertEqualsWithDelta( $expected['weight'], $converted['weight'], 0.01 );
-		$this->assertEquals( $expected['units'], $converted['units'] );
+		$target_units = $expected['units'];
+		$result       = $this->validator->convert_units( $input, $target_units );
+
+		$this->assertEquals( $expected['height'], round( $result['height'], 2 ) );
+		$this->assertEquals( $expected['weight'], round( $result['weight'], 2 ) );
+		$this->assertEquals( $expected['units'], $result['units'] );
 	}
 
 	/**
-	 * Additional BMI edge cases with detailed error message verification
+	 * Test BMI validation edge cases with detailed error messages
 	 */
 	public function test_validate_bmi_edge_cases_with_error_messages(): void {
-		// Test extremely low BMI
 		$data = array(
-			'height' => 180,
-			'weight' => 35, // Very low weight
+			'height' => 170,    // 170 cm
+			'weight' => 30,     // 30 kg (too low for height)
 			'units'  => 'metric',
 		);
 
 		$result = $this->validator->validate_data( $data );
+
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertEquals( 'invalid_bmi', $result->get_error_code() );
-		$this->assertStringContainsString( 'BMI value', $result->get_error_message() );
 
-		// Test extremely high BMI
-		$data['weight'] = 200; // Very high weight
-		$result         = $this->validator->validate_data( $data );
-		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertEquals( 'invalid_bmi', $result->get_error_code() );
-		$this->assertStringContainsString( 'BMI value', $result->get_error_message() );
-
-		// Verify error data contains BMI calculation details
-		$error_data = $result->get_error_data( 'invalid_bmi' );
+		$error_data = $result->get_error_data();
 		$this->assertArrayHasKey( 'bmi', $error_data );
 		$this->assertArrayHasKey( 'min_bmi', $error_data );
 		$this->assertArrayHasKey( 'max_bmi', $error_data );

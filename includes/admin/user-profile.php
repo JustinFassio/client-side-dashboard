@@ -83,32 +83,10 @@ function add_athlete_profile_fields( $user ) {
 			</table>
 		</div>
 
-		<!-- Physical Information -->
+		<!-- Profile Information -->
 		<div class="athlete-profile-section">
-			<h3><?php _e( 'Physical Information', 'athlete-dashboard' ); ?></h3>
+			<h3><?php _e( 'Profile Information', 'athlete-dashboard' ); ?></h3>
 			<table class="form-table">
-				<tr>
-					<th><label for="height"><?php _e( 'Height (cm)', 'athlete-dashboard' ); ?></label></th>
-					<td>
-						<input type="number" 
-								name="athlete_profile[height]" 
-								id="height" 
-								value="<?php echo esc_attr( $profile_data['height'] ); ?>" 
-								class="regular-text" 
-								step="1" />
-					</td>
-				</tr>
-				<tr>
-					<th><label for="weight"><?php _e( 'Weight (kg)', 'athlete-dashboard' ); ?></label></th>
-					<td>
-						<input type="number" 
-								name="athlete_profile[weight]" 
-								id="weight" 
-								value="<?php echo esc_attr( $profile_data['weight'] ); ?>" 
-								class="regular-text" 
-								step="0.1" />
-					</td>
-				</tr>
 				<tr>
 					<th><label for="gender"><?php _e( 'Gender', 'athlete-dashboard' ); ?></label></th>
 					<td>
@@ -145,20 +123,26 @@ function add_athlete_profile_fields( $user ) {
 								id="medical_clearance" 
 								value="1" 
 								<?php checked( $profile_data['medical_clearance'], true ); ?> />
-						<span class="description"><?php _e( 'Athlete has medical clearance to participate', 'athlete-dashboard' ); ?></span>
 					</td>
 				</tr>
 				<tr>
 					<th><label for="medical_notes"><?php _e( 'Medical Notes', 'athlete-dashboard' ); ?></label></th>
 					<td>
 						<textarea name="athlete_profile[medical_notes]" 
-									id="medical_notes" 
-									rows="4" 
-									class="regular-text"><?php echo esc_textarea( $profile_data['medical_notes'] ); ?></textarea>
+								id="medical_notes" 
+								class="large-text" 
+								rows="5"><?php echo esc_textarea( $profile_data['medical_notes'] ); ?></textarea>
 					</td>
 				</tr>
+			</table>
+		</div>
+
+		<!-- Emergency Contact -->
+		<div class="athlete-profile-section">
+			<h3><?php _e( 'Emergency Contact', 'athlete-dashboard' ); ?></h3>
+			<table class="form-table">
 				<tr>
-					<th><label for="emergency_contact_name"><?php _e( 'Emergency Contact Name', 'athlete-dashboard' ); ?></label></th>
+					<th><label for="emergency_contact_name"><?php _e( 'Name', 'athlete-dashboard' ); ?></label></th>
 					<td>
 						<input type="text" 
 								name="athlete_profile[emergency_contact_name]" 
@@ -168,7 +152,7 @@ function add_athlete_profile_fields( $user ) {
 					</td>
 				</tr>
 				<tr>
-					<th><label for="emergency_contact_phone"><?php _e( 'Emergency Contact Phone', 'athlete-dashboard' ); ?></label></th>
+					<th><label for="emergency_contact_phone"><?php _e( 'Phone', 'athlete-dashboard' ); ?></label></th>
 					<td>
 						<input type="tel" 
 								name="athlete_profile[emergency_contact_phone]" 

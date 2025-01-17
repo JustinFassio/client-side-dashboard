@@ -56,8 +56,9 @@ class User_Get extends Base_Endpoint {
 	 * @return WP_REST_Response|WP_Error Response object or error.
 	 */
 	public function handle_request( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		error_log( '=== New User Get Endpoint - Starting Request ===' );
 		error_log(
-			'New User Get Endpoint - Request: ' . wp_json_encode(
+			'Request Details: ' . wp_json_encode(
 				array(
 					'params'  => $request->get_params(),
 					'headers' => $request->get_headers(),
@@ -68,19 +69,25 @@ class User_Get extends Base_Endpoint {
 
 		// Get user ID from request or use current user
 		$user_id = $request->get_param( 'user_id' ) ?? get_current_user_id();
-		error_log( 'New User Get Endpoint - User ID: ' . $user_id );
+		error_log( 'User ID: ' . $user_id );
 
-		// Get user data
+		// Get user data with detailed logging
+		$user = get_userdata( $user_id );
+		error_log( 'Raw User Data - Display Name: ' . ( $user ? $user->display_name : 'null' ) );
+
+		// Get user data through service
 		$result = $this->service->get_user_data( $user_id );
 		if ( is_wp_error( $result ) ) {
-			error_log( 'New User Get Endpoint - Service Error: ' . $result->get_error_message() );
+			error_log( 'Service Error: ' . $result->get_error_message() );
 			return $this->response_factory->error(
 				$result->get_error_message(),
 				$result->get_error_data()['status'] ?? 500
 			);
 		}
 
-		error_log( 'New User Get Endpoint - Success Response: ' . wp_json_encode( $result ) );
+		error_log( 'Service Response: ' . wp_json_encode( $result ) );
+		error_log( '=== New User Get Endpoint - Request Complete ===' );
+
 		return $this->response_factory->success( $result );
 	}
 
@@ -95,10 +102,22 @@ class User_Get extends Base_Endpoint {
 			'title'      => 'user',
 			'type'       => 'object',
 			'properties' => array(
-				'user_id' => array(
+				'user_id'      => array(
 					'description' => __( 'The user ID to retrieve data for.', 'athlete-dashboard' ),
 					'type'        => 'integer',
 					'required'    => false,
+				),
+				'display_name' => array(
+					'description' => __( 'The user\'s display name.', 'athlete-dashboard' ),
+					'type'        => 'string',
+					'required'    => false,
+					'context'     => array( 'view', 'edit' ),
+				),
+				'name'         => array(
+					'description' => __( 'Legacy field for display name compatibility.', 'athlete-dashboard' ),
+					'type'        => 'string',
+					'required'    => false,
+					'context'     => array( 'view' ),
 				),
 			),
 		);

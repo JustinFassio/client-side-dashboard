@@ -511,7 +511,7 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	$response_factory = new AthleteDashboard\Features\Profile\API\Response_Factory();
 	$routes           = new AthleteDashboard\Features\Profile\API\Profile_Routes( $service, $response_factory, $registry );
 
-	// Initialize feature
+	// Initialize profile feature
 	$profile_feature = new AthleteDashboard\Features\Profile\Profile_Feature( $routes );
 	$profile_feature->init();
 }

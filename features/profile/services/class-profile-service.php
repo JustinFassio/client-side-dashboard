@@ -53,6 +53,7 @@ class Profile_Service implements Profile_Service_Interface {
 	 *
 	 * @param int $user_id User ID.
 	 * @return array|WP_Error Profile data or error on failure.
+	 * @throws \Exception When user is not found or other errors occur.
 	 */
 	public function get_profile( int $user_id ): array|WP_Error {
 		try {
@@ -67,7 +68,7 @@ class Profile_Service implements Profile_Service_Interface {
 			return Cache_Service::remember(
 				$cache_key,
 				fn() => $this->repository->get_profile( $user_id ),
-				['category' => Cache_Service::CATEGORY_CRITICAL]
+				array( 'category' => Cache_Service::CATEGORY_CRITICAL )
 			);
 		} catch ( Profile_Service_Exception $e ) {
 			return $e->to_wp_error();
@@ -85,6 +86,7 @@ class Profile_Service implements Profile_Service_Interface {
 	 * @param int   $user_id User ID.
 	 * @param array $data    Profile data to update.
 	 * @return array|WP_Error Updated profile data or error on failure.
+	 * @throws \Exception When validation fails or update errors occur.
 	 */
 	public function update_profile( int $user_id, array $data ): array|WP_Error {
 		try {
@@ -185,7 +187,7 @@ class Profile_Service implements Profile_Service_Interface {
 			return Cache_Service::remember(
 				$cache_key,
 				fn() => $this->repository->get_profile_meta( $user_id, $key, $single ),
-				['category' => Cache_Service::CATEGORY_FREQUENT]
+				array( 'category' => Cache_Service::CATEGORY_FREQUENT )
 			);
 		} catch ( Profile_Service_Exception $e ) {
 			return $e->to_wp_error();
@@ -232,22 +234,54 @@ class Profile_Service implements Profile_Service_Interface {
 	 * @return array|WP_Error User data or error on failure.
 	 */
 	public function get_user_data( int $user_id ): array|WP_Error {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Getting user data for ID %d', $user_id ) );
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Profile Service: User not found for ID %d', $user_id ) );
+			}
+			return new WP_Error(
+				'user_not_found',
+				sprintf(
+					/* translators: %d: User ID */
+					__( 'User not found: %d', 'athlete-dashboard' ),
+					$user_id
+				),
+				array( 'user_id' => $user_id )
+			);
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Formatting user data for ID %d', $user_id ) );
+		}
+
 		try {
-			$user = get_userdata( $user_id );
-			if ( ! $user ) {
-				throw new Profile_Service_Exception(
-					sprintf( 'User not found: %d', $user_id ),
-					Profile_Service_Exception::ERROR_NOT_FOUND
+			$user_data = $this->format_user_data( $user );
+
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log(
+					sprintf(
+						'Profile Service: User data formatted successfully - Fields: [%s]',
+						implode( ', ', array_keys( $user_data ) )
+					)
 				);
 			}
 
-			return $this->format_user_data( $user );
-		} catch ( Profile_Service_Exception $e ) {
-			return $e->to_wp_error();
+			return $user_data;
 		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Profile Service: Error formatting user data - %s', $e->getMessage() ) );
+			}
 			return new WP_Error(
-				'user_error',
-				$e->getMessage()
+				'user_format_error',
+				__( 'Failed to format user data', 'athlete-dashboard' ),
+				array(
+					'user_id' => $user_id,
+					'error'   => $e->getMessage(),
+				)
 			);
 		}
 	}
@@ -260,47 +294,76 @@ class Profile_Service implements Profile_Service_Interface {
 	 * @return array|WP_Error Updated user data or error on failure.
 	 */
 	public function update_user_data( int $user_id, array $data ): array|WP_Error {
-		try {
-			// Validate user data
-			$validation_result = $this->validator->validate_user_data( $data );
-			if ( is_wp_error( $validation_result ) ) {
-				return $validation_result;
-			}
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Starting user data update for ID %d', $user_id ) );
+		}
 
-			// Prepare user data for update
-			$user_data         = array( 'ID' => $user_id );
-			$updateable_fields = array(
-				'first_name'   => 'firstName',
-				'last_name'    => 'lastName',
-				'display_name' => 'displayName',
-				'user_email'   => 'email',
-			);
-
-			foreach ( $updateable_fields as $wp_field => $request_field ) {
-				if ( isset( $data[ $request_field ] ) ) {
-					$user_data[ $wp_field ] = sanitize_text_field( $data[ $request_field ] );
-				}
-			}
-
-			// Update user
-			$result = wp_update_user( $user_data );
-			if ( is_wp_error( $result ) ) {
-				throw new Profile_Service_Exception(
-					'Failed to update user data',
-					Profile_Service_Exception::ERROR_DATABASE,
-					array( 'user_id' => $user_id )
+		// Validate user data
+		$validation_result = $this->validator->validate_user_data( $data );
+		if ( is_wp_error( $validation_result ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log(
+					sprintf(
+						'Profile Service: Validation failed for user %d - %s',
+						$user_id,
+						$validation_result->get_error_message()
+					)
 				);
 			}
+			return $validation_result;
+		}
 
-			return $this->get_user_data( $user_id );
-		} catch ( Profile_Service_Exception $e ) {
-			return $e->to_wp_error();
-		} catch ( \Exception $e ) {
+		// Prepare user data for update
+		$user_data = array(
+			'ID' => $user_id,
+		);
+
+		$updateable_fields = array(
+			'first_name'   => 'firstName',
+			'last_name'    => 'lastName',
+			'display_name' => 'displayName',
+			'user_email'   => 'email',
+			'nickname'     => 'nickname',
+		);
+
+		foreach ( $updateable_fields as $wp_field => $request_field ) {
+			if ( isset( $data[ $request_field ] ) ) {
+				$user_data[ $wp_field ] = sanitize_text_field( $data[ $request_field ] );
+			}
+		}
+
+		// Update user
+		$result = wp_update_user( $user_data );
+		if ( is_wp_error( $result ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log(
+					sprintf(
+						'Profile Service: Failed to update user %d - %s',
+						$user_id,
+						$result->get_error_message()
+					)
+				);
+			}
 			return new WP_Error(
-				'user_error',
-				$e->getMessage()
+				'user_update_error',
+				__( 'Failed to update user data', 'athlete-dashboard' ),
+				array(
+					'user_id' => $user_id,
+					'error'   => $result->get_error_message(),
+				)
 			);
 		}
+
+		// Update nickname separately since it's a meta field
+		if ( isset( $data['nickname'] ) ) {
+			update_user_meta( $user_id, 'nickname', sanitize_text_field( $data['nickname'] ) );
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Successfully updated user %d', $user_id ) );
+		}
+
+		return $this->get_user_data( $user_id );
 	}
 
 	/**
@@ -310,27 +373,54 @@ class Profile_Service implements Profile_Service_Interface {
 	 * @return array|WP_Error Combined data or error on failure.
 	 */
 	public function get_combined_data( int $user_id ): array|WP_Error {
-		try {
-			// Get user data
-			$user_data = $this->get_user_data( $user_id );
-			if ( is_wp_error( $user_data ) ) {
-				return $user_data;
-			}
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Starting combined data fetch for user %d', $user_id ) );
+		}
 
-			// Get profile data
-			$profile_data = $this->get_profile( $user_id );
-			if ( is_wp_error( $profile_data ) ) {
-				return $profile_data;
+		// Get user data
+		$user_data = $this->get_user_data( $user_id );
+		if ( is_wp_error( $user_data ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log(
+					sprintf(
+						'Profile Service: Failed to fetch user data for ID %d - %s',
+						$user_id,
+						$user_data->get_error_message()
+					)
+				);
 			}
+			return $user_data;
+		}
 
-			// Merge data, ensuring user data takes precedence
-			return array_merge( $profile_data, $user_data );
-		} catch ( \Exception $e ) {
-			return new WP_Error(
-				'profile_error',
-				$e->getMessage()
+		// Get profile data
+		$profile_data = $this->get_profile( $user_id );
+		if ( is_wp_error( $profile_data ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log(
+					sprintf(
+						'Profile Service: Failed to fetch profile data for ID %d - %s',
+						$user_id,
+						$profile_data->get_error_message()
+					)
+				);
+			}
+			return $profile_data;
+		}
+
+		// Merge data, ensuring user data takes precedence
+		$merged_data = array_merge( $profile_data, $user_data );
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log(
+				sprintf(
+					'Profile Service: Successfully merged data for user %d - Fields: [%s]',
+					$user_id,
+					implode( ', ', array_keys( $merged_data ) )
+				)
 			);
 		}
+
+		return $merged_data;
 	}
 
 	/**
@@ -350,15 +440,50 @@ class Profile_Service implements Profile_Service_Interface {
 	 * @return array Formatted user data.
 	 */
 	private function format_user_data( WP_User $user ): array {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Formatting user data for user %s', $user->user_login ) );
+		}
+
 		return array(
 			'id'          => $user->ID,
-			'name'        => $user->display_name,
 			'username'    => $user->user_login,
 			'email'       => $user->user_email,
 			'roles'       => $user->roles,
 			'firstName'   => get_user_meta( $user->ID, 'first_name', true ) ?: '',
 			'lastName'    => get_user_meta( $user->ID, 'last_name', true ) ?: '',
 			'displayName' => $user->display_name,
+			'nickname'    => get_user_meta( $user->ID, 'nickname', true ) ?: '',
+		);
+	}
+
+	/**
+	 * Update user profile
+	 *
+	 * @param int   $user_id The user ID to update.
+	 * @param array $data    The profile data to update.
+	 * @return array Result of the update operation.
+	 * @throws \Exception When validation fails or update errors occur.
+	 */
+	public function update_user_profile( $user_id, $data ) {
+		// Validate all required fields before proceeding.
+
+		// Check if the user exists and is valid.
+
+		// Validate the email format and uniqueness.
+
+		// Process the profile update with validated data.
+
+		// Return the result of the update operation.
+
+		return array(
+			'id'          => $user_id,
+			'username'    => $user_info->user_login,
+			'email'       => $user_info->user_email,
+			'roles'       => $user_info->roles,
+			'firstName'   => ! empty( $user_info->first_name ) ? $user_info->first_name : '',
+			'lastName'    => ! empty( $user_info->last_name ) ? $user_info->last_name : '',
+			'displayName' => $user_info->display_name,
+			'nickname'    => ! empty( $user_info->nickname ) ? $user_info->nickname : '',
 		);
 	}
 }

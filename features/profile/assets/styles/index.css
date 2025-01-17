@@ -8,6 +8,5 @@
 /* Components */
 @import './components/ProfileForm.css';
 @import './components/CoreSection.css';
-@import './components/PhysicalMetrics.css';
 
 /* Note: InjuryTracker styles are now maintained locally in the component */ 
