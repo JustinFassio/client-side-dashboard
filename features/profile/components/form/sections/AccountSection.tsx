@@ -1,65 +1,88 @@
 import React from 'react';
-import { __ } from '@wordpress/i18n';
-import { Section } from '../../../components/Section';
-import { FormField } from '../fields/FormField';
+import FormField from '../fields/FormField';
 import { ProfileData } from '../../../types/profile';
 import { FormValidationResult } from '../../../types/validation';
+import { Button } from '../../../../../dashboard/components/Button';
+import * as styles from './AccountSection.module.css';
 
 interface AccountSectionProps {
     data: Partial<ProfileData>;
     onChange: (name: string, value: any) => void;
     validation?: FormValidationResult;
+    onSave: () => Promise<void>;
+    isSaving?: boolean;
+    error?: string;
 }
 
 export const AccountSection: React.FC<AccountSectionProps> = ({
     data,
     onChange,
-    validation
+    validation,
+    onSave,
+    isSaving,
+    error
 }) => {
     return (
-        <Section title={__('Account Information')}>
-            <div className="form-section__grid">
-                <FormField
-                    name="username"
-                    label={__('Username')}
-                    type="text"
-                    value={data?.username || ''}
-                    onChange={onChange}
-                    disabled
-                />
-                <FormField
-                    name="email"
-                    label={__('Email')}
-                    type="email"
-                    value={data?.email || ''}
-                    onChange={onChange}
-                    disabled
-                />
-                <FormField
-                    name="displayName"
-                    label={__('Display Name')}
-                    type="text"
-                    value={data?.displayName || ''}
-                    onChange={onChange}
-                    disabled
-                />
-                <FormField
-                    name="firstName"
-                    label={__('First Name')}
-                    type="text"
-                    value={data?.firstName || ''}
-                    onChange={onChange}
-                    disabled
-                />
-                <FormField
-                    name="lastName"
-                    label={__('Last Name')}
-                    type="text"
-                    value={data?.lastName || ''}
-                    onChange={onChange}
-                    disabled
-                />
+        <div className={styles.section}>
+            <h2>Account Settings</h2>
+            
+            <FormField
+                name="email"
+                label="Email"
+                type="email"
+                value={data.email}
+                onChange={onChange}
+                validation={validation?.fieldErrors?.email && {
+                    isValid: false,
+                    errors: validation.fieldErrors.email
+                }}
+                required
+            />
+            
+            <FormField
+                name="displayName"
+                label="Display Name"
+                type="text"
+                value={data.displayName}
+                onChange={onChange}
+                validation={validation?.fieldErrors?.displayName && {
+                    isValid: false,
+                    errors: validation.fieldErrors.displayName
+                }}
+                required
+            />
+
+            <FormField
+                name="nickname"
+                label="Nickname"
+                type="text"
+                value={data.nickname}
+                onChange={onChange}
+                validation={validation?.fieldErrors?.nickname && {
+                    isValid: false,
+                    errors: validation.fieldErrors.nickname
+                }}
+            />
+
+            {error && (
+                <div className={styles.error} role="alert">
+                    <p>{error}</p>
+                </div>
+            )}
+
+            <div className={styles.actions}>
+                <Button
+                    variant="primary"
+                    feature="profile"
+                    onClick={onSave}
+                    disabled={isSaving}
+                    aria-busy={isSaving}
+                >
+                    {isSaving ? 'Saving...' : 'Save Account Settings'}
+                </Button>
             </div>
-        </Section>
+        </div>
     );
-}; 
+};
+
+export default AccountSection; 

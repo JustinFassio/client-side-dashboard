@@ -1,8 +1,21 @@
 import { useCallback } from '@wordpress/element';
 import { Injury, InjuryTrackerProps, PREDEFINED_INJURIES } from './types';
 import { Tracker } from '../Tracker';
+import { Button } from '../../../../dashboard/components/Button';
+import * as styles from './InjuryTracker.module.css';
 
-export const InjuryTracker = ({ injuries, onChange, className = '' }: InjuryTrackerProps) => {
+export const InjuryTracker = ({
+    injuries,
+    onChange,
+    onSave,
+    isSaving,
+    error,
+    className = ''
+}: InjuryTrackerProps & {
+    onSave: () => Promise<void>;
+    isSaving?: boolean;
+    error?: string;
+}) => {
     const handleAdd = useCallback((item: Partial<Injury>) => {
         const newInjury: Injury = {
             id: `injury_${Date.now()}`,
@@ -30,42 +43,62 @@ export const InjuryTracker = ({ injuries, onChange, className = '' }: InjuryTrac
     }, [injuries, onChange]);
 
     return (
-        <Tracker<Injury>
-            items={injuries}
-            onAdd={handleAdd}
-            onUpdate={handleUpdate}
-            onRemove={handleRemove}
-            title="Injury Tracker"
-            description="Track and manage your injuries to optimize your training."
-            fields={[
-                {
-                    label: 'Details',
-                    key: 'details',
-                    type: 'textarea',
-                    placeholder: 'Add details about this injury...'
-                },
-                {
-                    label: 'Severity',
-                    key: 'severity',
-                    type: 'select',
-                    options: [
-                        { value: 'low', label: 'Low' },
-                        { value: 'medium', label: 'Medium' },
-                        { value: 'high', label: 'High' }
-                    ]
-                },
-                {
-                    label: 'Status',
-                    key: 'status',
-                    type: 'select',
-                    options: [
-                        { value: 'active', label: 'Active' },
-                        { value: 'recovered', label: 'Recovered' }
-                    ]
-                }
-            ]}
-            predefinedItems={PREDEFINED_INJURIES}
-            className={className}
-        />
+        <div className={styles.section}>
+            <Tracker<Injury>
+                items={injuries}
+                onAdd={handleAdd}
+                onUpdate={handleUpdate}
+                onRemove={handleRemove}
+                title="Injury Tracker"
+                description="Track and manage your injuries to optimize your training."
+                fields={[
+                    {
+                        label: 'Details',
+                        key: 'details',
+                        type: 'textarea',
+                        placeholder: 'Add details about this injury...'
+                    },
+                    {
+                        label: 'Severity',
+                        key: 'severity',
+                        type: 'select',
+                        options: [
+                            { value: 'low', label: 'Low' },
+                            { value: 'medium', label: 'Medium' },
+                            { value: 'high', label: 'High' }
+                        ]
+                    },
+                    {
+                        label: 'Status',
+                        key: 'status',
+                        type: 'select',
+                        options: [
+                            { value: 'active', label: 'Active' },
+                            { value: 'recovered', label: 'Recovered' }
+                        ]
+                    }
+                ]}
+                predefinedItems={PREDEFINED_INJURIES}
+                className={className}
+            />
+
+            {error && (
+                <div className={styles.error} role="alert">
+                    <p>{error}</p>
+                </div>
+            )}
+
+            <div className={styles.actions}>
+                <Button
+                    variant="primary"
+                    feature="profile"
+                    onClick={onSave}
+                    disabled={isSaving}
+                    aria-busy={isSaving}
+                >
+                    {isSaving ? 'Saving...' : 'Save Injury Information'}
+                </Button>
+            </div>
+        </div>
     );
 }; 

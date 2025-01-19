@@ -258,30 +258,4 @@
     .tracker__controls {
         grid-template-columns: 1fr;
     }
-}
-
-/* Save button styles */
-.save-button {
-    background: var(--primary-color);
-    color: var(--background-darker);
-    border: none;
-    border-radius: var(--border-radius-sm);
-    padding: var(--spacing-md) var(--spacing-lg);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-bold);
-    cursor: pointer;
-    transition: all var(--transition-fast);
-}
-
-.save-button:hover:not(:disabled) {
-    background: var(--primary-hover);
-    color: var(--background-darker);
-    transform: translateY(-1px);
-}
-
-.save-button:disabled {
-    background: var(--background-dark);
-    color: var(--text-dim);
-    cursor: not-allowed;
-    opacity: 0.7;
 } 

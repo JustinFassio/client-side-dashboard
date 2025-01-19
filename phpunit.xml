@@ -8,13 +8,18 @@
         <testsuite name="Profile Feature Tests">
             <directory>features/profile/tests/Unit</directory>
         </testsuite>
+        <testsuite name="Workout Generator Tests">
+            <directory>features/workout-generator/tests</directory>
+        </testsuite>
     </testsuites>
     <coverage>
         <include>
             <directory suffix=".php">features/profile</directory>
+            <directory suffix=".php">features/workout-generator</directory>
         </include>
         <exclude>
             <directory>features/profile/tests</directory>
+            <directory>features/workout-generator/tests</directory>
         </exclude>
     </coverage>
 </phpunit> 

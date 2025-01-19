@@ -107,8 +107,7 @@ class Physical_Service_Test extends WP_UnitTestCase {
 				'measurements' => 'cm',
 			),
 			'preferences' => array(
-				'showMetric'   => true,
-				'trackHistory' => true,
+				'showMetric' => true
 			),
 		);
 
@@ -124,36 +123,7 @@ class Physical_Service_Test extends WP_UnitTestCase {
 		$this->assertEquals( $test_data['preferences'], $result['preferences'] );
 	}
 
-	public function test_get_physical_history_respects_tracking_preference(): void {
-		// Disable history tracking
-		update_user_meta(
-			$this->test_user_id,
-			'physical_preferences',
-			array(
-				'showMetric'   => true,
-				'trackHistory' => false,
-			)
-		);
-
-		$result = $this->service->get_physical_history( $this->test_user_id );
-
-		$this->assertIsArray( $result );
-		$this->assertEmpty( $result['items'] );
-		$this->assertEquals( 0, $result['total'] );
-		$this->assertTrue( $result['tracking_disabled'] );
-	}
-
 	public function test_get_physical_history_returns_paginated_results(): void {
-		// Enable history tracking
-		update_user_meta(
-			$this->test_user_id,
-			'physical_preferences',
-			array(
-				'showMetric'   => true,
-				'trackHistory' => true,
-			)
-		);
-
 		// Insert multiple records
 		$test_data = array(
 			'height' => 180,
@@ -162,6 +132,9 @@ class Physical_Service_Test extends WP_UnitTestCase {
 				'height'       => 'cm',
 				'weight'       => 'kg',
 				'measurements' => 'cm',
+			),
+			'preferences' => array(
+				'showMetric' => true
 			),
 		);
 

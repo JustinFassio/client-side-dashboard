@@ -71,32 +71,6 @@
     align-items: center;
 }
 
-.injury-tracker__button {
-    background: var(--primary-color);
-    color: var(--background-darker);
-    border: none;
-    border-radius: var(--border-radius-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
-    font-size: var(--font-size-base);
-    font-weight: var(--font-weight-medium);
-    cursor: pointer;
-    transition: background-color var(--transition-fast);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-xs);
-    white-space: nowrap;
-}
-
-.injury-tracker__button:hover {
-    background: var(--primary-hover);
-}
-
-.injury-tracker__button:disabled {
-    background: var(--background-dark);
-    color: var(--text-dim);
-    cursor: not-allowed;
-}
-
 .injury-tracker__list {
     display: flex;
     flex-direction: column;
@@ -128,26 +102,6 @@
     margin: 0;
 }
 
-.injury-tracker__remove-button {
-    background: none;
-    border: none;
-    color: var(--text-dim);
-    cursor: pointer;
-    padding: var(--spacing-xs);
-    transition: color var(--transition-fast);
-}
-
-.injury-tracker__remove-button:hover {
-    color: var(--error-color);
-}
-
-.injury-tracker__controls {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-md);
-}
-
 .injury-tracker__textarea {
     min-height: 100px;
     resize: vertical;
@@ -163,11 +117,6 @@
     .injury-tracker__input-group {
         flex-direction: column;
         width: 100%;
-    }
-
-    .injury-tracker__button {
-        width: 100%;
-        justify-content: center;
     }
 
     .injury-tracker__controls {

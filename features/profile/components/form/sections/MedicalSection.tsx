@@ -2,20 +2,28 @@ import React from 'react';
 import FormField from '../fields/FormField';
 import { ProfileData } from '../../../types/profile';
 import { FormValidationResult } from '../../../types/validation';
+import { Button } from '../../../../../dashboard/components/Button';
+import * as styles from './MedicalSection.module.css';
 
 interface MedicalSectionProps {
     data: Partial<ProfileData>;
     onChange: (name: string, value: any) => void;
     validation?: FormValidationResult;
+    onSave: () => Promise<void>;
+    isSaving?: boolean;
+    error?: string;
 }
 
 export const MedicalSection: React.FC<MedicalSectionProps> = ({
     data,
     onChange,
-    validation
+    validation,
+    onSave,
+    isSaving,
+    error
 }) => {
     return (
-        <div className="form-section">
+        <div className={styles.section}>
             <h2>Medical Information</h2>
             
             <FormField
@@ -60,7 +68,7 @@ export const MedicalSection: React.FC<MedicalSectionProps> = ({
                 ]}
                 isArray={true}
             />
-            
+
             <FormField
                 name="medications"
                 label="Current Medications"
@@ -73,17 +81,23 @@ export const MedicalSection: React.FC<MedicalSectionProps> = ({
                 }}
             />
 
-            {/* Note: InjuryTracker component will be integrated here later */}
-            
-            {validation?.generalErrors && validation.generalErrors.length > 0 && (
-                <div className="section-errors">
-                    {validation.generalErrors.map((error, index) => (
-                        <div key={index} className="error-message">
-                            {error}
-                        </div>
-                    ))}
+            {error && (
+                <div className={styles.error} role="alert">
+                    <p>{error}</p>
                 </div>
             )}
+
+            <div className={styles.actions}>
+                <Button
+                    variant="primary"
+                    feature="profile"
+                    onClick={onSave}
+                    disabled={isSaving}
+                    aria-busy={isSaving}
+                >
+                    {isSaving ? 'Saving...' : 'Save Medical Information'}
+                </Button>
+            </div>
         </div>
     );
 };

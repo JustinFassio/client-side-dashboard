@@ -17,7 +17,7 @@ class Physical_Measurements_Service {
 		global $wpdb;
 		$global_wpdb      = $wpdb;
 		$this->wpdb       = $wpdb ?? $global_wpdb;
-		$this->table_name = $this->wpdb->prefix . 'physical_measurements';
+		$this->table_name = $this->wpdb->prefix . 'athlete_physical_measurements';
 	}
 
 	/**
@@ -51,10 +51,23 @@ class Physical_Measurements_Service {
 
 		$results = $this->wpdb->get_results( $query );
 		if ( ! $results ) {
-			return array();
+			return array(
+				'items' => array(),
+				'total' => 0,
+			);
 		}
 
-		return array_map( array( $this, 'format_measurement' ), $results );
+		// Get total count
+		$total_query = $this->wpdb->prepare(
+			"SELECT COUNT(*) FROM {$this->table_name} WHERE user_id = %d",
+			$user_id
+		);
+		$total = (int) $this->wpdb->get_var( $total_query );
+
+		return array(
+			'items' => array_map( array( $this, 'format_measurement' ), $results ),
+			'total' => $total,
+		);
 	}
 
 	/**
@@ -73,8 +86,8 @@ class Physical_Measurements_Service {
 		$measurement_data = array_merge(
 			$data,
 			array(
-				'user_id'    => $user_id,
-				'created_at' => $this->current_time( 'mysql' ),
+				'user_id' => $user_id,
+				'date'    => $this->current_time( 'mysql' ),
 			)
 		);
 
@@ -158,12 +171,12 @@ class Physical_Measurements_Service {
 	 */
 	public function format_measurement( $measurement ) {
 		return array(
-			'id'          => (int) $measurement->id,
-			'user_id'     => (int) $measurement->user_id,
-			'weight'      => isset( $measurement->weight ) ? (float) $measurement->weight : null,
-			'height'      => isset( $measurement->height ) ? (float) $measurement->height : null,
-			'unit_system' => $measurement->unit_system,
-			'created_at'  => substr( $measurement->created_at, 0, 10 ),
+			'id'      => (int) $measurement->id,
+			'user_id' => (int) $measurement->user_id,
+			'weight'  => isset( $measurement->weight ) ? (float) $measurement->weight : null,
+			'height'  => isset( $measurement->height ) ? (float) $measurement->height : null,
+			'units'   => $measurement->units,
+			'date'    => substr( $measurement->date, 0, 10 ),
 		);
 	}
 
@@ -175,7 +188,7 @@ class Physical_Measurements_Service {
 			return new WP_Error( 'validation_error', $this->__( 'No measurement data provided' ) );
 		}
 
-		if ( isset( $data['unit_system'] ) && ! in_array( $data['unit_system'], array( 'metric', 'imperial' ) ) ) {
+		if ( isset( $data['units'] ) && ! in_array( $data['units'], array( 'metric', 'imperial' ) ) ) {
 			return new WP_Error( 'validation_error', $this->__( 'Invalid unit system' ) );
 		}
 
@@ -194,11 +207,11 @@ class Physical_Measurements_Service {
 	 */
 	protected function get_column_formats() {
 		return array(
-			'user_id'     => '%d',
-			'weight'      => '%f',
-			'height'      => '%f',
-			'unit_system' => '%s',
-			'created_at'  => '%s',
+			'user_id' => '%d',
+			'weight'  => '%f',
+			'height'  => '%f',
+			'units'   => '%s',
+			'date'    => '%s',
 		);
 	}
 

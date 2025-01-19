@@ -56,20 +56,26 @@ class Physical_Service {
 		// Get data from user meta
 		$height      = get_user_meta( $user_id, 'physical_height', true );
 		$weight      = get_user_meta( $user_id, 'physical_weight', true );
+		$chest       = get_user_meta( $user_id, 'physical_chest', true );
+		$waist       = get_user_meta( $user_id, 'physical_waist', true );
+		$hips        = get_user_meta( $user_id, 'physical_hips', true );
 		$units       = get_user_meta( $user_id, 'physical_units', true );
 		$preferences = get_user_meta( $user_id, 'physical_preferences', true );
 
 		// Set default values if not found
 		$data = array(
-			'height'      => $height ? floatval( $height ) : 175,
-			'weight'      => $weight ? floatval( $weight ) : 70,
+			'height'      => $height ? floatval( $height ) : 0,
+			'weight'      => $weight ? floatval( $weight ) : 0,
+			'chest'       => $chest ? floatval( $chest ) : null,
+			'waist'       => $waist ? floatval( $waist ) : null,
+			'hips'        => $hips ? floatval( $hips ) : null,
 			'units'       => $units ?: array(
 				'height' => 'cm',
 				'weight' => 'kg',
+				'measurements' => 'cm',
 			),
 			'preferences' => $preferences ?: array(
-				'showMetric'   => true,
-				'trackHistory' => true,
+				'showMetric' => true,
 			),
 		);
 
@@ -91,15 +97,36 @@ class Physical_Service {
 		error_log( 'Physical_Service: Updating physical data for user ' . $user_id );
 		error_log( 'Data: ' . wp_json_encode( $data ) );
 
-		// Validate BMI
-		$height_m  = $data['height'] / 100; // Convert to meters
-		$weight_kg = $data['weight'];
-
-		if ( $data['units']['weight'] === 'lbs' ) {
-			$weight_kg = $data['weight'] * 0.453592; // Convert lbs to kg
+		// Validate required fields
+		if ( ! isset( $data['height'] ) || ! isset( $data['weight'] ) || ! isset( $data['units'] ) ) {
+			return new WP_Error(
+				'missing_data',
+				__( 'Height, weight, and units are required.', 'athlete-dashboard' ),
+				array( 'status' => 400 )
+			);
 		}
 
+		// Convert height to meters for BMI calculation
+		$height_m = $data['height'];
+		error_log('Physical_Service: Original height: ' . $height_m . ' ' . $data['units']['height']);
+		if ( $data['units']['height'] === 'ft' ) {
+			$height_m = $data['height'] * 30.48; // Convert feet to cm
+			error_log('Physical_Service: Converted height from ft to cm: ' . $height_m);
+		}
+		$height_m = $height_m / 100; // Convert cm to meters
+		error_log('Physical_Service: Final height in meters: ' . $height_m);
+
+		// Convert weight to kg for BMI calculation
+		$weight_kg = $data['weight'];
+		error_log('Physical_Service: Original weight: ' . $weight_kg . ' ' . $data['units']['weight']);
+		if ( $data['units']['weight'] === 'lbs' ) {
+			$weight_kg = $data['weight'] * 0.453592; // Convert lbs to kg
+			error_log('Physical_Service: Converted weight from lbs to kg: ' . $weight_kg);
+		}
+		error_log('Physical_Service: Final weight in kg: ' . $weight_kg);
+
 		$bmi = $weight_kg / ( $height_m * $height_m );
+		error_log('Physical_Service: Calculated BMI: ' . $bmi);
 
 		if ( $bmi < self::MIN_BMI || $bmi > self::MAX_BMI ) {
 			return new WP_Error(
@@ -124,6 +151,17 @@ class Physical_Service {
 		update_user_meta( $user_id, 'physical_weight', $data['weight'] );
 		update_user_meta( $user_id, 'physical_units', $data['units'] );
 
+		// Update optional measurements
+		if ( isset( $data['chest'] ) ) {
+			update_user_meta( $user_id, 'physical_chest', $data['chest'] );
+		}
+		if ( isset( $data['waist'] ) ) {
+			update_user_meta( $user_id, 'physical_waist', $data['waist'] );
+		}
+		if ( isset( $data['hips'] ) ) {
+			update_user_meta( $user_id, 'physical_hips', $data['hips'] );
+		}
+
 		if ( isset( $data['preferences'] ) ) {
 			update_user_meta( $user_id, 'physical_preferences', $data['preferences'] );
 		}
@@ -133,11 +171,8 @@ class Physical_Service {
 		wp_cache_delete( $cache_key, self::CACHE_GROUP );
 		error_log( 'Physical_Service: Cache cleared for user ' . $user_id );
 
-		// If history tracking is enabled, save to history
-		$preferences = $data['preferences'] ?? get_user_meta( $user_id, 'physical_preferences', true );
-		if ( $preferences && ! empty( $preferences['trackHistory'] ) ) {
-			$this->save_to_history( $user_id, $data );
-		}
+		// Always save to history
+		$this->save_to_history( $user_id, $data );
 
 		return $this->get_physical_data( $user_id );
 	}
@@ -155,6 +190,16 @@ class Physical_Service {
 
 		global $wpdb;
 		$table_name = $wpdb->prefix . 'athlete_physical_measurements';
+
+		// Check if table exists
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_name'" ) !== $table_name ) {
+			error_log( 'Physical_Service: History table not found' );
+			return new WP_Error(
+				'no_table',
+				__( 'History table not found. Please contact support.', 'athlete-dashboard' ),
+				array( 'status' => 500 )
+			);
+		}
 
 		// Get total count
 		$total_query = "SELECT COUNT(*) FROM {$table_name} WHERE user_id = %d";

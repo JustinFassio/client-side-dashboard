@@ -94,44 +94,6 @@
                 }
             }
         }
-
-        .button-group {
-            display: flex;
-            gap: 0.5rem;
-
-            button {
-                flex: 1;
-                padding: 0.5rem;
-                border-radius: var(--border-radius-sm);
-                font-size: 0.875rem;
-                cursor: pointer;
-
-                &:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-            }
-
-            .save-button {
-                background: var(--color-primary);
-                color: white;
-                border: none;
-
-                &:hover:not(:disabled) {
-                    background: var(--color-primary-dark);
-                }
-            }
-
-            .cancel-button {
-                background: transparent;
-                border: 1px solid var(--color-border);
-                color: var(--color-text-secondary);
-
-                &:hover:not(:disabled) {
-                    background: var(--color-background-secondary);
-                }
-            }
-        }
     }
 
     .metric-display {

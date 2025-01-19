@@ -1,6 +1,7 @@
 import { createElement, useState } from '@wordpress/element';
 import { PlusCircle, XCircle } from 'lucide-react';
 import type { TrackerProps } from '../InjuryTracker/types';
+import { Button } from '../../../../dashboard/components/Button';
 import './styles.css';
 
 export function Tracker<T extends { id: string }>({
@@ -116,14 +117,15 @@ export function Tracker<T extends { id: string }>({
                         placeholder="Enter custom item..."
                         className="tracker__input"
                     />
-                    <button
+                    <Button
+                        variant="secondary"
+                        feature="profile"
                         onClick={() => newItemValue && handleAdd(newItemValue, true)}
                         disabled={!newItemValue}
-                        className="tracker__button"
                     >
                         <PlusCircle size={16} />
                         Add
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -133,13 +135,14 @@ export function Tracker<T extends { id: string }>({
                         <div key={item.id} className="tracker__item">
                             <div className="tracker__item-header">
                                 <h5 className="tracker__item-title">{item['name'] as string}</h5>
-                                <button
+                                <Button
+                                    variant="secondary"
+                                    feature="profile"
                                     onClick={() => onRemove(item.id)}
-                                    className="tracker__remove-button"
                                     aria-label="Remove item"
                                 >
                                     <XCircle size={16} />
-                                </button>
+                                </Button>
                             </div>
                             {fields.map(field => (
                                 <div key={String(field.key)} className="tracker__form-group">

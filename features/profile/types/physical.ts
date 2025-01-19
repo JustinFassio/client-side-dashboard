@@ -3,14 +3,19 @@
  */
 export interface PhysicalData {
     height: number;
+    heightFeet?: number;
+    heightInches?: number;
     weight: number;
     chest?: number;
     waist?: number;
     hips?: number;
-    units: 'metric' | 'imperial';
+    units: {
+        height: 'cm' | 'ft';
+        weight: 'kg' | 'lbs';
+        measurements: 'cm' | 'in';
+    };
     preferences: {
-        trackHistory: boolean;
-        showMetricAndImperial: boolean;
+        showMetric: boolean;
     };
 }
 
@@ -27,4 +32,4 @@ export interface PhysicalHistoryResponse {
     total: number;
     limit: number;
     offset: number;
-} 
+}

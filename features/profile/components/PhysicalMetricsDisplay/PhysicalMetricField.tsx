@@ -1,5 +1,6 @@
 import React from 'react';
 import { PhysicalMetric } from '../../types/profile';
+import { Button } from '../../../../dashboard/components/Button';
 
 export interface PhysicalMetricFieldProps {
     _metricId: string;
@@ -75,13 +76,15 @@ export const PhysicalMetricField: React.FC<PhysicalMetricFieldProps> = ({
 
                 {error && <div className="metric-error">{error.message}</div>}
 
-                <button
+                <Button
                     type="submit"
-                    className="metric-update-button"
+                    variant="primary"
+                    feature="physical"
                     disabled={!value || isLoading || isUpdating}
+                    aria-busy={isUpdating}
                 >
                     {isUpdating ? 'Updating...' : 'Update'}
-                </button>
+                </Button>
             </form>
         </div>
     );

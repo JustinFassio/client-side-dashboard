@@ -101,6 +101,40 @@ Features remain independent and self-contained, interacting with the dashboard o
    - Use provided integration points
    - Document WordPress dependencies
 
+## Shared Components
+
+### Button Component
+
+The Button component provides consistent styling and behavior across features. It supports feature-specific styling while maintaining a cohesive look.
+
+```typescript
+import { Button } from '@dashboard/components/Button';
+
+// Basic usage
+<Button
+    variant="primary"
+    feature="profile"
+    onClick={handleClick}
+    disabled={isLoading}
+    aria-busy={isLoading}
+>
+    Save Changes
+</Button>
+```
+
+#### Props
+- `variant`: Visual style ('primary' | 'secondary')
+- `feature`: Feature-specific styling ('profile' | 'physical')
+- Standard button props (onClick, disabled, etc.)
+
+#### Best Practices
+1. Always specify both `variant` and `feature` props
+2. Use `aria-busy` for loading states
+3. Include descriptive button text
+4. Follow feature-specific styling:
+   - Use `feature="profile"` for profile-related sections
+   - Use `feature="physical"` for physical data sections
+
 ## Example: Feature Registration
 
 ```typescript

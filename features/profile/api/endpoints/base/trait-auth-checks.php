@@ -83,14 +83,33 @@ trait Auth_Checks {
 	 * @param string $action The nonce action.
 	 * @return bool|WP_Error True if nonce is valid, WP_Error if not.
 	 */
-	protected function verify_nonce( string $nonce, string $action ): bool|WP_Error {
-		if ( ! wp_verify_nonce( $nonce, $action ) ) {
+	protected function verify_nonce( string $nonce, string $action = 'wp_rest' ): bool|WP_Error {
+		error_log('Auth_Checks: Starting nonce verification');
+		error_log('Auth_Checks: Nonce provided: ' . ($nonce ? 'Yes' : 'No'));
+		error_log('Auth_Checks: Action: ' . $action);
+		
+		if ( ! $nonce ) {
+			error_log('Auth_Checks: No nonce provided');
 			return new WP_Error(
-				'rest_invalid_nonce',
-				__( 'Invalid security token.', 'athlete-dashboard' ),
-				array( 'status' => 403 )
+				'rest_missing_nonce',
+				__( 'Missing nonce.', 'athlete-dashboard' ),
+				array( 'status' => 401 )
 			);
 		}
+
+		$result = wp_verify_nonce( $nonce, $action );
+		error_log('Auth_Checks: Nonce verification result: ' . $result);
+		
+		if ( ! $result ) {
+			error_log('Auth_Checks: Invalid nonce');
+			return new WP_Error(
+				'rest_invalid_nonce',
+				__( 'Invalid nonce.', 'athlete-dashboard' ),
+				array( 'status' => 401 )
+			);
+		}
+
+		error_log('Auth_Checks: Nonce verification successful');
 		return true;
 	}
 

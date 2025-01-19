@@ -1,8 +1,9 @@
 import React from 'react';
+import { Button } from '../../../../dashboard/components/Button';
 
 interface SaveAlertProps {
-    success: boolean;
-    error: string | null;
+    success?: boolean;
+    error?: string;
     onDismiss: () => void;
 }
 
@@ -25,9 +26,15 @@ export function SaveAlert({ success, error, onDismiss }: SaveAlertProps) {
                     </div>
                 )}
             </div>
-            <button className="dismiss-button" onClick={onDismiss}>
+            <Button
+                variant="secondary"
+                feature="profile"
+                onClick={onDismiss}
+                aria-label="Dismiss alert"
+                className="dismiss-button"
+            >
                 ✕
-            </button>
+            </Button>
 
             <style>{`
                 .save-alert {

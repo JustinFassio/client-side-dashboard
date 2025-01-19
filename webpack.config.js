@@ -18,6 +18,7 @@ module.exports = {
     ...defaultConfig.resolve,
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.css'],
     alias: {
+      '@dashboard': path.resolve(__dirname, 'dashboard'),
       '@dashboard-styles': path.resolve(__dirname, 'dashboard/styles'),
       '@styles': path.resolve(__dirname, 'dashboard/styles')
     }

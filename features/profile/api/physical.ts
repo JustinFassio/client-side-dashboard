@@ -1,38 +1,45 @@
-import { PhysicalData, PhysicalHistory } from '../types/physical';
+import { PhysicalData, PhysicalHistory, PhysicalHistoryResponse } from '../types/physical';
 
 const BASE_URL = '/wp-json/athlete-dashboard/v1/profile/physical';
 
-interface PhysicalHistoryResponse {
-    items: PhysicalHistory[];
-    total: number;
-    limit: number;
-    offset: number;
-}
-
 // Get the WordPress nonce from the page
 const getNonce = (): string => {
+    console.log('=== Nonce Debug ===');
+    console.log('Window athleteDashboardData:', (window as any).athleteDashboardData);
     const dashboardData = (window as any).athleteDashboardData;
     if (!dashboardData?.nonce) {
         console.error('WordPress nonce not found in athleteDashboardData');
         return '';
     }
+    console.log('Found nonce:', dashboardData.nonce);
     return dashboardData.nonce;
 };
 
 // Common fetch options for authenticated requests
-const getAuthOptions = (method: string = 'GET', body?: any): RequestInit => ({
-    method,
-    credentials: 'same-origin',
-    headers: {
-        'X-WP-Nonce': getNonce(),
-        'Content-Type': 'application/json',
-    },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-});
+const getAuthOptions = (method: string = 'GET', body?: any): RequestInit => {
+    const options: RequestInit = {
+        method,
+        credentials: 'same-origin' as RequestCredentials,
+        headers: {
+            'X-WP-Nonce': getNonce(),
+            'Content-Type': 'application/json',
+        },
+        ...(body ? { body: JSON.stringify(body) } : {}),
+    };
+    console.log('Request options:', options);
+    return options;
+};
 
-export const physicalApi = {
+export type PhysicalApi = {
+    getPhysicalData(userId: number): Promise<PhysicalData>;
+    updatePhysicalData(userId: number, data: PhysicalData): Promise<PhysicalData>;
+    getPhysicalHistory(userId: number, offset?: number, limit?: number): Promise<PhysicalHistoryResponse>;
+};
+
+export const physicalApi: PhysicalApi = {
     async getPhysicalData(userId: number): Promise<PhysicalData> {
-        console.log(`Fetching physical data for user ${userId}`);
+        console.log('=== Get Physical Data Debug ===');
+        console.log(`1. Fetching physical data for user ${userId}`);
         const response = await fetch(
             `${BASE_URL}/${userId}`,
             getAuthOptions()
@@ -40,32 +47,91 @@ export const physicalApi = {
         
         if (!response.ok) {
             if (response.status === 404) {
-                console.log('No physical data found for new user, returning defaults');
-                return {
+                console.log('2. No physical data found, returning defaults');
+                const defaults: PhysicalData = {
                     height: 0,
                     weight: 0,
-                    units: 'metric',
+                    units: {
+                        height: 'cm' as const,
+                        weight: 'kg' as const,
+                        measurements: 'cm' as const
+                    },
                     preferences: {
-                        trackHistory: false,
-                        showMetricAndImperial: false
+                        showMetric: true
                     }
                 };
+                console.log('3. Default values:', defaults);
+                return defaults;
             }
             throw new Error('Failed to load physical data');
         }
 
-        return response.json();
+        const data = await response.json();
+        console.log('2. Raw API response:', data);
+        
+        // Create base response with required fields
+        const physicalData: PhysicalData = {
+            height: data.height || 0,
+            weight: data.weight || 0,
+            units: {
+                height: data.units?.height || 'cm',
+                weight: data.units?.weight || 'kg',
+                measurements: data.units?.measurements || 'cm'
+            },
+            preferences: {
+                showMetric: data.preferences?.showMetric ?? true
+            }
+        };
+
+        // Add optional measurements only if they exist and are not null
+        if (typeof data.chest === 'number') physicalData.chest = data.chest;
+        if (typeof data.waist === 'number') physicalData.waist = data.waist;
+        if (typeof data.hips === 'number') physicalData.hips = data.hips;
+
+        console.log('3. Processed physical data:', physicalData);
+        return physicalData;
     },
 
     async updatePhysicalData(userId: number, data: PhysicalData): Promise<PhysicalData> {
-        console.log(`Updating physical data for user ${userId}`, data);
+        console.log('=== Physical Data Update Debug ===');
+        console.log('1. Raw input data:', data);
+        
+        // Validate required data
+        if (!data || !data.units || !data.preferences) {
+            console.error('Missing required data structures:', { data });
+            throw new Error('Invalid physical data structure');
+        }
+
+        // Create a clean payload that matches PhysicalData interface
+        const payload: PhysicalData = {
+            height: data.height,
+            weight: data.weight,
+            units: {
+                height: data.units.height,
+                weight: data.units.weight,
+                measurements: data.units.measurements || 'cm'
+            },
+            preferences: {
+                showMetric: data.preferences.showMetric
+            }
+        };
+
+        // Add optional measurements only if they are numbers
+        if (typeof data.chest === 'number') payload.chest = data.chest;
+        if (typeof data.waist === 'number') payload.waist = data.waist;
+        if (typeof data.hips === 'number') payload.hips = data.hips;
+
+        console.log('2. Final payload:', payload);
+
         const response = await fetch(
             `${BASE_URL}/${userId}`,
-            getAuthOptions('POST', data)
+            getAuthOptions('POST', payload)
         );
 
         if (!response.ok) {
-            throw new Error('Failed to update physical data');
+            const error = await response.json();
+            console.error('Update failed:', error);
+            throw new Error(error.message || 'Failed to update physical data');
         }
 
         return response.json();

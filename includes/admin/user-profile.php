@@ -25,6 +25,13 @@ function add_athlete_profile_fields( $user ) {
 		'date_of_birth'           => '',
 		'height'                  => '',
 		'weight'                  => '',
+		'chest'                   => '',
+		'waist'                   => '',
+		'hips'                    => '',
+		'units'                   => array(
+			'height'              => 'cm',
+			'weight'              => 'kg'
+		),
 		'gender'                  => '',
 		'dominant_side'           => '',
 		'medical_clearance'       => false,
@@ -78,6 +85,94 @@ function add_athlete_profile_fields( $user ) {
 								id="date_of_birth" 
 								value="<?php echo esc_attr( $profile_data['date_of_birth'] ); ?>" 
 								class="regular-text" />
+					</td>
+				</tr>
+			</table>
+		</div>
+
+		<!-- Physical Information -->
+		<div class="athlete-profile-section">
+			<h3><?php _e( 'Physical Information', 'athlete-dashboard' ); ?></h3>
+			<table class="form-table">
+				<tr>
+					<th><label for="height"><?php _e( 'Height', 'athlete-dashboard' ); ?></label></th>
+					<td>
+						<input type="number" 
+								name="athlete_profile[height]" 
+								id="height" 
+								value="<?php echo esc_attr( $profile_data['height'] ); ?>" 
+								class="regular-text"
+								step="0.1"
+								min="0"
+								max="300" />
+						<span class="description"><?php echo esc_html( $profile_data['units']['height'] ?? 'cm' ); ?></span>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="weight"><?php _e( 'Weight', 'athlete-dashboard' ); ?></label></th>
+					<td>
+						<input type="number" 
+								name="athlete_profile[weight]" 
+								id="weight" 
+								value="<?php echo esc_attr( $profile_data['weight'] ); ?>" 
+								class="regular-text"
+								step="0.1"
+								min="0"
+								max="500" />
+						<span class="description"><?php echo esc_html( $profile_data['units']['weight'] ?? 'kg' ); ?></span>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="chest"><?php _e( 'Chest', 'athlete-dashboard' ); ?></label></th>
+					<td>
+						<input type="number" 
+								name="athlete_profile[chest]" 
+								id="chest" 
+								value="<?php echo esc_attr( $profile_data['chest'] ?? '' ); ?>" 
+								class="regular-text"
+								step="0.1"
+								min="0" />
+						<span class="description">in</span>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="waist"><?php _e( 'Waist', 'athlete-dashboard' ); ?></label></th>
+					<td>
+						<input type="number" 
+								name="athlete_profile[waist]" 
+								id="waist" 
+								value="<?php echo esc_attr( $profile_data['waist'] ?? '' ); ?>" 
+								class="regular-text"
+								step="0.1"
+								min="0" />
+						<span class="description">in</span>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="hips"><?php _e( 'Hips', 'athlete-dashboard' ); ?></label></th>
+					<td>
+						<input type="number" 
+								name="athlete_profile[hips]" 
+								id="hips" 
+								value="<?php echo esc_attr( $profile_data['hips'] ?? '' ); ?>" 
+								class="regular-text"
+								step="0.1"
+								min="0" />
+						<span class="description">in</span>
+					</td>
+				</tr>
+				<tr>
+					<th><label for="units"><?php _e( 'Measurement Units', 'athlete-dashboard' ); ?></label></th>
+					<td>
+						<select name="athlete_profile[units][height]" id="height_unit">
+							<option value="cm" <?php selected( $profile_data['units']['height'] ?? 'cm', 'cm' ); ?>><?php _e( 'Centimeters (cm)', 'athlete-dashboard' ); ?></option>
+							<option value="ft" <?php selected( $profile_data['units']['height'] ?? 'cm', 'ft' ); ?>><?php _e( 'Feet (ft)', 'athlete-dashboard' ); ?></option>
+						</select>
+						<br />
+						<select name="athlete_profile[units][weight]" id="weight_unit" style="margin-top: 5px;">
+							<option value="kg" <?php selected( $profile_data['units']['weight'] ?? 'kg', 'kg' ); ?>><?php _e( 'Kilograms (kg)', 'athlete-dashboard' ); ?></option>
+							<option value="lbs" <?php selected( $profile_data['units']['weight'] ?? 'kg', 'lbs' ); ?>><?php _e( 'Pounds (lbs)', 'athlete-dashboard' ); ?></option>
+						</select>
 					</td>
 				</tr>
 			</table>
@@ -275,13 +370,13 @@ function add_athlete_profile_fields( $user ) {
  * @return bool|void False on failure. Void on success.
  */
 function save_athlete_profile_fields( $user_id ) {
-	// Verify user capabilities
-	if ( ! current_user_can( 'edit_user', $user_id ) ) {
+	// Verify nonce
+	if ( ! isset( $_POST['athlete_profile_nonce'] ) || ! wp_verify_nonce( $_POST['athlete_profile_nonce'], 'athlete_profile_update' ) ) {
 		return false;
 	}
 
-	// Verify nonce
-	if ( ! isset( $_POST['athlete_profile_nonce'] ) || ! wp_verify_nonce( $_POST['athlete_profile_nonce'], 'athlete_profile_update' ) ) {
+	// Verify user capabilities
+	if ( ! current_user_can( 'edit_user', $user_id ) ) {
 		return false;
 	}
 
@@ -297,25 +392,31 @@ function save_athlete_profile_fields( $user_id ) {
 		return false;
 	}
 
-	$height = isset( $profile_data['height'] ) ? absint( $profile_data['height'] ) : '';
-	if ( $height && $height > 300 ) { // Max height validation (300cm = ~9.8ft)
+	// Validate height based on units
+	$height = isset( $profile_data['height'] ) ? floatval( $profile_data['height'] ) : '';
+	$height_unit = isset( $profile_data['units']['height'] ) ? sanitize_text_field( $profile_data['units']['height'] ) : 'cm';
+	$max_height = $height_unit === 'cm' ? 300 : 10; // 300cm or 10ft
+	if ( $height && $height > $max_height ) {
 		return false;
 	}
 
+	// Validate weight based on units
 	$weight = isset( $profile_data['weight'] ) ? floatval( $profile_data['weight'] ) : '';
-	if ( $weight && ( $weight < 20 || $weight > 500 ) ) { // Reasonable weight range in kg
+	$weight_unit = isset( $profile_data['units']['weight'] ) ? sanitize_text_field( $profile_data['units']['weight'] ) : 'kg';
+	$max_weight = $weight_unit === 'kg' ? 300 : 660; // 300kg or 660lbs
+	if ( $weight && ( $weight < 20 || $weight > $max_weight ) ) {
 		return false;
 	}
 
 	// Validate gender values
 	$valid_genders = array( '', 'male', 'female', 'other' );
-	$gender        = isset( $profile_data['gender'] ) ? sanitize_text_field( $profile_data['gender'] ) : '';
+	$gender = isset( $profile_data['gender'] ) ? sanitize_text_field( $profile_data['gender'] ) : '';
 	if ( ! in_array( $gender, $valid_genders, true ) ) {
 		return false;
 	}
 
 	// Validate dominant side values
-	$valid_sides   = array( '', 'left', 'right' );
+	$valid_sides = array( '', 'left', 'right' );
 	$dominant_side = isset( $profile_data['dominant_side'] ) ? sanitize_text_field( $profile_data['dominant_side'] ) : '';
 	if ( ! in_array( $dominant_side, $valid_sides, true ) ) {
 		return false;
@@ -323,18 +424,25 @@ function save_athlete_profile_fields( $user_id ) {
 
 	// Sanitize the data
 	$sanitized_data = array(
-		'phone'                   => isset( $profile_data['phone'] ) ? sanitize_text_field( $profile_data['phone'] ) : '',
-		'age'                     => $age,
-		'date_of_birth'           => isset( $profile_data['date_of_birth'] ) ? sanitize_text_field( $profile_data['date_of_birth'] ) : '',
-		'height'                  => $height,
-		'weight'                  => $weight,
-		'gender'                  => $gender,
-		'dominant_side'           => $dominant_side,
-		'medical_clearance'       => isset( $profile_data['medical_clearance'] ),
-		'medical_notes'           => isset( $profile_data['medical_notes'] ) ? sanitize_textarea_field( $profile_data['medical_notes'] ) : '',
-		'emergency_contact_name'  => isset( $profile_data['emergency_contact_name'] ) ? sanitize_text_field( $profile_data['emergency_contact_name'] ) : '',
+		'phone' => isset( $profile_data['phone'] ) ? sanitize_text_field( $profile_data['phone'] ) : '',
+		'age' => $age,
+		'date_of_birth' => isset( $profile_data['date_of_birth'] ) ? sanitize_text_field( $profile_data['date_of_birth'] ) : '',
+		'height' => $height,
+		'weight' => $weight,
+		'chest' => isset( $profile_data['chest'] ) ? floatval( $profile_data['chest'] ) : '',
+		'waist' => isset( $profile_data['waist'] ) ? floatval( $profile_data['waist'] ) : '',
+		'hips' => isset( $profile_data['hips'] ) ? floatval( $profile_data['hips'] ) : '',
+		'units' => array(
+			'height' => $height_unit,
+			'weight' => $weight_unit,
+		),
+		'gender' => $gender,
+		'dominant_side' => $dominant_side,
+		'medical_clearance' => isset( $profile_data['medical_clearance'] ),
+		'medical_notes' => isset( $profile_data['medical_notes'] ) ? sanitize_textarea_field( $profile_data['medical_notes'] ) : '',
+		'emergency_contact_name' => isset( $profile_data['emergency_contact_name'] ) ? sanitize_text_field( $profile_data['emergency_contact_name'] ) : '',
 		'emergency_contact_phone' => isset( $profile_data['emergency_contact_phone'] ) ? sanitize_text_field( $profile_data['emergency_contact_phone'] ) : '',
-		'injuries'                => array(),
+		'injuries' => array(),
 	);
 
 	// Sanitize injuries
@@ -344,8 +452,8 @@ function save_athlete_profile_fields( $user_id ) {
 				continue;
 			}
 			$sanitized_data['injuries'][] = array(
-				'id'      => isset( $injury['id'] ) ? sanitize_text_field( $injury['id'] ) : '',
-				'name'    => isset( $injury['name'] ) ? sanitize_text_field( $injury['name'] ) : '',
+				'id' => isset( $injury['id'] ) ? sanitize_text_field( $injury['id'] ) : '',
+				'name' => isset( $injury['name'] ) ? sanitize_text_field( $injury['name'] ) : '',
 				'details' => isset( $injury['details'] ) ? sanitize_textarea_field( $injury['details'] ) : '',
 			);
 		}

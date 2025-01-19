@@ -88,60 +88,22 @@
     margin: 0 0 1rem;
 }
 
-.retry-button {
-    background: var(--error-text);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    font-weight: 500;
-    transition: opacity 0.2s;
-}
-
-.retry-button:hover {
-    opacity: 0.9;
-}
-
-.retry-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.save-error {
+/* Section-specific styles */
+.section-error {
     background: var(--error-background);
     color: var(--error-text);
     padding: 1rem;
     border-radius: var(--border-radius);
-    margin-bottom: 1rem;
+    margin: 1rem 0;
 }
 
-.profile-actions {
+.section-actions {
     display: flex;
     justify-content: flex-end;
     gap: 1rem;
     margin-top: 2rem;
-}
-
-.save-button {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 1rem;
-    transition: background-color 0.2s;
-}
-
-.save-button:hover {
-    background: var(--primary-color-dark);
-}
-
-.save-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
 }
 
 /* Physical Section Styles */
@@ -190,24 +152,6 @@
     justify-content: center;
     gap: 1rem;
     margin-top: 1.5rem;
-}
-
-.physical-section .pagination button {
-    background: var(--surface-background-alt);
-    border: 1px solid var(--border-color);
-    padding: 0.5rem 1rem;
-    border-radius: var(--border-radius-sm);
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.physical-section .pagination button:hover {
-    background: var(--surface-background-hover);
-}
-
-.physical-section .pagination button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
 }
 
 @media (max-width: 768px) {

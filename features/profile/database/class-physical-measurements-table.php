@@ -21,7 +21,7 @@ class Physical_Measurements_Table {
 	 */
 	public function get_table_name(): string {
 		global $wpdb;
-		return $wpdb->prefix . 'physical_measurements';
+		return $wpdb->prefix . 'athlete_physical_measurements';
 	}
 
 	/**

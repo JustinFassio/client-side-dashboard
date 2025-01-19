@@ -14,6 +14,7 @@ use AthleteDashboard\Features\Profile\API\Response_Factory;
 use AthleteDashboard\Features\Profile\Events\Listeners\User_Updated_Listener;
 use AthleteDashboard\Features\Profile\Services\Profile_Service;
 use AthleteDashboard\Features\User\Events\User_Updated;
+use AthleteDashboard\Features\Profile\Admin\Profile_Admin;
 
 /**
  * Bootstrap class for the Profile feature.
@@ -97,6 +98,35 @@ class Profile_Bootstrap {
 	}
 
 	/**
+	 * Run migrations for database setup.
+	 */
+	private function run_migrations(): void {
+		error_log( 'Profile_Bootstrap: Running migrations' );
+
+		$physical_migration = new Physical_Data_Migration();
+		$result = $physical_migration->up();
+
+		if ( is_wp_error( $result ) ) {
+			error_log( 'Profile_Bootstrap: Migration failed - ' . $result->get_error_message() );
+		} else {
+			error_log( 'Profile_Bootstrap: Migration completed successfully' );
+		}
+	}
+
+	/**
+	 * Initialize the feature.
+	 */
+	public function init(): void {
+		error_log( 'Profile_Bootstrap: Initializing' );
+		
+		// Run migrations on after_switch_theme hook
+		add_action('after_switch_theme', array($this, 'run_migrations'));
+		
+		$this->register_events();
+		$this->register_routes();
+	}
+
+	/**
 	 * Bootstrap the feature.
 	 *
 	 * @param Container $container Service container instance.
@@ -105,5 +135,11 @@ class Profile_Bootstrap {
 		$this->register_services( $container );
 		$this->register_events( $container );
 		$this->register_routes( $container );
+
+		// Initialize admin functionality
+		if (is_admin()) {
+			$profile_admin = new Profile_Admin();
+			$profile_admin->init();
+		}
 	}
 }

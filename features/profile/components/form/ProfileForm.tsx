@@ -2,6 +2,7 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { ProfileData } from '../../types/profile';
 import { useProfileErrors } from '../../hooks/useProfileErrors';
+import { Button } from '../../../../dashboard/components/Button';
 
 interface ProfileFormProps {
     profile: ProfileData;
@@ -90,20 +91,24 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
             </div>
 
             <div className="form-actions">
-                <button 
-                    type="submit" 
+                <Button
+                    type="submit"
+                    variant="primary"
+                    feature="profile"
                     disabled={isSubmitting}
                     aria-busy={isSubmitting}
                 >
                     {isSubmitting ? 'Saving...' : 'Save'}
-                </button>
-                <button 
-                    type="button" 
+                </Button>
+                <Button
+                    type="button"
+                    variant="secondary"
+                    feature="profile"
                     onClick={onCancel}
                     disabled={isSubmitting}
                 >
                     Cancel
-                </button>
+                </Button>
             </div>
         </form>
     );

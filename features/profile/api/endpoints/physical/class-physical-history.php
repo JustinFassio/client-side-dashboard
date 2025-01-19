@@ -85,10 +85,18 @@ class Physical_History extends Base_Endpoint {
 			);
 		}
 
-		error_log( 'Service Response: ' . wp_json_encode( $result ) );
+		// Format response according to PhysicalHistoryResponse interface
+		$response = array(
+			'items'  => $result['items'] ?? array(),
+			'total'  => $result['total'] ?? 0,
+			'limit'  => $args['limit'],
+			'offset' => $args['offset'],
+		);
+
+		error_log( 'Service Response: ' . wp_json_encode( $response ) );
 		error_log( '=== Physical History Endpoint - Request Complete ===' );
 
-		return $this->response_factory->success( $result );
+		return $this->response_factory->success( $response );
 	}
 
 	/**
@@ -138,6 +146,15 @@ class Physical_History extends Base_Endpoint {
 							'weight' => array(
 								'type' => 'number',
 							),
+							'chest' => array(
+								'type' => 'number',
+							),
+							'waist' => array(
+								'type' => 'number',
+							),
+							'hips' => array(
+								'type' => 'number',
+							),
 							'units'  => array(
 								'type'       => 'object',
 								'properties' => array(
@@ -148,6 +165,10 @@ class Physical_History extends Base_Endpoint {
 									'weight' => array(
 										'type' => 'string',
 										'enum' => array( 'kg', 'lbs' ),
+									),
+									'measurements' => array(
+										'type' => 'string',
+										'enum' => array( 'cm', 'in' ),
 									),
 								),
 							),

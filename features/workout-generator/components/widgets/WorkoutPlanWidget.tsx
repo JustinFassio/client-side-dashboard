@@ -1,5 +1,6 @@
 import React from 'react';
 import { WorkoutPlan, Exercise } from '../../types/workout-types';
+import { Button } from '../../../../dashboard/components/Button';
 
 interface WorkoutPlanWidgetProps {
     workout: WorkoutPlan;
@@ -73,9 +74,12 @@ export const WorkoutPlanWidget: React.FC<WorkoutPlanWidgetProps> = ({
                         {workout.difficulty}
                     </span>
                 </div>
-                <button onClick={() => onSave(workout)} className="save-button">
+                <Button
+                    variant="primary"
+                    onClick={() => onSave(workout)}
+                >
                     Save Workout
-                </button>
+                </Button>
             </div>
 
             <div className="workout-meta">

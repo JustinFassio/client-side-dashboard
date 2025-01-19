@@ -44,8 +44,18 @@ class Physical_Update extends Base_Endpoint {
 	 * @return bool|WP_Error True if has permission, WP_Error if not.
 	 */
 	public function check_permission( WP_REST_Request $request ): bool|WP_Error {
+		error_log('Physical_Update: Starting permission check');
+		error_log('Physical_Update: Current user ID: ' . get_current_user_id());
+		error_log('Physical_Update: Is user logged in: ' . (is_user_logged_in() ? 'Yes' : 'No'));
+		error_log('Physical_Update: Request nonce: ' . $request->get_header('X-WP-Nonce'));
+		
 		$user_id = $request->get_param( 'user_id' );
-		return $this->check_resource_owner( $user_id );
+		error_log('Physical_Update: Requested user ID: ' . $user_id);
+		
+		$result = $this->check_resource_owner( $user_id );
+		error_log('Physical_Update: Resource owner check result: ' . (is_wp_error($result) ? $result->get_error_message() : 'Success'));
+		
+		return $result;
 	}
 
 	/**
@@ -138,10 +148,25 @@ class Physical_Update extends Base_Endpoint {
 						'showMetric'   => array(
 							'type' => 'boolean',
 						),
-						'trackHistory' => array(
-							'type' => 'boolean',
-						),
 					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Get the schema for the preferences object.
+	 *
+	 * @return array Schema array.
+	 */
+	private function get_preferences_schema(): array {
+		return array(
+			'type'       => 'object',
+			'properties' => array(
+				'showMetric' => array(
+					'type'        => 'boolean',
+					'description' => __( 'Whether to show metric units', 'athlete-dashboard' ),
+					'default'     => true,
 				),
 			),
 		);

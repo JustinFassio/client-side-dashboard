@@ -2,24 +2,55 @@ import React from 'react';
 import FormField from '../fields/FormField';
 import { ProfileData } from '../../../types/profile';
 import { FormValidationResult } from '../../../types/validation';
+import { Button } from '../../../../../dashboard/components/Button';
+import * as styles from './BasicSection.module.css';
 
 interface BasicSectionProps {
     data: Partial<ProfileData>;
     onChange: (name: string, value: any) => void;
     validation?: FormValidationResult;
+    onSave: () => Promise<void>;
+    isSaving?: boolean;
+    error?: string;
 }
 
 export const BasicSection: React.FC<BasicSectionProps> = ({
     data,
     onChange,
-    validation
+    validation,
+    onSave,
+    isSaving,
+    error
 }) => {
     return (
-        <div className="form-section">
+        <div className={styles.section}>
             <h2>Basic Information</h2>
-            <p className="form-section__description">
-                Update your personal details and preferences.
-            </p>
+            
+            <FormField
+                name="firstName"
+                label="First Name"
+                type="text"
+                value={data.firstName}
+                onChange={onChange}
+                validation={validation?.fieldErrors?.firstName && {
+                    isValid: false,
+                    errors: validation.fieldErrors.firstName
+                }}
+                required
+            />
+            
+            <FormField
+                name="lastName"
+                label="Last Name"
+                type="text"
+                value={data.lastName}
+                onChange={onChange}
+                validation={validation?.fieldErrors?.lastName && {
+                    isValid: false,
+                    errors: validation.fieldErrors.lastName
+                }}
+                required
+            />
             
             <FormField
                 name="displayName"
@@ -35,36 +66,35 @@ export const BasicSection: React.FC<BasicSectionProps> = ({
             />
             
             <FormField
-                name="age"
-                label="Age"
-                type="number"
-                value={data.age}
+                name="email"
+                label="Email"
+                type="email"
+                value={data.email}
                 onChange={onChange}
-                validation={validation?.fieldErrors?.age && {
+                validation={validation?.fieldErrors?.email && {
                     isValid: false,
-                    errors: validation.fieldErrors.age
+                    errors: validation.fieldErrors.email
                 }}
-                min={13}
-                max={120}
+                required
             />
-            
-            <FormField
-                name="gender"
-                label="Gender"
-                type="select"
-                value={data.gender}
-                onChange={onChange}
-                validation={validation?.fieldErrors?.gender && {
-                    isValid: false,
-                    errors: validation.fieldErrors.gender
-                }}
-                options={[
-                    { value: 'male', label: 'Male' },
-                    { value: 'female', label: 'Female' },
-                    { value: 'other', label: 'Other' },
-                    { value: 'prefer_not_to_say', label: 'Prefer not to say' }
-                ]}
-            />
+
+            {error && (
+                <div className={styles.error} role="alert">
+                    <p>{error}</p>
+                </div>
+            )}
+
+            <div className={styles.actions}>
+                <Button
+                    variant="primary"
+                    feature="profile"
+                    onClick={onSave}
+                    disabled={isSaving}
+                    aria-busy={isSaving}
+                >
+                    {isSaving ? 'Saving...' : 'Save Basic Information'}
+                </Button>
+            </div>
         </div>
     );
 };

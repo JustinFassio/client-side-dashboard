@@ -515,3 +515,20 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	$profile_feature = new AthleteDashboard\Features\Profile\Profile_Feature( $routes );
 	$profile_feature->init();
 }
+
+require_once get_stylesheet_directory() . '/features/profile/database/migrations/class-physical-measurements-table.php';
+
+/**
+ * Run migrations on theme activation
+ */
+function athlete_dashboard_run_migrations() {
+	error_log('Running athlete dashboard migrations...');
+	$physical_table = new \AthleteDashboard\Features\Profile\Database\Migrations\Physical_Measurements_Table();
+	$result = $physical_table->up();
+	if (is_wp_error($result)) {
+		error_log('Failed to run physical measurements table migration: ' . $result->get_error_message());
+	} else {
+		error_log('Physical measurements table migration completed successfully');
+	}
+}
+add_action('after_switch_theme', 'athlete_dashboard_run_migrations');

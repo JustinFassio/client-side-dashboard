@@ -1,0 +1,210 @@
+/* Physical Section Styles */
+
+.physical-section {
+    background: var(--background-darker);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius-md);
+    border: var(--border-width) solid var(--border-color);
+    margin-bottom: var(--spacing-lg);
+}
+
+.physical-section h2 {
+    color: var(--text-light);
+    margin-bottom: var(--spacing-md);
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-bold);
+}
+
+.measurements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.measurement-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.measurement-field label {
+    display: block;
+    color: var(--text-dim);
+    font-size: var(--font-size-sm);
+}
+
+.measurement-input-group {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.measurement-input-group input {
+    flex: 1;
+    padding: var(--spacing-sm);
+    background: var(--input-background);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-light);
+    font-size: var(--font-size-base);
+    transition: border-color var(--transition-fast);
+}
+
+.measurement-input-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.measurement-unit {
+    color: var(--text-dim);
+    font-size: var(--font-size-sm);
+    min-width: 40px;
+}
+
+.unit-selector {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    background: var(--background-dark);
+    border-radius: var(--border-radius-sm);
+}
+
+.unit-selector h3 {
+    color: var(--text-light);
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-sm);
+}
+
+.unit-options {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.unit-option {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--input-background);
+    border: var(--border-width) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.unit-option.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--background-darker);
+}
+
+.history-section {
+    margin-top: var(--spacing-xl);
+}
+
+.history-section h3 {
+    color: var(--text-light);
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+.history-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.history-toggle input[type="checkbox"] {
+    margin: 0;
+}
+
+.history-toggle label {
+    color: var(--text-dim);
+    font-size: var(--font-size-sm);
+}
+
+.unit-toggle {
+    margin-top: var(--spacing-md);
+}
+
+.toggle-label {
+    display: block;
+    color: var(--text-light);
+    margin-bottom: var(--spacing-sm);
+}
+
+.toggle-buttons {
+    display: flex;
+    gap: 1px;
+    background: var(--border-color);
+    padding: 1px;
+    border-radius: var(--border-radius-sm);
+    width: fit-content;
+}
+
+.toggle-button {
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border: none;
+    background: var(--input-background);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+}
+
+.toggle-button:first-child {
+    border-top-left-radius: var(--border-radius-sm);
+    border-bottom-left-radius: var(--border-radius-sm);
+}
+
+.toggle-button:last-child {
+    border-top-right-radius: var(--border-radius-sm);
+    border-bottom-right-radius: var(--border-radius-sm);
+}
+
+.toggle-button.active {
+    background: var(--primary-color);
+    color: var(--background-darker);
+    font-weight: var(--font-weight-bold);
+}
+
+.toggle-button:hover:not(.active) {
+    background: var(--primary-hover);
+    color: var(--background-darker);
+    transform: translateY(-1px);
+}
+
+.toggle-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+.toggle-button:disabled {
+    background-color: var(--text-dim);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+    .measurements-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .unit-options {
+        flex-direction: column;
+    }
+
+    .unit-option {
+        width: 100%;
+        text-align: center;
+    }
+
+    .toggle-buttons {
+        width: 100%;
+    }
+    
+    .toggle-button {
+        flex: 1;
+        text-align: center;
+    }
+} 

@@ -140,6 +140,21 @@ class Physical_Get extends Base_Endpoint {
 					'type'        => 'number',
 					'required'    => false,
 				),
+				'chest'       => array(
+					'description' => __( 'The user\'s chest measurement.', 'athlete-dashboard' ),
+					'type'        => 'number',
+					'required'    => false,
+				),
+				'waist'       => array(
+					'description' => __( 'The user\'s waist measurement.', 'athlete-dashboard' ),
+					'type'        => 'number',
+					'required'    => false,
+				),
+				'hips'        => array(
+					'description' => __( 'The user\'s hips measurement.', 'athlete-dashboard' ),
+					'type'        => 'number',
+					'required'    => false,
+				),
 				'units'       => array(
 					'description' => __( 'The measurement units.', 'athlete-dashboard' ),
 					'type'        => 'object',
@@ -153,6 +168,10 @@ class Physical_Get extends Base_Endpoint {
 							'type' => 'string',
 							'enum' => array( 'kg', 'lbs' ),
 						),
+						'measurements' => array(
+							'type' => 'string',
+							'enum' => array( 'cm', 'in' ),
+						),
 					),
 				),
 				'preferences' => array(
@@ -163,10 +182,25 @@ class Physical_Get extends Base_Endpoint {
 						'showMetric'   => array(
 							'type' => 'boolean',
 						),
-						'trackHistory' => array(
-							'type' => 'boolean',
-						),
 					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Get the schema for the preferences object.
+	 *
+	 * @return array Schema array.
+	 */
+	private function get_preferences_schema(): array {
+		return array(
+			'type'       => 'object',
+			'properties' => array(
+				'showMetric' => array(
+					'type'        => 'boolean',
+					'description' => __( 'Whether to show metric units', 'athlete-dashboard' ),
+					'default'     => true,
 				),
 			),
 		);

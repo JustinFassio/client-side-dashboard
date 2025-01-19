@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { __ } from '@wordpress/i18n';
 import { physicalApi } from '../../api/physical';
-import { PhysicalHistory } from '../../types';
-import * as styles from './PhysicalSection.module.css';
+import { PhysicalHistory, PhysicalHistoryResponse } from '../../types/physical';
+import { Button } from '../../../../dashboard/components/Button';
 
 interface HistoryViewProps {
   userId: number;
@@ -11,6 +12,11 @@ interface PaginationState {
   offset: number;
   limit: number;
   total: number;
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
 }
 
 export const HistoryView: React.FC<HistoryViewProps> = ({ userId }) => {
@@ -25,23 +31,33 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ userId }) => {
 
   const loadHistory = async () => {
     try {
+      console.log('Loading history for user:', userId);
       setLoading(true);
       const response = await physicalApi.getPhysicalHistory(
         userId,
         pagination.offset,
         pagination.limit
-      );
-      setHistory(response.items);
-      setPagination(prev => ({ ...prev, total: response.total }));
+      ) as unknown as ApiResponse<PhysicalHistoryResponse>;
+      console.log('History response:', response);
+      
+      // Unwrap the response data
+      const historyData = response.success ? response.data : { items: [], total: 0, limit: 10, offset: 0 };
+      console.log('Unwrapped history data:', historyData);
+      
+      setHistory(historyData.items);
+      setPagination(prev => ({ ...prev, total: historyData.total }));
       setError(null);
     } catch (e) {
+      console.error('Failed to load history:', e);
       setError('Failed to load measurement history');
+      setHistory([]); // Reset history on error
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    console.log('HistoryView mounted/updated. UserId:', userId);
     if (userId) loadHistory();
   }, [userId, pagination.offset, pagination.limit]);
 
@@ -63,36 +79,43 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ userId }) => {
     }
   };
 
-  if (loading) return (
-    <div className={styles.loading} role="status" aria-live="polite">
-      Loading history...
-    </div>
-  );
+  if (loading) {
+    console.log('HistoryView: Loading state');
+    return (
+      <div className="loading" role="status" aria-live="polite">
+        {__('Loading history...')}
+      </div>
+    );
+  }
 
-  if (error) return (
-    <div className={styles.error} role="alert">
-      Error: {error}
-    </div>
-  );
+  if (error) {
+    console.log('HistoryView: Error state:', error);
+    return (
+      <div className="error" role="alert">
+        {__('Error:')} {error}
+      </div>
+    );
+  }
 
+  console.log('HistoryView: Rendering table with history:', history);
   return (
-    <section className={styles['history-view']} aria-labelledby="history-title">
-      <h3 id="history-title">Measurement History</h3>
+    <section className="history-section" aria-labelledby="history-title">
+      <h3 id="history-title">{__('Measurement History')}</h3>
 
       {history.length === 0 ? (
-        <p>No measurement history available.</p>
+        <p>{__('No measurement history available.')}</p>
       ) : (
         <>
-          <div className={styles['table-wrapper']} role="region" aria-label="Measurement history table" tabIndex={0}>
-            <table className={styles['history-table']}>
+          <div className="table-wrapper" role="region" aria-label="Measurement history table" tabIndex={0}>
+            <table className="history-table">
               <thead>
                 <tr>
-                  <th scope="col">Date</th>
-                  <th scope="col">Height</th>
-                  <th scope="col">Weight</th>
-                  <th scope="col">Chest</th>
-                  <th scope="col">Waist</th>
-                  <th scope="col">Hips</th>
+                  <th scope="col">{__('Date')}</th>
+                  <th scope="col">{__('Height')}</th>
+                  <th scope="col">{__('Weight')}</th>
+                  <th scope="col">{__('Chest')}</th>
+                  <th scope="col">{__('Waist')}</th>
+                  <th scope="col">{__('Hips')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -110,26 +133,30 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ userId }) => {
             </table>
           </div>
 
-          <nav className={styles.pagination} aria-label="History pagination">
-            <button
+          <nav className="pagination" aria-label="History pagination">
+            <Button
+              variant="secondary"
+              feature="physical"
               onClick={handlePrevPage}
               disabled={pagination.offset === 0}
               aria-label="Previous page"
             >
-              Previous
-            </button>
+              {__('Previous')}
+            </Button>
             <span>
-              Showing {pagination.offset + 1} to{' '}
+              {__('Showing')} {pagination.offset + 1} {__('to')}{' '}
               {Math.min(pagination.offset + pagination.limit, pagination.total)}{' '}
-              of {pagination.total}
+              {__('of')} {pagination.total}
             </span>
-            <button
+            <Button
+              variant="secondary"
+              feature="physical"
               onClick={handleNextPage}
               disabled={pagination.offset + pagination.limit >= pagination.total}
               aria-label="Next page"
             >
-              Next
-            </button>
+              {__('Next')}
+            </Button>
           </nav>
         </>
       )}
