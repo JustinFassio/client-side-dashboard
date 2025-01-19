@@ -210,6 +210,9 @@ Each **feature** has its own:
    ```bash
    npm run test
    ```
+   - Runs all test suites
+   - See `docs/TESTING.md` for detailed testing guide
+   - Feature-specific test documentation available in `features/*/tests/README.md`
 
 ---
 

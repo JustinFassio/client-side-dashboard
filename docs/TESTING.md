@@ -8,6 +8,7 @@
 - [Writing Tests](#writing-tests)
 - [CI/CD Integration](#cicd-integration)
 - [Code Coverage](#code-coverage)
+- [Feature-Specific Testing](#feature-specific-testing)
 
 ## Overview
 
@@ -16,6 +17,12 @@ The Athlete Dashboard uses a comprehensive testing strategy that includes:
 - Jest Tests for frontend components and features
 - Integration Tests for API endpoints
 - End-to-End Tests for critical user flows
+
+Each feature maintains its own test documentation in `features/[feature-name]/tests/README.md`, providing detailed information about:
+- Feature-specific test cases
+- Mock implementations
+- Test data requirements
+- Common debugging scenarios
 
 ## Test Environment Setup
 
@@ -62,212 +69,127 @@ Run specific test suite:
 vendor/bin/phpunit --testsuite unit
 ```
 
-Run tests with coverage:
+Run tests for a specific feature:
 ```bash
-vendor/bin/phpunit --coverage-html tests/reports/coverage
+vendor/bin/phpunit --testsuite features/[feature-name]
 ```
 
-### JavaScript Tests
+### Feature-Specific Testing
 
-Run all JavaScript tests:
-```bash
-npm test
-```
+Each feature in the Athlete Dashboard maintains its own test suite and documentation. For example, the Workout Generator feature's tests are documented in `features/workout-generator/tests/README.md`.
 
-Run tests in watch mode:
-```bash
-npm run test:watch
-```
+Key aspects of feature-specific testing:
 
-Run with coverage:
-```bash
-npm run test:coverage
-```
+1. **Isolated Testing Environment**
+   - Mock WordPress functions
+   - Custom test case classes
+   - Feature-specific test data
+
+2. **Test Organization**
+   - Unit tests for individual components
+   - Integration tests for feature interactions
+   - End-to-end tests for user flows
+
+3. **Mock Implementations**
+   - WordPress function mocks
+   - Service mocks
+   - API response mocks
+
+4. **Common Debugging Scenarios**
+   - Missing mock functions
+   - Rate limit testing issues
+   - Transient data handling
+
+For detailed information about testing a specific feature, refer to its test documentation in the feature's tests directory.
 
 ## Test Structure
 
-### PHP Tests Directory Structure
-```
-tests/
-├── php/
-│   ├── rest-api/           # REST API tests
-│   ├── services/           # Service tests
-│   ├── features/           # Feature tests
-│   └── helpers.php         # Test helpers
-├── bootstrap.php           # Test bootstrap
-└── TestCase.php           # Base test case
-```
+Tests are organized following the Feature-First architecture:
 
-### JavaScript Tests Directory Structure
 ```
-__tests__/
-├── components/            # Component tests
-├── features/             # Feature tests
-├── services/             # Service tests
-└── utils/                # Utility tests
+features/
+├── [feature-name]/
+│   ├── tests/
+│   │   ├── README.md           # Feature test documentation
+│   │   ├── bootstrap.php       # Test initialization
+│   │   ├── *Test.php          # Test classes
+│   │   └── test-data/         # Test fixtures
+│   └── ...
 ```
 
 ## Writing Tests
 
-### PHP Test Guidelines
+### Best Practices
 
-1. Extend the base test case:
+1. **Isolation**
+   - Tests should be independent
+   - Use fresh test data for each test
+   - Clean up after tests
+
+2. **Naming**
+   - Clear, descriptive test names
+   - Follow `test_[what]_[expected]` pattern
+   - Group related tests in classes
+
+3. **Assertions**
+   - Use specific assertions
+   - Test both success and failure cases
+   - Verify side effects
+
+### Example Test
+
 ```php
-use AthleteDashboard\Tests\TestCase;
-
-class MyTest extends TestCase {
+class Feature_Test extends TestCase {
     public function setUp(): void {
         parent::setUp();
-        // Your setup code
+        // Feature-specific setup
+    }
+
+    public function test_feature_behavior_expected_result() {
+        // Arrange
+        $input = 'test data';
+
+        // Act
+        $result = do_something($input);
+
+        // Assert
+        $this->assertEquals('expected', $result);
     }
 }
 ```
 
-2. Use provided helper methods:
-```php
-$this->createMockUser();
-$this->mockWordPressFunctions();
-$this->mockWordPressCache();
-```
-
-3. Follow naming conventions:
-```php
-public function test_should_do_something() {
-    // Test code
-}
-```
-
-### JavaScript Test Guidelines
-
-1. Use React Testing Library:
-```typescript
-import { render, screen } from '@testing-library/react';
-import { MyComponent } from './MyComponent';
-
-describe('MyComponent', () => {
-    it('should render correctly', () => {
-        render(<MyComponent />);
-        expect(screen.getByRole('button')).toBeInTheDocument();
-    });
-});
-```
-
-2. Mock API calls:
-```typescript
-jest.mock('@/services/api', () => ({
-    fetchData: jest.fn().mockResolvedValue({ data: 'test' })
-}));
-```
-
-3. Test user interactions:
-```typescript
-import userEvent from '@testing-library/user-event';
-
-test('should handle click', async () => {
-    const user = userEvent.setup();
-    render(<MyComponent />);
-    await user.click(screen.getByRole('button'));
-    expect(screen.getByText('Clicked')).toBeInTheDocument();
-});
-```
-
 ## CI/CD Integration
 
-Tests are automatically run in the CI/CD pipeline:
+Tests are automatically run in CI/CD pipelines:
 
-1. On Pull Requests:
-   - All unit tests
-   - Linting checks
-   - Type checking
-   - Coverage reports
+1. **Pull Requests**
+   - All tests must pass
+   - Coverage requirements met
+   - No new warnings
 
-2. On Merge to Main:
-   - All tests
-   - E2E tests
-   - Performance tests
-   - Security scans
+2. **Deployment**
+   - Full test suite runs
+   - Performance benchmarks
+   - Security checks
 
 ## Code Coverage
 
-### Coverage Requirements
+Coverage reports are generated for:
+- PHP tests using PHPUnit
+- JavaScript tests using Jest
+- End-to-end tests using Cypress
 
-- PHP Code: Minimum 80% coverage
-- JavaScript Code: Minimum 75% coverage
-- Critical paths: 100% coverage
+Minimum coverage requirements:
+- Lines: 80%
+- Functions: 90%
+- Branches: 75%
 
-### Generating Coverage Reports
+## Contributing
 
-PHP Coverage:
-```bash
-vendor/bin/phpunit --coverage-html tests/reports/coverage-php
-```
+When adding or modifying tests:
 
-JavaScript Coverage:
-```bash
-npm run test:coverage
-```
-
-### Coverage Exclusions
-
-The following are excluded from coverage requirements:
-- Test files
-- Configuration files
-- Build scripts
-- External libraries
-
-## Best Practices
-
-1. **Test Independence**
-   - Each test should be independent
-   - Clean up after each test
-   - Don't rely on test execution order
-
-2. **Test Data**
-   - Use factories for test data
-   - Avoid hard-coded IDs
-   - Clean up test data after use
-
-3. **Mocking**
-   - Mock external services
-   - Use dependency injection
-   - Keep mocks simple
-
-4. **Assertions**
-   - Test one thing per test
-   - Use descriptive assertion messages
-   - Check both positive and negative cases
-
-## Common Patterns
-
-### Testing REST API Endpoints
-
-```php
-public function test_endpoint() {
-    $request = new WP_REST_Request('GET', '/athlete-dashboard/v1/endpoint');
-    $response = $this->controller->get_items($request);
-    $this->assertEquals(200, $response->get_status());
-}
-```
-
-### Testing React Components
-
-```typescript
-describe('Component', () => {
-    it('should handle loading state', () => {
-        render(<Component isLoading={true} />);
-        expect(screen.getByTestId('loading')).toBeInTheDocument();
-    });
-
-    it('should handle error state', () => {
-        render(<Component error="Error message" />);
-        expect(screen.getByText('Error message')).toBeInTheDocument();
-    });
-});
-```
-
-## Need Help?
-
-- Check the test output for detailed error messages
-- Review test logs in CI/CD pipeline
-- Contact the development team for assistance
+1. Follow the test organization structure
+2. Update relevant documentation
+3. Maintain coverage requirements
+4. Add debug information for common issues
 ``` 

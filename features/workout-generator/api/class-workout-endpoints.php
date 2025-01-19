@@ -3,12 +3,19 @@
  * Workout Generator REST API endpoints
  */
 
+namespace AthleteDashboard\Features\WorkoutGenerator\API;
+
+use Exception;
+use WP_Error;
+use WP_REST_Request;
+use AthleteDashboard\Features\Profile\API\Profile_Service;
+
 class Workout_Endpoints {
     /**
      * Register REST API routes
      */
     public function register_routes() {
-        register_rest_route('athlete-dashboard/v1', '/workout/generate', [
+        \register_rest_route('athlete-dashboard/v1', '/generate', [
             'methods'             => 'POST',
             'callback'           => [$this, 'generate_workout'],
             'permission_callback' => [$this, 'check_permission'],
@@ -20,7 +27,7 @@ class Workout_Endpoints {
             ],
         ]);
 
-        register_rest_route('athlete-dashboard/v1', '/workout/modify/(?P<id>[a-zA-Z0-9-]+)', [
+        \register_rest_route('athlete-dashboard/v1', '/modify', [
             'methods'             => 'POST',
             'callback'           => [$this, 'modify_workout'],
             'permission_callback' => [$this, 'check_permission'],
@@ -32,7 +39,7 @@ class Workout_Endpoints {
             ],
         ]);
 
-        register_rest_route('athlete-dashboard/v1', '/workout/history', [
+        \register_rest_route('athlete-dashboard/v1', '/history', [
             'methods'             => 'GET',
             'callback'           => [$this, 'get_workout_history'],
             'permission_callback' => [$this, 'check_permission'],
@@ -44,7 +51,7 @@ class Workout_Endpoints {
             ],
         ]);
 
-        register_rest_route('athlete-dashboard/v1', '/workout/alternative/(?P<exercise_id>[a-zA-Z0-9-]+)', [
+        \register_rest_route('athlete-dashboard/v1', '/workout/alternative/(?P<exercise_id>[a-zA-Z0-9-]+)', [
             'methods'             => 'POST',
             'callback'           => [$this, 'get_exercise_alternative'],
             'permission_callback' => [$this, 'check_permission'],
@@ -62,7 +69,7 @@ class Workout_Endpoints {
      */
     public function generate_workout(WP_REST_Request $request) {
         try {
-            $user_id = get_current_user_id();
+            $user_id = \get_current_user_id();
             $preferences = $request->get_json_params();
 
             // Validate preferences
@@ -102,7 +109,7 @@ class Workout_Endpoints {
                 );
             }
 
-            return rest_ensure_response($workout);
+            return \rest_ensure_response($workout);
 
         } catch (Exception $e) {
             return new WP_Error(
@@ -152,7 +159,7 @@ class Workout_Endpoints {
                 );
             }
 
-            return rest_ensure_response($modified_workout);
+            return \rest_ensure_response($modified_workout);
 
         } catch (Exception $e) {
             return new WP_Error(
@@ -168,13 +175,13 @@ class Workout_Endpoints {
      */
     public function get_workout_history(WP_REST_Request $request) {
         try {
-            $user_id = get_current_user_id();
+            $user_id = \get_current_user_id();
             $filters = $request->get_param('filters');
 
             $ai_service = new AI_Service();
             $history = $ai_service->get_workout_history($user_id, $filters);
 
-            return rest_ensure_response($history);
+            return \rest_ensure_response($history);
 
         } catch (Exception $e) {
             return new WP_Error(
@@ -216,7 +223,7 @@ class Workout_Endpoints {
                 );
             }
 
-            return rest_ensure_response($alternatives[0]);
+            return \rest_ensure_response($alternatives[0]);
 
         } catch (Exception $e) {
             return new WP_Error(
@@ -231,7 +238,7 @@ class Workout_Endpoints {
      * Check if user has permission to access endpoints
      */
     public function check_permission() {
-        return is_user_logged_in();
+        return \is_user_logged_in();
     }
 
     /**

@@ -3,6 +3,8 @@
  * Workout Validator
  */
 
+namespace AthleteDashboard\Features\WorkoutGenerator\API;
+
 class Workout_Validator {
     /**
      * Validate a workout plan

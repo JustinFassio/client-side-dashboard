@@ -1,24 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.6/phpunit.xsd"
-         bootstrap="features/profile/tests/bootstrap.php"
+         bootstrap="features/workout-generator/tests/bootstrap.php"
          colors="true"
          verbose="true">
     <testsuites>
-        <testsuite name="Profile Feature Tests">
-            <directory>features/profile/tests/Unit</directory>
+        <testsuite name="Unit Tests">
+            <directory suffix="Test.php">features/workout-generator/tests/unit</directory>
         </testsuite>
-        <testsuite name="Workout Generator Tests">
-            <directory>features/workout-generator/tests</directory>
+        <testsuite name="Integration Tests">
+            <directory suffix="Test.php">features/workout-generator/tests/integration</directory>
         </testsuite>
     </testsuites>
     <coverage>
         <include>
-            <directory suffix=".php">features/profile</directory>
             <directory suffix=".php">features/workout-generator</directory>
         </include>
         <exclude>
-            <directory>features/profile/tests</directory>
             <directory>features/workout-generator/tests</directory>
         </exclude>
     </coverage>

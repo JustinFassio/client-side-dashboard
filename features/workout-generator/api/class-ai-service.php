@@ -1,223 +1,319 @@
 <?php
 /**
- * AI Service for workout generation
+ * AI Service class for handling workout generation and modification.
  */
 
+namespace AthleteDashboard\Features\WorkoutGenerator\API;
+
+use Exception;
+
+/**
+ * Class AI_Service_Exception
+ */
 class AI_Service_Exception extends Exception {
-    private $error_code;
-    private $error_details;
+    private $data;
 
-    public function __construct($message, $code = 0, $details = null) {
-        parent::__construct($message, $code);
-        $this->error_code = $code;
-        $this->error_details = $details;
+    /**
+     * Constructor.
+     *
+     * @param string $message Error message.
+     * @param string $code Error code.
+     * @param mixed  $data Additional error data.
+     */
+    public function __construct($message, $code = '', $data = null) {
+        parent::__construct($message, 0);
+        $this->code = $code;
+        $this->data = $data;
     }
 
-    public function get_error_code() {
-        return $this->error_code;
-    }
-
-    public function get_error_details() {
-        return $this->error_details;
+    public function getData() {
+        return $this->data;
     }
 }
 
+/**
+ * Class AI_Service
+ */
 class AI_Service {
-    private $api_key;
-    private $node_endpoint;
+    /**
+     * Rate limiter instance.
+     *
+     * @var Rate_Limiter
+     */
     private $rate_limiter;
 
-    public function __construct() {
-        $this->validate_configuration();
-        $this->rate_limiter = new Rate_Limiter('ai_service', 100, 3600); // 100 requests per hour
-    }
-
     /**
-     * Validate service configuration
+     * WordPress functions wrapper.
+     *
+     * @var array
      */
-    private function validate_configuration() {
-        // Check for API key
-        if (!defined('AI_SERVICE_API_KEY') || empty(AI_SERVICE_API_KEY)) {
+    private $wp_functions;
+
+    /**
+     * Constructor.
+     *
+     * @param Rate_Limiter|null $rate_limiter Optional rate limiter instance.
+     * @param array|null $wp_functions Optional WordPress functions wrapper.
+     */
+    public function __construct($rate_limiter = null, $wp_functions = null) {
+        $this->validate_configuration();
+        $this->rate_limiter = $rate_limiter ?? new Rate_Limiter();
+        $this->wp_functions = $wp_functions ?? [
+            'get_bloginfo' => 'get_bloginfo',
+            'wp_remote_request' => 'wp_remote_request',
+            'wp_remote_retrieve_response_code' => 'wp_remote_retrieve_response_code',
+            'wp_remote_retrieve_body' => 'wp_remote_retrieve_body',
+            'is_wp_error' => 'is_wp_error',
+            'wp_json_encode' => 'wp_json_encode'
+        ];
+    }
+
+    /**
+     * Make a request to the AI service.
+     *
+     * @param string $method HTTP method.
+     * @param string $endpoint API endpoint.
+     * @param array  $data Request data.
+     * @return array Response data.
+     * @throws AI_Service_Exception If the request fails.
+     */
+    private function make_request($method, $endpoint, $data = null) {
+        if (!$this->rate_limiter->check_limit()) {
+            $headers = $this->rate_limiter->get_rate_limit_headers();
             throw new AI_Service_Exception(
-                'AI service API key not configured',
-                'CONFIG_ERROR'
+                'Rate limit exceeded. Reset in ' . $headers['X-RateLimit-Reset'] . ' seconds.',
+                'RATE_LIMIT_EXCEEDED',
+                $headers
             );
         }
-        $this->api_key = AI_SERVICE_API_KEY;
 
-        // Check for endpoint
-        if (!defined('AI_SERVICE_ENDPOINT') || empty(AI_SERVICE_ENDPOINT)) {
+        $url = rtrim(AI_SERVICE_ENDPOINT, '/') . '/' . ltrim($endpoint, '/');
+        $args = [
+            'method' => $method,
+            'headers' => array_merge(
+                [
+                    'Content-Type' => 'application/json',
+                    'X-API-Key' => AI_SERVICE_API_KEY,
+                    'User-Agent' => call_user_func($this->wp_functions['get_bloginfo'], 'name') . ' WordPress Plugin'
+                ],
+                $this->rate_limiter->get_rate_limit_headers()
+            ),
+            'timeout' => 30
+        ];
+
+        if ($data !== null) {
+            $args['body'] = call_user_func($this->wp_functions['wp_json_encode'], $data);
+        }
+
+        $response = call_user_func($this->wp_functions['wp_remote_request'], $url, $args);
+
+        if (call_user_func($this->wp_functions['is_wp_error'], $response)) {
+            throw new AI_Service_Exception($response->get_error_message(), 'REQUEST_FAILED');
+        }
+
+        $status_code = call_user_func($this->wp_functions['wp_remote_retrieve_response_code'], $response);
+        $body = call_user_func($this->wp_functions['wp_remote_retrieve_body'], $response);
+
+        if ($status_code !== 200) {
+            throw new AI_Service_Exception('API request failed: ' . $body, 'API_ERROR');
+        }
+
+        $data = json_decode($body, true);
+        if ($data === null) {
+            throw new AI_Service_Exception('Invalid JSON response', 'INVALID_RESPONSE');
+        }
+
+        return $data;
+    }
+
+    /**
+     * Validate profile data for workout generation.
+     *
+     * @param array $profile_data The user's profile data.
+     * @throws AI_Service_Exception If the profile data is invalid.
+     */
+    private function validate_profile_data($profile_data) {
+        $required_fields = ['heightCm', 'weightKg', 'experienceLevel'];
+        $missing_fields = [];
+
+        foreach ($required_fields as $field) {
+            if (!isset($profile_data[$field])) {
+                $missing_fields[] = $field;
+            }
+        }
+
+        if (!empty($missing_fields)) {
             throw new AI_Service_Exception(
-                'AI service endpoint not configured',
-                'CONFIG_ERROR'
+                'Required profile fields missing: ' . implode(', ', $missing_fields),
+                'PROFILE_DATA_MISSING'
             );
         }
-        $this->node_endpoint = AI_SERVICE_ENDPOINT;
 
-        // Validate endpoint URL
-        if (!filter_var($this->node_endpoint, FILTER_VALIDATE_URL)) {
+        // Validate numeric fields
+        if ($profile_data['heightCm'] <= 0 || $profile_data['weightKg'] <= 0) {
             throw new AI_Service_Exception(
-                'Invalid AI service endpoint URL',
-                'CONFIG_ERROR'
+                'Height and weight must be positive numbers',
+                'PROFILE_DATA_INVALID'
+            );
+        }
+
+        // Validate experience level
+        $valid_experience_levels = ['beginner', 'intermediate', 'advanced'];
+        if (!in_array($profile_data['experienceLevel'], $valid_experience_levels)) {
+            throw new AI_Service_Exception(
+                'Invalid experience level. Must be one of: ' . implode(', ', $valid_experience_levels),
+                'PROFILE_DATA_INVALID'
+            );
+        }
+
+        // Ensure arrays are properly formatted
+        $array_fields = ['injuries', 'equipment', 'fitnessGoals'];
+        foreach ($array_fields as $field) {
+            if (isset($profile_data[$field]) && !is_array($profile_data[$field])) {
+                throw new AI_Service_Exception(
+                    "Field '$field' must be an array",
+                    'PROFILE_DATA_INVALID'
+                );
+            }
+        }
+    }
+
+    /**
+     * Validate workout preferences.
+     *
+     * @param array $preferences The workout preferences.
+     * @throws AI_Service_Exception If the preferences are invalid.
+     */
+    private function validate_preferences($preferences) {
+        if (empty($preferences)) {
+            return;
+        }
+
+        // Validate duration if provided
+        if (isset($preferences['duration'])) {
+            if (!is_numeric($preferences['duration']) || $preferences['duration'] <= 0) {
+                throw new AI_Service_Exception(
+                    'Duration must be a positive number',
+                    'PREFERENCES_INVALID'
+                );
+            }
+        }
+
+        // Validate intensity if provided
+        if (isset($preferences['intensity'])) {
+            $valid_intensities = ['low', 'medium', 'high'];
+            if (!in_array($preferences['intensity'], $valid_intensities)) {
+                throw new AI_Service_Exception(
+                    'Invalid intensity. Must be one of: ' . implode(', ', $valid_intensities),
+                    'PREFERENCES_INVALID'
+                );
+            }
+        }
+
+        // Validate focus areas if provided
+        if (isset($preferences['focusAreas']) && !is_array($preferences['focusAreas'])) {
+            throw new AI_Service_Exception(
+                'Focus areas must be an array',
+                'PREFERENCES_INVALID'
             );
         }
     }
 
     /**
-     * Generate a workout plan using AI
+     * Generate a workout plan using profile data.
+     *
+     * @param array $profile_data The user's profile data.
+     * @param array $preferences Optional workout preferences.
+     * @return array The generated workout plan.
+     * @throws AI_Service_Exception If the profile data is invalid or the request fails.
+     */
+    public function generate_workout_plan_with_profile($profile_data, $preferences = []) {
+        $this->validate_profile_data($profile_data);
+        $this->validate_preferences($preferences);
+
+        $prompt = array_merge(
+            $profile_data,
+            ['preferences' => $preferences]
+        );
+
+        return $this->make_request('POST', 'generate', $prompt);
+    }
+
+    /**
+     * Generate a workout plan.
+     *
+     * @param array $prompt The workout preferences.
+     * @return array The generated workout plan.
+     * @throws AI_Service_Exception If the request fails.
      */
     public function generate_workout_plan($prompt) {
-        $this->check_rate_limit();
-        return $this->make_request('POST', '/generate', $prompt);
+        return $this->make_request('POST', 'generate', $prompt);
     }
 
     /**
-     * Modify an existing workout plan
+     * Modify a workout plan.
+     *
+     * @param array $workout The workout to modify.
+     * @param array $modifications The modifications to apply.
+     * @return array The modified workout plan.
+     * @throws AI_Service_Exception If the request fails.
      */
     public function modify_workout_plan($workout, $modifications) {
-        $this->check_rate_limit();
-        return $this->make_request('POST', '/modify', [
+        return $this->make_request('POST', 'modify', [
             'workout' => $workout,
             'modifications' => $modifications
         ]);
     }
 
     /**
-     * Get workout by ID
+     * Get a workout by ID.
+     *
+     * @param int $workout_id The workout ID.
+     * @return array The workout data.
+     * @throws AI_Service_Exception If the request fails.
      */
     public function get_workout_by_id($workout_id) {
-        if (empty($workout_id)) {
-            throw new AI_Service_Exception(
-                'Workout ID is required',
-                'INVALID_INPUT'
-            );
-        }
-        return $this->make_request('GET', "/workout/{$workout_id}");
+        return $this->make_request('GET', "workout/{$workout_id}");
     }
 
     /**
-     * Get exercise by ID
+     * Get workout history.
+     *
+     * @param int    $user_id The user ID.
+     * @param string $date    The date to get history for.
+     * @return array The workout history.
+     * @throws AI_Service_Exception If the request fails.
      */
-    public function get_exercise_by_id($exercise_id) {
-        if (empty($exercise_id)) {
-            throw new AI_Service_Exception(
-                'Exercise ID is required',
-                'INVALID_INPUT'
-            );
-        }
-        return $this->make_request('GET', "/exercise/{$exercise_id}");
+    public function get_workout_history($user_id, $date) {
+        $filters = ['date' => $date];
+        return $this->make_request('GET', "history/{$user_id}?" . http_build_query($filters));
     }
 
     /**
-     * Get workout history
-     */
-    public function get_workout_history($user_id, $filters = null) {
-        if (empty($user_id)) {
-            throw new AI_Service_Exception(
-                'User ID is required',
-                'INVALID_INPUT'
-            );
-        }
-        $query = $filters ? '?' . http_build_query($filters) : '';
-        return $this->make_request('GET', "/history/{$user_id}{$query}");
-    }
-
-    /**
-     * Suggest alternative exercises
+     * Suggest alternative exercises.
+     *
+     * @param array $exercise The exercise to find alternatives for.
+     * @param array $constraints The constraints for alternatives.
+     * @return array The alternative exercises.
+     * @throws AI_Service_Exception If the request fails.
      */
     public function suggest_alternatives($exercise, $constraints) {
-        $this->check_rate_limit();
-        return $this->make_request('POST', '/alternatives', [
+        return $this->make_request('POST', 'alternatives', [
             'exercise' => $exercise,
             'constraints' => $constraints
         ]);
     }
 
     /**
-     * Make HTTP request to Node/TypeScript service
+     * Validate the service configuration.
+     *
+     * @throws AI_Service_Exception If the configuration is invalid.
      */
-    private function make_request($method, $endpoint, $data = null) {
-        $url = $this->node_endpoint . $endpoint;
-        
-        $args = [
-            'method'  => $method,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'X-API-Key'    => $this->api_key,
-                'User-Agent'   => 'WordPress/' . get_bloginfo('version') . '; ' . get_bloginfo('url')
-            ],
-            'timeout' => 30,
-            'sslverify' => true
-        ];
-
-        if ($data !== null) {
-            $args['body'] = wp_json_encode($data);
-        }
-
-        // Log request (if debug mode)
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                'AI Service Request: %s %s',
-                $method,
-                $url
-            ));
-        }
-
-        $response = wp_remote_request($url, $args);
-
-        if (is_wp_error($response)) {
+    private function validate_configuration() {
+        if (!defined('AI_SERVICE_API_KEY') || !defined('AI_SERVICE_ENDPOINT')) {
             throw new AI_Service_Exception(
-                'Failed to connect to AI service: ' . $response->get_error_message(),
-                'CONNECTION_ERROR',
-                $response->get_error_data()
-            );
-        }
-
-        $status_code = wp_remote_retrieve_response_code($response);
-        $body = wp_remote_retrieve_body($response);
-        $json_body = json_decode($body, true);
-
-        // Log response (if debug mode)
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                'AI Service Response: %d %s',
-                $status_code,
-                substr($body, 0, 1000) // First 1000 chars only
-            ));
-        }
-
-        if ($status_code !== 200) {
-            throw new AI_Service_Exception(
-                $json_body['message'] ?? 'Unknown error occurred',
-                $json_body['code'] ?? 'API_ERROR',
-                $json_body['details'] ?? ['status' => $status_code]
-            );
-        }
-
-        if ($json_body === null && !empty($body)) {
-            throw new AI_Service_Exception(
-                'Invalid JSON response from AI service',
-                'INVALID_RESPONSE',
-                ['response' => substr($body, 0, 1000)]
-            );
-        }
-
-        return $json_body;
-    }
-
-    /**
-     * Check rate limit
-     */
-    private function check_rate_limit() {
-        if (!$this->rate_limiter->check_limit()) {
-            throw new AI_Service_Exception(
-                'Rate limit exceeded',
-                'RATE_LIMIT_EXCEEDED',
-                [
-                    'limit' => $this->rate_limiter->get_limit(),
-                    'window' => $this->rate_limiter->get_window(),
-                    'remaining' => $this->rate_limiter->get_remaining()
-                ]
+                'AI service configuration is missing. Please define AI_SERVICE_API_KEY and AI_SERVICE_ENDPOINT.',
+                'CONFIG_ERROR'
             );
         }
     }

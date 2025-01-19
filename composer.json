@@ -22,7 +22,8 @@
         "sort-packages": true,
         "allow-plugins": {
             "dealerdirect/phpcodesniffer-composer-installer": true,
-            "automattic/jetpack-autoloader": true
+            "automattic/jetpack-autoloader": true,
+            "composer/installers": true
         }
     },
     "minimum-stability": "dev",
@@ -31,7 +32,9 @@
         "classmap": [
             "features/profile/api/endpoints/",
             "features/profile/api/",
-            "features/profile/"
+            "features/profile/",
+            "features/workout-generator/api/",
+            "features/workout-generator/src/"
         ],
         "psr-4": {
             "AthleteDashboard\\": "includes/",
@@ -42,7 +45,10 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "AthleteDashboard\\Tests\\": "tests/php/"
+            "AthleteDashboard\\Tests\\": "tests/php/",
+            "AthleteDashboard\\Features\\Profile\\Tests\\": "features/profile/tests/",
+            "AthleteDashboard\\Features\\WorkoutGenerator\\Tests\\": "features/workout-generator/tests/",
+            "AthleteDashboard\\Features\\WorkoutGenerator\\Tests\\Unit\\": "features/workout-generator/tests/unit/"
         }
     },
     "scripts": {
