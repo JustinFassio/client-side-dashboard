@@ -21,6 +21,16 @@ use AthleteDashboard\Core\Cache\Cache_Category;
  */
 class Profile_Service implements Profile_Service_Interface {
 	/**
+	 * Cache group for profile data.
+	 */
+	private const CACHE_GROUP = 'athlete_profile_data';
+
+	/**
+	 * Cache expiration in seconds (24 hours).
+	 */
+	private const CACHE_EXPIRATION = 86400;
+
+	/**
 	 * Profile repository instance.
 	 *
 	 * @var Profile_Repository
@@ -49,33 +59,195 @@ class Profile_Service implements Profile_Service_Interface {
 	}
 
 	/**
-	 * Get a user's profile data.
+	 * Get a user's complete profile data.
 	 *
 	 * @param int $user_id User ID.
 	 * @return array|WP_Error Profile data or error on failure.
-	 * @throws \Exception When user is not found or other errors occur.
 	 */
 	public function get_profile( int $user_id ): array|WP_Error {
+		// Try cache first
+		$cache_key   = "profile_{$user_id}";
+		$cached_data = wp_cache_get( $cache_key, self::CACHE_GROUP );
+
+		if ( false !== $cached_data ) {
+			return $cached_data;
+		}
+
+		// Get basic user data
+		$user_data = $this->get_user_data( $user_id );
+		if ( is_wp_error( $user_data ) ) {
+			return $user_data;
+		}
+
+		// Get physical measurements
+		$physical_data = $this->get_physical_data( $user_id );
+		if ( is_wp_error( $physical_data ) ) {
+			return $physical_data;
+		}
+
+		// Combine data
+		$profile_data = array_merge(
+			$user_data,
+			array(
+				'physical' => $physical_data,
+			)
+		);
+
+		// Cache the result
+		wp_cache_set( $cache_key, $profile_data, self::CACHE_GROUP, self::CACHE_EXPIRATION );
+
+		return $profile_data;
+	}
+
+	/**
+	 * Get user's physical data.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array|WP_Error Physical data or error.
+	 */
+	public function get_physical_data( int $user_id ): array|WP_Error {
+		$cache_key   = "physical_data_{$user_id}";
+		$cached_data = wp_cache_get( $cache_key, self::CACHE_GROUP );
+
+		if ( false !== $cached_data ) {
+			return $cached_data;
+		}
+
+		$data = array(
+			'heightCm'    => (float) get_user_meta( $user_id, 'physical_height', true ) ?: 0,
+			'weightKg'    => (float) get_user_meta( $user_id, 'physical_weight', true ) ?: 0,
+			'chestCm'     => (float) get_user_meta( $user_id, 'physical_chest', true ) ?: null,
+			'waistCm'     => (float) get_user_meta( $user_id, 'physical_waist', true ) ?: null,
+			'hipsCm'      => (float) get_user_meta( $user_id, 'physical_hips', true ) ?: null,
+			'units'       => get_user_meta( $user_id, 'physical_units', true ) ?: array(
+				'height'       => 'cm',
+				'weight'       => 'kg',
+				'measurements' => 'cm',
+			),
+			'preferences' => get_user_meta( $user_id, 'physical_preferences', true ) ?: array(
+				'showMetric' => true,
+			),
+		);
+
+		wp_cache_set( $cache_key, $data, self::CACHE_GROUP, self::CACHE_EXPIRATION );
+
+		return $data;
+	}
+
+	/**
+	 * Update physical data for a user.
+	 *
+	 * @param int   $user_id User ID.
+	 * @param array $data    Physical data to update.
+	 * @return array|WP_Error Updated data or error.
+	 */
+	public function update_physical_data( int $user_id, array $data ): array|WP_Error {
+		// Validate data
+		$validation_result = $this->validator->validate_physical_data( $data );
+		if ( is_wp_error( $validation_result ) ) {
+			return $validation_result;
+		}
+
+		// Update meta
+		if ( isset( $data['heightCm'] ) ) {
+			update_user_meta( $user_id, 'physical_height', $data['heightCm'] );
+		}
+		if ( isset( $data['weightKg'] ) ) {
+			update_user_meta( $user_id, 'physical_weight', $data['weightKg'] );
+		}
+		if ( isset( $data['chestCm'] ) ) {
+			update_user_meta( $user_id, 'physical_chest', $data['chestCm'] );
+		}
+		if ( isset( $data['waistCm'] ) ) {
+			update_user_meta( $user_id, 'physical_waist', $data['waistCm'] );
+		}
+		if ( isset( $data['hipsCm'] ) ) {
+			update_user_meta( $user_id, 'physical_hips', $data['hipsCm'] );
+		}
+		if ( isset( $data['units'] ) ) {
+			update_user_meta( $user_id, 'physical_units', $data['units'] );
+		}
+		if ( isset( $data['preferences'] ) ) {
+			update_user_meta( $user_id, 'physical_preferences', $data['preferences'] );
+		}
+
+		// Clear cache
+		wp_cache_delete( "physical_data_{$user_id}", self::CACHE_GROUP );
+		wp_cache_delete( "profile_{$user_id}", self::CACHE_GROUP );
+
+		// Save to history
+		$this->save_to_history( $user_id, $data );
+
+		// Get updated data
+		return $this->get_physical_data( $user_id );
+	}
+
+	/**
+	 * Save physical data to history.
+	 *
+	 * @param int   $user_id User ID.
+	 * @param array $data    Physical data.
+	 * @return bool|WP_Error True on success, error on failure.
+	 */
+	private function save_to_history( int $user_id, array $data ): bool|WP_Error {
+		return $this->repository->save_physical_history( $user_id, $data );
+	}
+
+	/**
+	 * Get basic user data.
+	 *
+	 * @param int $user_id User ID.
+	 * @return array|WP_Error User data or error.
+	 */
+	private function get_user_data( int $user_id ): array|WP_Error {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Getting user data for ID %d', $user_id ) );
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Profile Service: User not found for ID %d', $user_id ) );
+			}
+			return new WP_Error(
+				'user_not_found',
+				sprintf(
+					/* translators: %d: User ID */
+					__( 'User not found: %d', 'athlete-dashboard' ),
+					$user_id
+				),
+				array( 'user_id' => $user_id )
+			);
+		}
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Profile Service: Formatting user data for ID %d', $user_id ) );
+		}
+
 		try {
-			if ( ! $this->profile_exists( $user_id ) ) {
-				throw new Profile_Service_Exception(
-					sprintf( 'Profile not found for user %d', $user_id ),
-					Profile_Service_Exception::ERROR_NOT_FOUND
+			$user_data = $this->format_user_data( $user );
+
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log(
+					sprintf(
+						'Profile Service: User data formatted successfully - Fields: [%s]',
+						implode( ', ', array_keys( $user_data ) )
+					)
 				);
 			}
 
-			$cache_key = Cache_Service::generate_user_key( $user_id, 'profile' );
-			return Cache_Service::remember(
-				$cache_key,
-				fn() => $this->repository->get_profile( $user_id ),
-				array( 'category' => Cache_Service::CATEGORY_CRITICAL )
-			);
-		} catch ( Profile_Service_Exception $e ) {
-			return $e->to_wp_error();
+			return $user_data;
 		} catch ( \Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Profile Service: Error formatting user data - %s', $e->getMessage() ) );
+			}
 			return new WP_Error(
-				'profile_error',
-				$e->getMessage()
+				'user_format_error',
+				__( 'Failed to format user data', 'athlete-dashboard' ),
+				array(
+					'user_id' => $user_id,
+					'error'   => $e->getMessage(),
+				)
 			);
 		}
 	}
@@ -228,65 +400,6 @@ class Profile_Service implements Profile_Service_Interface {
 	}
 
 	/**
-	 * Get user data.
-	 *
-	 * @param int $user_id User ID.
-	 * @return array|WP_Error User data or error on failure.
-	 */
-	public function get_user_data( int $user_id ): array|WP_Error {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf( 'Profile Service: Getting user data for ID %d', $user_id ) );
-		}
-
-		$user = get_userdata( $user_id );
-		if ( ! $user ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( sprintf( 'Profile Service: User not found for ID %d', $user_id ) );
-			}
-			return new WP_Error(
-				'user_not_found',
-				sprintf(
-					/* translators: %d: User ID */
-					__( 'User not found: %d', 'athlete-dashboard' ),
-					$user_id
-				),
-				array( 'user_id' => $user_id )
-			);
-		}
-
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf( 'Profile Service: Formatting user data for ID %d', $user_id ) );
-		}
-
-		try {
-			$user_data = $this->format_user_data( $user );
-
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log(
-					sprintf(
-						'Profile Service: User data formatted successfully - Fields: [%s]',
-						implode( ', ', array_keys( $user_data ) )
-					)
-				);
-			}
-
-			return $user_data;
-		} catch ( \Exception $e ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( sprintf( 'Profile Service: Error formatting user data - %s', $e->getMessage() ) );
-			}
-			return new WP_Error(
-				'user_format_error',
-				__( 'Failed to format user data', 'athlete-dashboard' ),
-				array(
-					'user_id' => $user_id,
-					'error'   => $e->getMessage(),
-				)
-			);
-		}
-	}
-
-	/**
 	 * Update user data.
 	 *
 	 * @param int   $user_id User ID.
@@ -356,7 +469,7 @@ class Profile_Service implements Profile_Service_Interface {
 
 		// Update nickname separately since it's a meta field
 		if ( isset( $data['nickname'] ) ) {
-			update_user_meta( $user_id, 'nickname', sanitize_text_field( $data['nickname'] ) );
+			update_user_meta( $user_id, 'nickname', sanitize_text_error( $data['nickname'] ) );
 		}
 
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {

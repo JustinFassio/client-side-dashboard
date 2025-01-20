@@ -116,25 +116,31 @@ export const physicalApi: PhysicalApi = {
             }
         };
 
-        // Add optional measurements only if they are numbers
-        if (typeof data.chest === 'number') payload.chest = data.chest;
-        if (typeof data.waist === 'number') payload.waist = data.waist;
-        if (typeof data.hips === 'number') payload.hips = data.hips;
-
         console.log('2. Final payload:', payload);
 
-        const response = await fetch(
-            `${BASE_URL}/${userId}`,
-            getAuthOptions('POST', payload)
-        );
+        try {
+            const response = await fetch(
+                `${BASE_URL}/${userId}`,
+                getAuthOptions('POST', payload)
+            );
 
-        if (!response.ok) {
-            const error = await response.json();
-            console.error('Update failed:', error);
-            throw new Error(error.message || 'Failed to update physical data');
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('Update failed:', error);
+                throw new Error(error.message || 'Failed to update physical data');
+            }
+
+            const result = await response.json();
+            console.log('Update successful:', result);
+            return result;
+        } catch (err) {
+            console.error('Update failed:', err);
+            // Ensure we throw an Error object with a message
+            if (err instanceof Error) {
+                throw err;
+            }
+            throw new Error('Failed to update physical data');
         }
-
-        return response.json();
     },
 
     async getPhysicalHistory(
@@ -142,25 +148,40 @@ export const physicalApi: PhysicalApi = {
         offset: number = 0,
         limit: number = 10
     ): Promise<PhysicalHistoryResponse> {
+        console.log('=== Physical History Debug ===');
         console.log(`Fetching physical history for user ${userId}`);
-        const response = await fetch(
-            `${BASE_URL}/${userId}/history?offset=${offset}&limit=${limit}`,
-            getAuthOptions()
-        );
+        
+        try {
+            const response = await fetch(
+                `${BASE_URL}/${userId}/history?offset=${offset}&limit=${limit}`,
+                getAuthOptions()
+            );
 
-        if (!response.ok) {
-            if (response.status === 404) {
-                console.log('No history found, returning empty array');
-                return {
-                    items: [],
-                    total: 0,
-                    limit,
-                    offset
-                };
+            if (!response.ok) {
+                if (response.status === 404) {
+                    console.log('No history found, returning empty array');
+                    return {
+                        items: [],
+                        total: 0,
+                        limit,
+                        offset
+                    };
+                }
+                const error = await response.json();
+                console.error('History fetch failed:', error);
+                throw new Error(error.message || 'Failed to load physical history');
+            }
+
+            const result = await response.json();
+            console.log('History fetch successful:', result);
+            return result;
+        } catch (err) {
+            console.error('History fetch failed:', err);
+            // Ensure we throw an Error object with a message
+            if (err instanceof Error) {
+                throw err;
             }
             throw new Error('Failed to load physical history');
         }
-
-        return response.json();
     }
 }; 

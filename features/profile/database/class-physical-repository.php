@@ -72,9 +72,9 @@ class Physical_Repository {
 			'waist'  => $result['waist'] ? (float) $result['waist'] : null,
 			'hips'   => $result['hips'] ? (float) $result['hips'] : null,
 			'units'  => array(
-				'height'       => $result['units_height'],
-				'weight'       => $result['units_weight'],
-				'measurements' => $result['units_measurements'],
+				'height'       => $result['units_height'] ?? 'cm',
+				'weight'       => $result['units_weight'] ?? 'kg',
+				'measurements' => $result['units_measurements'] ?? 'cm',
 			),
 		);
 	}

@@ -4,7 +4,7 @@ import { MeasurementForm } from './MeasurementForm';
 import { HistoryView } from './HistoryView';
 import { physicalApi } from '../../api/physical';
 import { PhysicalData } from '../../types/physical';
-import * as styles from './PhysicalSection.module.css';
+import { loading, error } from './PhysicalSection.module.css';
 
 interface PhysicalSectionProps {
     userId: number;
@@ -17,11 +17,12 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
     userId,
     onSave,
     isSaving,
-    error
+    error: externalError
 }) => {
     const [physicalData, setPhysicalData] = useState<PhysicalData | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [updateError, setUpdateError] = useState<string | null>(null);
 
     useEffect(() => {
         loadPhysicalData();
@@ -37,29 +38,29 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
             console.error('Failed to load physical data:', err);
             setLoadError(err instanceof Error ? err.message : 'Failed to load physical data');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     const handleUpdate = async (data: PhysicalData) => {
-        setLoading(true);
+        setIsLoading(true);
         try {
             console.log('Updating physical data:', data);
             const updatedData = await physicalApi.updatePhysicalData(userId, data);
             console.log('Update successful:', updatedData);
             setPhysicalData(updatedData);
-            setError(null);
+            setUpdateError(null);
         } catch (err) {
             console.error('Update failed:', err);
-            setError(err instanceof Error ? err.message : 'Failed to update physical data');
+            setUpdateError(err instanceof Error ? err.message : 'Failed to update physical data');
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
-    if (loading) return (
+    if (isLoading) return (
         <Section title="Physical Information">
-            <div className={styles.loading} role="status" aria-live="polite">
+            <div className={loading} role="status" aria-live="polite">
                 Loading physical data...
             </div>
         </Section>
@@ -67,7 +68,7 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
 
     if (loadError) return (
         <Section title="Physical Information">
-            <div className={styles.error} role="alert">
+            <div className={error} role="alert">
                 Error: {loadError}
             </div>
         </Section>
@@ -85,9 +86,9 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
                         onUpdate={handleUpdate}
                     />
                     <HistoryView userId={userId} />
-                    {error && (
-                        <div className="section-error">
-                            <p>{error}</p>
+                    {(updateError || externalError) && (
+                        <div className={error} role="alert">
+                            {updateError || externalError}
                         </div>
                     )}
                 </>

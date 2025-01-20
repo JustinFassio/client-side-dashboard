@@ -92,96 +92,85 @@ class Workout_Endpoints {
 	}
 
 	/**
-	 * Generate a new workout
+	 * Generate a workout plan.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response|WP_Error Response object or error.
 	 */
 	public function generate_workout( WP_REST_Request $request ) {
-		try {
-			error_log( 'Starting workout generation...' );
-			error_log( 'Request method: ' . $request->get_method() );
-			error_log( 'Request route: ' . $request->get_route() );
+		$user_id = get_current_user_id();
 
-			$user_id = \get_current_user_id();
-			$params  = $request->get_json_params();
-			error_log( 'Received params: ' . print_r( $params, true ) );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Workout Generator: Generating workout for user %d', $user_id ) );
+		}
 
-			if ( ! isset( $params['preferences'] ) || ! isset( $params['settings'] ) ) {
-				throw new Exception( 'Missing required parameters: preferences and settings are required' );
+		// Get profile data
+		$repository      = new Profile_Repository();
+		$validator       = new Profile_Validator();
+		$profile_service = new Profile_Service( $repository, $validator );
+
+		$profile_data = $profile_service->get_profile( $user_id );
+
+		if ( is_wp_error( $profile_data ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Workout Generator: Profile error - %s', $profile_data->get_error_message() ) );
 			}
-
-			$preferences = $params['preferences'];
-			$settings    = $params['settings'];
-
-			error_log( 'User ID: ' . $user_id . ', Preferences: ' . print_r( $preferences, true ) . ', Settings: ' . print_r( $settings, true ) );
-
-			// Validate preferences
-			$this->validate_preferences( $preferences );
-			error_log( 'Preferences validated successfully' );
-
-			try {
-				// Get user profile data
-				$repository      = new Profile_Repository();
-				$validator       = new Profile_Validator();
-				$profile_service = new Profile_Service( $repository, $validator );
-				error_log( 'Profile service initialized' );
-
-				$profile_data = $profile_service->get_profile( $user_id );
-				error_log( 'Retrieved profile data: ' . print_r( $profile_data, true ) );
-
-				// Check if profile data is WP_Error
-				if ( is_wp_error( $profile_data ) ) {
-					error_log( 'Profile data error: ' . $profile_data->get_error_message() );
-					return new WP_Error(
-						'profile_error',
-						'Unable to generate workout: ' . $profile_data->get_error_message(),
-						array( 'status' => 400 )
-					);
-				}
-			} catch ( Exception $e ) {
-				error_log( 'Error getting profile data: ' . $e->getMessage() );
-				error_log( 'Stack trace: ' . $e->getTraceAsString() );
-				throw $e;
-			}
-
-			try {
-				// Initialize AI service
-				$ai_service = new AI_Service();
-				error_log( 'AI Service initialized' );
-
-				// Generate workout
-				error_log( 'Calling AI service to generate workout...' );
-				$workout_data = $ai_service->generate_workout_plan( $preferences, $profile_data );
-				error_log( 'AI service response: ' . print_r( $workout_data, true ) );
-			} catch ( Exception $e ) {
-				error_log( 'Error in AI service: ' . $e->getMessage() );
-				error_log( 'Stack trace: ' . $e->getTraceAsString() );
-				throw $e;
-			}
-
-			// Validate generated workout
-			$validator         = new Workout_Validator();
-			$validation_result = $validator->validate_workout( $workout_data );
-			error_log( 'Workout validation result: ' . ( $validation_result ? 'passed' : 'failed' ) );
-
-			if ( ! $validation_result ) {
-				throw new Exception( 'Generated workout failed validation' );
-			}
-
-			$response = array(
-				'success' => true,
-				'data'    => $workout_data,
-			);
-			error_log( 'Sending response: ' . print_r( $response, true ) );
-			return $response;
-
-		} catch ( Exception $e ) {
-			error_log( 'Error generating workout: ' . $e->getMessage() );
-			error_log( 'Stack trace: ' . $e->getTraceAsString() );
 			return new WP_Error(
-				'workout_generation_failed',
-				$e->getMessage(),
-				array( 'status' => 500 )
+				'profile_error',
+				__( 'Unable to generate workout: Profile not found or incomplete. Please complete your profile first.', 'athlete-dashboard' ),
+				array( 'status' => 400 )
 			);
 		}
+
+		// Validate profile data for workout requirements
+		$validation_result = $validator->validate_workout_requirements( $profile_data );
+		if ( is_wp_error( $validation_result ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Workout Generator: Profile validation error - %s', $validation_result->get_error_message() ) );
+			}
+			return new WP_Error(
+				'profile_validation_error',
+				sprintf(
+					__( 'Unable to generate workout: %s', 'athlete-dashboard' ),
+					$validation_result->get_error_message()
+				),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Get workout preferences from request
+		$preferences = $request->get_param( 'preferences' ) ?? array();
+
+		// Merge profile data with preferences
+		$workout_params = array_merge(
+			array(
+				'heightCm'        => $profile_data['heightCm'],
+				'weightKg'        => $profile_data['weightKg'],
+				'experienceLevel' => $profile_data['experienceLevel'],
+				'age'             => $profile_data['age'] ?? null,
+				'gender'          => $profile_data['gender'] ?? null,
+				'injuries'        => $profile_data['injuries'] ?? array(),
+				'equipment'       => $profile_data['equipment'] ?? array(),
+			),
+			$preferences
+		);
+
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( sprintf( 'Workout Generator: Using parameters - %s', print_r( $workout_params, true ) ) );
+		}
+
+		// Generate workout using AI Service
+		$ai_service   = new AI_Service();
+		$workout_data = $ai_service->generate_workout_plan( $workout_params );
+
+		if ( is_wp_error( $workout_data ) ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Workout Generator: AI Service error - %s', $workout_data->get_error_message() ) );
+			}
+			return $workout_data;
+		}
+
+		return rest_ensure_response( $workout_data );
 	}
 
 	/**

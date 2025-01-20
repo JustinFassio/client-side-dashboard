@@ -1,0 +1,92 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  php-tests:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wordpress_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          extensions: mysql, mysqli
+          coverage: xdebug
+
+      - name: Install WordPress Test Suite
+        run: |
+          bash bin/install-wp-tests.sh wordpress_test root root localhost latest
+
+      - name: Install PHP Dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHP Unit Tests
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml
+
+      - name: Upload PHP Coverage
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage.xml
+          flags: php
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Frontend Tests
+        run: npm test -- --coverage
+
+      - name: Run Performance Tests
+        run: npm run test:perf
+
+      - name: Upload JS Coverage
+        uses: codecov/codecov-action@v2
+        with:
+          files: ./coverage/lcov.info
+          flags: javascript
+
+  performance-report:
+    needs: [php-tests, frontend-tests]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate Performance Report
+        run: |
+          echo "## Performance Test Results" > performance.md
+          echo "### Frontend Metrics" >> performance.md
+          cat features/profile/assets/tests/performance/results.json >> performance.md
+          echo "### Backend Metrics" >> performance.md
+          cat features/profile/tests/performance/results.json >> performance.md
+
+      - name: Upload Performance Results
+        uses: actions/upload-artifact@v2
+        with:
+          name: performance-report
+          path: performance.md 

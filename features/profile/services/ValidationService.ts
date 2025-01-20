@@ -135,8 +135,12 @@ export class ValidationService implements IValidationService {
             case 'height':
                 return {
                     ...baseConfig,
-                    min: 0,
-                    max: 300 // cm
+                    min: 50,
+                    max: 300, // cm
+                    custom: [{
+                        validate: (value: number) => Number.isFinite(value) && value >= 50 && value <= 300,
+                        message: 'Height must be between 50 and 300 centimeters'
+                    }]
                 };
             case 'weight':
                 return {

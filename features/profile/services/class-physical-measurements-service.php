@@ -9,64 +9,79 @@ namespace AthleteDashboard\Features\Profile\Services;
 
 use WP_Error;
 
+/**
+ * Physical Measurements Service Class
+ *
+ * Handles CRUD operations for physical measurements
+ */
 class Physical_Measurements_Service {
-	private $wpdb;
+	/** @var string Database table name */
 	private $table_name;
 
-	public function __construct( $wpdb = null ) {
+	/** @var wpdb WordPress database object */
+	private $wpdb;
+
+	/**
+	 * Constructor
+	 *
+	 * @param string $table_name Database table name.
+	 */
+	public function __construct( $table_name ) {
 		global $wpdb;
-		$global_wpdb      = $wpdb;
-		$this->wpdb       = $wpdb ?? $global_wpdb;
-		$this->table_name = $this->wpdb->prefix . 'athlete_physical_measurements';
+		$this->table_name = $table_name;
+		$this->wpdb       = $wpdb;
 	}
 
 	/**
 	 * Get measurements for a user
+	 *
+	 * @param int   $user_id User ID.
+	 * @param array $args    Query arguments.
+	 * @return array Measurements data.
 	 */
-	public function get_measurements( int $user_id, array $args = array() ) {
-		if ( ! $this->user_exists( $user_id ) ) {
-			return new WP_Error( 'invalid_user', $this->__( 'Invalid user ID' ) );
-		}
-
+	public function get_measurements( $user_id, $args = array() ) {
 		$defaults = array(
-			'orderby' => 'created_at',
-			'order'   => 'DESC',
-			'limit'   => 10,
-			'offset'  => 0,
+			'orderby'  => 'date',
+			'order'    => 'DESC',
+			'per_page' => 10,
+			'page'     => 1,
 		);
 
-		$args    = $this->wp_parse_args( $args, $defaults );
-		$order   = $this->esc_sql( $args['order'] );
-		$orderby = $this->esc_sql( $args['orderby'] );
+		$args     = wp_parse_args( $args, $defaults );
+		$orderby  = esc_sql( $args['orderby'] );
+		$order    = esc_sql( $args['order'] );
+		$per_page = absint( $args['per_page'] );
+		$offset   = ( $args['page'] - 1 ) * $per_page;
 
 		$query = $this->wpdb->prepare(
 			"SELECT * FROM {$this->table_name} 
-            WHERE user_id = %d 
-            ORDER BY {$orderby} {$order}
-            LIMIT %d OFFSET %d",
+			WHERE user_id = %d
+			ORDER BY {$orderby} {$order}
+			LIMIT %d OFFSET %d",
 			$user_id,
-			$args['limit'],
-			$args['offset']
+			$per_page,
+			$offset
 		);
 
-		$results = $this->wpdb->get_results( $query );
-		if ( ! $results ) {
-			return array(
-				'items' => array(),
-				'total' => 0,
-			);
-		}
-
-		// Get total count
 		$total_query = $this->wpdb->prepare(
 			"SELECT COUNT(*) FROM {$this->table_name} WHERE user_id = %d",
 			$user_id
 		);
-		$total = (int) $this->wpdb->get_var( $total_query );
+
+		$cache_key = 'physical_measurements_' . $user_id . '_' . md5( $query );
+		$results   = wp_cache_get( $cache_key );
+
+		if ( false === $results ) {
+			$results = $this->wpdb->get_results( $query );
+			wp_cache_set( $cache_key, $results, '', 3600 );
+		}
+
+		$total = $this->wpdb->get_var( $total_query );
 
 		return array(
-			'items' => array_map( array( $this, 'format_measurement' ), $results ),
-			'total' => $total,
+			'items' => $results,
+			'total' => (int) $total,
+			'pages' => ceil( $total / $per_page ),
 		);
 	}
 

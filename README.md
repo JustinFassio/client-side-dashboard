@@ -249,3 +249,66 @@ GNU General Public License v2 (or later). See [LICENSE](LICENSE) for details.
 **This `README.md`** provides the starting point for **Cursor AI** to scaffold and automate coding tasks. If you have further questions or need to expand features, consult the **feature-specific READMEs** or reach out to the development team. 
 
 Enjoy building your **Athlete Dashboard**!
+
+## Testing Overview
+
+The Athlete Dashboard uses a comprehensive testing approach covering both backend (PHP/WordPress) and frontend (React/TypeScript) components.
+
+### Quick Start
+
+1. **Backend Tests**
+```bash
+# Install dependencies
+composer install
+
+# Run tests
+composer test
+```
+
+2. **Frontend Tests**
+```bash
+# Install dependencies
+cd features/profile/assets
+npm install
+
+# Run tests
+npm test
+```
+
+### Documentation
+
+- [Backend Testing Guide](tests/README.md) - Complete guide for PHP/WordPress testing
+- [Profile Feature Testing](features/profile/README.md) - Profile-specific testing documentation
+
+### Performance Testing
+
+Performance tests are run automatically in CI/CD and can be run locally:
+
+```bash
+# Backend performance
+composer test -- --testsuite performance
+
+# Frontend performance
+cd features/profile/assets
+npm run test:perf
+```
+
+Performance reports are generated in:
+- Backend: `tests/reports/performance/`
+- Frontend: `features/profile/assets/tests/performance/results.json`
+
+### Test Environment Setup
+
+1. **Local WordPress Environment**
+```bash
+# Set up test database
+bin/install-wp-tests.sh wordpress_test root root localhost latest
+```
+
+2. **Mock Environment** (for quick unit tests)
+```bash
+# Uses WP_Mock, already included in composer dependencies
+composer install
+```
+
+For detailed setup instructions, see the [Backend Testing Guide](tests/README.md).

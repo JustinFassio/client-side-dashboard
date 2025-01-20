@@ -59,6 +59,11 @@ class Profile_Validator extends Base_Validator {
 	private const ALLOWED_GENDERS         = array( 'male', 'female', 'other', 'prefer_not_to_say', '' );
 
 	/**
+	 * Experience level options
+	 */
+	private const EXPERIENCE_LEVELS = array( 'beginner', 'intermediate', 'advanced' );
+
+	/**
 	 * Get the validator-specific debug tag.
 	 *
 	 * @since 1.0.0
@@ -544,5 +549,137 @@ class Profile_Validator extends Base_Validator {
 		}
 
 		return $converted;
+	}
+
+	/**
+	 * Validate profile data for workout generation requirements
+	 *
+	 * @param array $data Profile data to validate
+	 * @return bool|WP_Error True if valid, WP_Error otherwise
+	 */
+	public function validate_workout_requirements( array $data ): bool|WP_Error {
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+			error_log( 'Validating workout requirements: ' . print_r( $data, true ) );
+		}
+
+		// Check required fields
+		$required_fields = array(
+			'heightCm'        => 'Height',
+			'weightKg'        => 'Weight',
+			'experienceLevel' => 'Experience Level',
+		);
+
+		foreach ( $required_fields as $field => $label ) {
+			if ( ! isset( $data[ $field ] ) || empty( $data[ $field ] ) ) {
+				return new WP_Error(
+					'missing_required_field',
+					sprintf( __( '%s is required for workout generation.', 'athlete-dashboard' ), $label ),
+					array(
+						'status' => 400,
+						'field'  => $field,
+					)
+				);
+			}
+		}
+
+		// Validate height
+		$height = (float) $data['heightCm'];
+		if ( $height < self::MIN_HEIGHT_CM || $height > self::MAX_HEIGHT_CM ) {
+			return new WP_Error(
+				'invalid_height',
+				sprintf(
+					__( 'Height must be between %1$d and %2$d cm.', 'athlete-dashboard' ),
+					self::MIN_HEIGHT_CM,
+					self::MAX_HEIGHT_CM
+				),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Validate weight
+		$weight = (float) $data['weightKg'];
+		if ( $weight < self::MIN_WEIGHT_KG || $weight > self::MAX_WEIGHT_KG ) {
+			return new WP_Error(
+				'invalid_weight',
+				sprintf(
+					__( 'Weight must be between %1$d and %2$d kg.', 'athlete-dashboard' ),
+					self::MIN_WEIGHT_KG,
+					self::MAX_WEIGHT_KG
+				),
+				array( 'status' => 400 )
+			);
+		}
+
+		// Validate experience level
+		if ( ! in_array( $data['experienceLevel'], self::EXPERIENCE_LEVELS, true ) ) {
+			return new WP_Error(
+				'invalid_experience_level',
+				__( 'Invalid experience level. Must be beginner, intermediate, or advanced.', 'athlete-dashboard' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Validate physical measurements
+	 *
+	 * @param array $data Data to validate.
+	 * @return array Validation result.
+	 */
+	public function validate_physical_measurements( $data ) {
+		$errors = array();
+
+		// Sanitize and validate height
+		$height = isset( $data['heightCm'] ) ? absint( $data['heightCm'] ) : 0;
+		if ( ! $this->is_valid_height( $height ) ) {
+			$errors['heightCm'] = sprintf(
+				/* translators: %1$d: minimum height, %2$d: maximum height */
+				__( 'Height must be between %1$d and %2$d cm.', 'athlete-dashboard' ),
+				self::MIN_HEIGHT_CM,
+				self::MAX_HEIGHT_CM
+			);
+		}
+
+		// Sanitize and validate weight
+		$weight = isset( $data['weightKg'] ) ? absint( $data['weightKg'] ) : 0;
+		if ( ! $this->is_valid_weight( $weight ) ) {
+			$errors['weightKg'] = sprintf(
+				/* translators: %1$d: minimum weight, %2$d: maximum weight */
+				__( 'Weight must be between %1$d and %2$d kg.', 'athlete-dashboard' ),
+				self::MIN_WEIGHT_KG,
+				self::MAX_WEIGHT_KG
+			);
+		}
+
+		return array(
+			'is_valid'       => empty( $errors ),
+			'errors'         => $errors,
+			'sanitized_data' => array(
+				'heightCm' => $height,
+				'weightKg' => $weight,
+			),
+		);
+	}
+
+	/**
+	 * Validate height value
+	 *
+	 * @param int $height Height in cm.
+	 * @return bool Whether height is valid.
+	 */
+	private function is_valid_height( $height ) {
+		return $height >= self::MIN_HEIGHT_CM && $height <= self::MAX_HEIGHT_CM;
+	}
+
+	/**
+	 * Validate weight value
+	 *
+	 * @param int $weight Weight in kg.
+	 * @return bool Whether weight is valid.
+	 */
+	private function is_valid_weight( $weight ) {
+		return $weight >= self::MIN_WEIGHT_KG && $weight <= self::MAX_WEIGHT_KG;
 	}
 }

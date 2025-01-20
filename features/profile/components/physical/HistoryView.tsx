@@ -119,16 +119,21 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ userId }) => {
                 </tr>
               </thead>
               <tbody>
-                {history.map(item => (
-                  <tr key={item.id}>
-                    <td>{new Date(item.date).toLocaleDateString()}</td>
-                    <td>{item.height} {item.units.height}</td>
-                    <td>{item.weight} {item.units.weight}</td>
-                    <td>{item.chest ? `${item.chest} ${item.units.measurements}` : '-'}</td>
-                    <td>{item.waist ? `${item.waist} ${item.units.measurements}` : '-'}</td>
-                    <td>{item.hips ? `${item.hips} ${item.units.measurements}` : '-'}</td>
-                  </tr>
-                ))}
+                {history.map(item => {
+                  // Ensure item exists before accessing properties
+                  if (!item) return null;
+                  
+                  return (
+                    <tr key={item.id || `history-${item.date}`}>
+                      <td>{item.date ? new Date(item.date).toLocaleDateString() : '-'}</td>
+                      <td>{typeof item.height === 'number' ? `${item.height} ${item.units_height}` : '-'}</td>
+                      <td>{typeof item.weight === 'number' ? `${item.weight} ${item.units_weight}` : '-'}</td>
+                      <td>{typeof item.chest === 'number' ? `${item.chest} ${item.units_measurements}` : '-'}</td>
+                      <td>{typeof item.waist === 'number' ? `${item.waist} ${item.units_measurements}` : '-'}</td>
+                      <td>{typeof item.hips === 'number' ? `${item.hips} ${item.units_measurements}` : '-'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

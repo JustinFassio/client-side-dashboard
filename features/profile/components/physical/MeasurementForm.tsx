@@ -62,29 +62,51 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
         measurements: useMetric ? ('cm' as const) : ('in' as const)
       };
       
-      // Convert existing values
-      let newHeight = prev.height;
+      // Convert height based on current unit system
+      let newHeight: number;
       let newHeightFeet: number | undefined;
       let newHeightInches: number | undefined;
 
       if (useMetric) {
         // Converting from imperial to metric
         if (prev.heightFeet !== undefined && prev.heightInches !== undefined) {
-          // Use feet/inches if available
+          // Convert from feet/inches to cm
           newHeight = (prev.heightFeet + (prev.heightInches / 12)) * 30.48;
+        } else if (prev.units.height === 'ft') {
+          // Convert from decimal feet to cm
+          newHeight = prev.height * 30.48;
         } else {
-          // Fallback to converting the single height value
+          // Already in cm
           newHeight = prev.height;
         }
         newHeightFeet = undefined;
         newHeightInches = undefined;
       } else {
         // Converting from metric to imperial
-        const totalFeet = prev.height / 30.48;
-        newHeightFeet = Math.floor(totalFeet);
-        newHeightInches = Math.round((totalFeet % 1) * 12);
-        newHeight = prev.height; // Keep the original cm value for storage
+        if (prev.units.height === 'cm') {
+          // Convert from cm to feet/inches
+          const totalFeet = prev.height / 30.48;
+          newHeightFeet = Math.floor(totalFeet);
+          newHeightInches = Math.round((totalFeet % 1) * 12);
+          newHeight = totalFeet; // Store as decimal feet
+        } else {
+          // Already in feet
+          newHeight = prev.height;
+          newHeightFeet = Math.floor(prev.height);
+          newHeightInches = Math.round((prev.height % 1) * 12);
+        }
       }
+
+      console.log('Unit switch conversion:', {
+        from: prev.units,
+        to: newUnits,
+        oldHeight: prev.height,
+        newHeight,
+        oldUnits: prev.units.height,
+        newUnits: newUnits.height,
+        heightFeet: newHeightFeet,
+        heightInches: newHeightInches
+      });
 
       const convertedValues = {
         height: newHeight,
@@ -95,13 +117,6 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
         waist: prev.waist ? convertMeasurement(prev.waist, prev.units.measurements, newUnits.measurements) : prev.waist,
         hips: prev.hips ? convertMeasurement(prev.hips, prev.units.measurements, newUnits.measurements) : prev.hips
       };
-
-      console.log('Switching units:', { 
-        from: prev.units, 
-        to: newUnits,
-        oldValues: { height: prev.height, heightFeet: prev.heightFeet, heightInches: prev.heightInches },
-        newValues: convertedValues 
-      });
 
       return {
         ...prev,
@@ -145,14 +160,27 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
       ? parseFloat(value) || 0
       : (formState.heightInches ?? 0);
 
-    // Update local form state for separate tracking
-    setFormState(prev => ({
-      ...prev,
-      heightFeet: feetVal,
-      heightInches: inchesVal,
-      // Convert total feet to cm for storage
-      height: (feetVal + (inchesVal / 12)) * 30.48
-    }));
+    // Validate inches to be between 0 and 11
+    const validatedInches = Math.min(Math.max(inchesVal, 0), 11);
+
+    // Store feet/inches values
+    setFormState(prev => {
+      // Calculate total height in the current unit system
+      const heightInFeet = feetVal + (validatedInches / 12);
+      const heightInCm = heightInFeet * 30.48;
+
+      return {
+        ...prev,
+        heightFeet: feetVal,
+        heightInches: validatedInches,
+        // Store height in the current unit system
+        height: prev.preferences?.showMetric ? heightInCm : heightInFeet,
+        units: {
+          ...prev.units,
+          height: prev.preferences?.showMetric ? 'cm' : 'ft'
+        }
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -160,18 +188,42 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
     if (submitting) return;
 
     try {
-        setSubmitting(true);
-        await onUpdate({
-            ...formState,
-            preferences: {
-                showMetric: formState.preferences.showMetric
-            }
-        });
-        setFormError(null);
+      setSubmitting(true);
+      setFormError(null); // Clear any previous errors
+      
+      // Ensure height is in the correct format before sending
+      const dataToSubmit = {
+        ...formState,
+        height: formState.units.height === 'ft'
+          ? formState.height // Already in decimal feet
+          : formState.height, // Already in cm
+        heightFeet: formState.heightFeet,
+        heightInches: formState.heightInches,
+        preferences: {
+          showMetric: formState.preferences.showMetric
+        }
+      };
+      
+      console.log('Submitting physical data:', {
+        height: dataToSubmit.height,
+        units: dataToSubmit.units,
+        heightFeet: formState.heightFeet,
+        heightInches: formState.heightInches,
+        showMetric: dataToSubmit.preferences.showMetric
+      });
+
+      // Validate required fields before submission
+      if (!dataToSubmit.height || !dataToSubmit.weight) {
+        throw new Error('Height and weight are required');
+      }
+
+      await onUpdate(dataToSubmit);
     } catch (err) {
-        setFormError(err instanceof Error ? err.message : 'Failed to update measurements');
+      console.error('Error updating measurements:', err);
+      setFormError(err instanceof Error ? err.message : 'Failed to update measurements');
+      throw err;
     } finally {
-        setSubmitting(false);
+      setSubmitting(false);
     }
   };
 
@@ -180,6 +232,7 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
       <form onSubmit={handleSubmit} className="form-section__grid" aria-label="Physical Measurements">
         {formError && (
           <div className="form-error" role="alert" aria-live="polite">
+            <strong>{__('Error:')} </strong>
             {formError}
           </div>
         )}
