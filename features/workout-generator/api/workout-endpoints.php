@@ -72,30 +72,81 @@ class WorkoutEndpoints {
 	}
 
 	public function generate_workout( WP_REST_Request $request ): WP_REST_Response {
-		$preferences = $request->get_param( 'preferences' );
-		$settings    = $request->get_param( 'settings' );
+		try {
+			$preferences = $request->get_param( 'preferences' );
+			$settings    = $request->get_param( 'settings' );
+			$user_id     = get_current_user_id();
 
-		// TODO: Implement AI workout generation logic
-		$workout = array(
-			'id'          => uniqid( 'workout_' ),
-			'name'        => 'Generated Workout',
-			'description' => 'AI-generated workout based on your preferences',
-			'difficulty'  => $preferences['fitnessLevel'],
-			'duration'    => $preferences['preferredDuration'],
-			'exercises'   => array(),
-			'targetGoals' => $preferences['targetMuscleGroups'],
-			'equipment'   => $preferences['availableEquipment'],
-			'createdAt'   => current_time( 'mysql' ),
-			'updatedAt'   => current_time( 'mysql' ),
-		);
+			// Get user profile data
+			$profile_service = new \AthleteDashboard\Features\Profile\API\Profile_Service();
+			$profile         = $profile_service->get_profile( $user_id );
+			$training_prefs  = $profile_service->get_training_preferences( $user_id );
+			$equipment       = $profile_service->get_equipment_availability( $user_id );
 
-		return new WP_REST_Response(
-			array(
-				'success' => true,
-				'data'    => $workout,
-			),
-			200
-		);
+			// Generate AI prompt
+			$prompt = array(
+				'profile'             => $profile,
+				'preferences'         => $preferences,
+				'trainingPreferences' => $training_prefs,
+				'equipment'           => $equipment,
+				'settings'            => $settings,
+			);
+
+			// Call AI service
+			$ai_service = new AI_Service();
+			$workout    = $ai_service->generate_workout_plan_with_profile( $prompt );
+
+			// Validate workout
+			$validator         = new Workout_Validator();
+			$validation_result = $validator->validate(
+				$workout,
+				array(
+					'maxExercises'   => $preferences['maxExercises'] ?? 10,
+					'minRestPeriod'  => $preferences['minRestPeriod'] ?? 60,
+					'requiredWarmup' => true,
+				)
+			);
+
+			if ( ! $validation_result['isValid'] ) {
+				return new WP_Error(
+					'validation_failed',
+					'Generated workout failed validation',
+					array(
+						'status' => 400,
+						'errors' => $validation_result['errors'],
+					)
+				);
+			}
+
+			// Add metadata
+			$workout['createdAt'] = current_time( 'mysql' );
+			$workout['updatedAt'] = current_time( 'mysql' );
+			$workout['userId']    = $user_id;
+
+			return new WP_REST_Response(
+				array(
+					'success' => true,
+					'data'    => $workout,
+				),
+				200
+			);
+
+		} catch ( AI_Service_Exception $e ) {
+			return new WP_Error(
+				$e->getCode() ?: 'ai_service_error',
+				$e->getMessage(),
+				array(
+					'status' => 500,
+					'data'   => $e->getData(),
+				)
+			);
+		} catch ( \Exception $e ) {
+			return new WP_Error(
+				'generation_failed',
+				'Failed to generate workout: ' . $e->getMessage(),
+				array( 'status' => 500 )
+			);
+		}
 	}
 
 	public function save_workout( WP_REST_Request $request ): WP_REST_Response {

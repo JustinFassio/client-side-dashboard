@@ -14,9 +14,10 @@ import {
     WorkoutRequest
 } from '../types/workout-types';
 
-import { ProfileIntegrationService } from '../../profile/services/ProfileService';
+import { ProfileService } from '../../profile/services/ProfileService';
+import { ProfileData, Injury } from '../../profile/types/profile';
 import { AIIntegrationService } from './AIService';
-import { AnalyticsService } from './AnalyticsService';
+import { AnalyticsService } from '.';
 import { WorkoutCache } from './WorkoutCache';
 import { SecurityValidator } from './SecurityValidator';
 import { WorkoutValidator } from './WorkoutValidator';
@@ -53,7 +54,7 @@ export class WorkoutGeneratorService implements WorkoutService {
     private securityValidator: SecurityValidator;
 
     constructor(
-        private profileService: ProfileIntegrationService,
+        private profileService: ProfileService,
         private aiService: AIIntegrationService,
         private analyticsService: AnalyticsService,
         private authService: AuthService
@@ -61,6 +62,16 @@ export class WorkoutGeneratorService implements WorkoutService {
         this.cache = new WorkoutCache();
         this.validator = new WorkoutValidator();
         this.securityValidator = new SecurityValidator();
+    }
+
+    private convertToUserProfile(profile: ProfileData): UserProfile {
+        return {
+            id: profile.id.toString(),
+            injuries: profile.injuries.map((injury: Injury) => injury.name),
+            heightCm: 170, // Default value since not in profile
+            weightKg: 70,  // Default value since not in profile
+            experienceLevel: 'beginner' // Default value since not in profile
+        };
     }
 
     async generateWorkout(userId: number, preferences: WorkoutPreferences): Promise<WorkoutPlan> {
@@ -74,18 +85,28 @@ export class WorkoutGeneratorService implements WorkoutService {
             this.securityValidator.validateInput(preferences);
             
             // Gather user data
-            const [profile, trainingPrefs, equipment] = await Promise.all([
-                this.profileService.getUserProfile(userId),
-                this.profileService.getTrainingPreferences(userId),
-                this.profileService.getEquipmentAvailability(userId)
-            ]);
+            const profile = await this.profileService.fetchProfile(userId);
+            const userProfile = this.convertToUserProfile(profile);
             
             // Generate AI prompt
             const prompt: AIPrompt = {
-                profile,
+                profile: userProfile,
                 preferences,
-                trainingPreferences: trainingPrefs,
-                equipment
+                trainingPreferences: {
+                    preferredDays: [], // Default empty since not in profile
+                    preferredTime: 'morning', // Default value
+                    focusAreas: [] // Default empty since not in profile
+                },
+                equipment: [], // Default empty since not in profile
+                constraints: {
+                    injuries: userProfile.injuries,
+                    equipment: [],
+                    experienceLevel: userProfile.experienceLevel,
+                    timeConstraints: {
+                        maxDuration: preferences.preferredDuration * 60, // convert to minutes to seconds
+                        minRestPeriod: preferences.minRestPeriod || 60
+                    }
+                }
             };
             
             // Generate workout plan
@@ -93,15 +114,15 @@ export class WorkoutGeneratorService implements WorkoutService {
             
             // Validate safety
             const validationResult = await this.validator.validate(workoutPlan, {
-                maxExercises: preferences.maxExercises || 10,
-                minRestPeriod: preferences.minRestPeriod || 60,
+                maxExercises: preferences.maxExercises ?? 10,
+                minRestPeriod: preferences.minRestPeriod ?? 60,
                 requiredWarmup: true
             });
             
             if (!validationResult.isValid) {
                 throw new WorkoutServiceError(
                     'Generated workout failed safety validation',
-                    'SAFETY_VALIDATION_FAILED',
+                    WorkoutErrorCode.SAFETY_VALIDATION_FAILED,
                     validationResult.errors
                 );
             }
@@ -117,7 +138,7 @@ export class WorkoutGeneratorService implements WorkoutService {
                 ? error 
                 : new WorkoutServiceError(
                     'Failed to generate workout',
-                    'GENERATION_FAILED',
+                    WorkoutErrorCode.GENERATION_FAILED,
                     error
                 );
         }
@@ -136,15 +157,15 @@ export class WorkoutGeneratorService implements WorkoutService {
             
             // Validate modified workout
             const validationResult = await this.validator.validate(modifiedWorkout, {
-                maxExercises: currentWorkout.preferences.maxExercises,
-                minRestPeriod: currentWorkout.preferences.minRestPeriod,
+                maxExercises: currentWorkout.preferences?.maxExercises ?? 10,
+                minRestPeriod: currentWorkout.preferences?.minRestPeriod ?? 60,
                 requiredWarmup: true
             });
             
             if (!validationResult.isValid) {
                 throw new WorkoutServiceError(
-                    'Modified workout failed safety validation',
-                    'SAFETY_VALIDATION_FAILED',
+                    'Workout failed safety validation',
+                    WorkoutErrorCode.SAFETY_VALIDATION_FAILED,
                     validationResult.errors
                 );
             }
@@ -152,13 +173,11 @@ export class WorkoutGeneratorService implements WorkoutService {
             return modifiedWorkout;
             
         } catch (error) {
-            throw error instanceof WorkoutServiceError 
-                ? error 
-                : new WorkoutServiceError(
-                    'Failed to modify workout',
-                    'MODIFICATION_FAILED',
-                    error
-                );
+            throw new WorkoutServiceError(
+                'Failed to modify workout',
+                WorkoutErrorCode.MODIFICATION_FAILED,
+                error
+            );
         }
     }
 
@@ -166,15 +185,15 @@ export class WorkoutGeneratorService implements WorkoutService {
         try {
             // Validate workout before saving
             const validationResult = await this.validator.validate(workout, {
-                maxExercises: workout.preferences.maxExercises,
-                minRestPeriod: workout.preferences.minRestPeriod,
+                maxExercises: workout.preferences?.maxExercises ?? 10,
+                minRestPeriod: workout.preferences?.minRestPeriod ?? 60,
                 requiredWarmup: true
             });
             
             if (!validationResult.isValid) {
                 throw new WorkoutServiceError(
-                    'Cannot save invalid workout',
-                    'SAFETY_VALIDATION_FAILED',
+                    'Workout failed safety validation',
+                    WorkoutErrorCode.SAFETY_VALIDATION_FAILED,
                     validationResult.errors
                 );
             }
@@ -186,13 +205,11 @@ export class WorkoutGeneratorService implements WorkoutService {
             this.cache.invalidate(`history:${workout.userId}`);
             
         } catch (error) {
-            throw error instanceof WorkoutServiceError 
-                ? error 
-                : new WorkoutServiceError(
-                    'Failed to save workout',
-                    'SAVE_FAILED',
-                    error
-                );
+            throw new WorkoutServiceError(
+                'Failed to save workout',
+                WorkoutErrorCode.SAVE_FAILED,
+                error
+            );
         }
     }
 
@@ -204,13 +221,11 @@ export class WorkoutGeneratorService implements WorkoutService {
                     await this.authService.validateAccess(userId);
                     return await this.aiService.getWorkoutHistory(userId, filters);
                 } catch (error) {
-                    throw error instanceof WorkoutServiceError 
-                        ? error 
-                        : new WorkoutServiceError(
-                            'Failed to fetch workout history',
-                            'HISTORY_FETCH_FAILED',
-                            error
-                        );
+                    throw new WorkoutServiceError(
+                        'Failed to fetch workout history',
+                        WorkoutErrorCode.HISTORY_FETCH_FAILED,
+                        error
+                    );
                 }
             }
         );
@@ -227,7 +242,7 @@ export class WorkoutGeneratorService implements WorkoutService {
             if (!alternatives.length) {
                 throw new WorkoutServiceError(
                     'No suitable alternatives found',
-                    'NO_ALTERNATIVES',
+                    WorkoutErrorCode.NO_ALTERNATIVES,
                     { exerciseId, constraints }
                 );
             }
@@ -236,27 +251,25 @@ export class WorkoutGeneratorService implements WorkoutService {
             return alternatives[0];
             
         } catch (error) {
-            throw error instanceof WorkoutServiceError 
-                ? error 
-                : new WorkoutServiceError(
-                    'Failed to find exercise alternative',
-                    'ALTERNATIVE_FAILED',
-                    error
-                );
+            throw new WorkoutServiceError(
+                'Failed to find exercise alternative',
+                WorkoutErrorCode.ALTERNATIVE_FAILED,
+                error
+            );
         }
     }
 
     async validateWorkoutSafety(workout: WorkoutPlan, userProfile: UserProfile): Promise<ValidationResult> {
         try {
             return await this.validator.validate(workout, {
-                maxExercises: workout.preferences.maxExercises,
-                minRestPeriod: workout.preferences.minRestPeriod,
+                maxExercises: workout.preferences?.maxExercises ?? 10,
+                minRestPeriod: workout.preferences?.minRestPeriod ?? 60,
                 requiredWarmup: true
             });
         } catch (error) {
             throw new WorkoutServiceError(
-                'Failed to validate workout safety',
-                'VALIDATION_FAILED',
+                'Validation failed',
+                WorkoutErrorCode.VALIDATION_FAILED,
                 error
             );
         }
@@ -267,9 +280,9 @@ export class WorkoutGeneratorService implements WorkoutService {
             return await this.aiService.getWorkoutPlanById(workoutId);
         } catch (error) {
             throw new WorkoutServiceError(
-                'Failed to fetch workout',
-                'WORKOUT_NOT_FOUND',
-                error
+                'Workout not found',
+                WorkoutErrorCode.WORKOUT_NOT_FOUND,
+                { workoutId }
             );
         }
     }

@@ -1,7 +1,15 @@
-import { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, User } from '../types';
+import { 
+    LoginRequest, 
+    LoginResponse, 
+    RegisterRequest, 
+    RegisterResponse, 
+    User,
+    AuthEventType,
+    AuthErrorCode
+} from '../types';
 import { AuthServiceError, shouldRetry } from './errors';
-import { ApiConfig, RequestOptions } from './types';
-import { EventEmitter } from '../../../dashboard/events';
+import { ApiConfig, RequestOptions, RetryConfig } from './types';
+import { dashboardEvents } from '../../../dashboard/events';
 import { RateLimiter } from './rateLimiting';
 
 /**
@@ -55,12 +63,12 @@ export class AuthService {
 
             this.validateResponse(response);
             this.rateLimiter.resetState(key);
-            EventEmitter.emit(AuthEventType.LOGIN_SUCCESS, response);
+            dashboardEvents.emit(AuthEventType.LOGIN_SUCCESS, response);
             return response;
         } catch (error) {
             this.rateLimiter.incrementAttempts(key);
             const authError = this.handleError(error);
-            EventEmitter.emit(AuthEventType.LOGIN_ERROR, authError);
+            dashboardEvents.emit(AuthEventType.LOGIN_ERROR, authError);
             throw authError;
         }
     }
@@ -74,10 +82,10 @@ export class AuthService {
             await this.makeRequest(this.config.endpoints.logout, {
                 method: 'POST'
             });
-            EventEmitter.emit(AuthEventType.LOGOUT);
+            dashboardEvents.emit(AuthEventType.LOGOUT);
         } catch (error) {
             const authError = this.handleError(error);
-            EventEmitter.emit(AuthEventType.LOGOUT_ERROR, authError);
+            dashboardEvents.emit(AuthEventType.LOGIN_ERROR, authError);
             throw authError;
         }
     }
@@ -104,12 +112,12 @@ export class AuthService {
 
             this.validateResponse(response);
             this.rateLimiter.resetState(key);
-            EventEmitter.emit(AuthEventType.REGISTER_SUCCESS, response);
+            dashboardEvents.emit(AuthEventType.REGISTER_SUCCESS, response);
             return response;
         } catch (error) {
             this.rateLimiter.incrementAttempts(key);
             const authError = this.handleError(error);
-            EventEmitter.emit(AuthEventType.REGISTER_ERROR, authError);
+            dashboardEvents.emit(AuthEventType.REGISTER_ERROR, authError);
             throw authError;
         }
     }
@@ -140,7 +148,7 @@ export class AuthService {
             );
 
             this.validateResponse(response);
-            return response.data.user;
+            return response.user;
         } catch (error) {
             throw this.handleError(error);
         }
@@ -159,10 +167,10 @@ export class AuthService {
             );
 
             this.validateResponse(response);
-            return response.data.token;
+            return response.token;
         } catch (error) {
             const authError = this.handleError(error);
-            EventEmitter.emit(AuthEventType.SESSION_EXPIRED);
+            dashboardEvents.emit(AuthEventType.SESSION_EXPIRED);
             throw authError;
         }
     }
@@ -223,8 +231,8 @@ export class AuthService {
     private static validateResponse<T>(response: T): void {
         if (!response || typeof response !== 'object') {
             throw new AuthServiceError(
-                'Invalid response format',
-                'INVALID_RESPONSE'
+                AuthErrorCode.INVALID_RESPONSE,
+                'Invalid response format'
             );
         }
     }
@@ -240,6 +248,18 @@ export class AuthService {
         }
 
         const message = error instanceof Error ? error.message : 'Unknown error';
-        return new AuthServiceError(message, 'UNKNOWN_ERROR');
+        return new AuthServiceError(AuthErrorCode.UNKNOWN_ERROR, message);
+    }
+
+    async validateAccess(userId: number): Promise<void> {
+        const currentUser = await AuthService.getCurrentUser();
+        
+        if (!currentUser) {
+            throw new Error('Authentication required');
+        }
+
+        if (currentUser.id !== userId) {
+            throw new Error('Unauthorized access');
+        }
     }
 } 

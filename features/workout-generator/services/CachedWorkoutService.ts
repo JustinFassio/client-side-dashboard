@@ -11,7 +11,17 @@ import {
 
 import { WorkoutService } from './workout-service';
 import { WorkoutCache } from './WorkoutCache';
-import { createHash } from 'crypto';
+
+// Simple hash function for browser environment
+function hashString(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16);
+}
 
 export class CachedWorkoutService implements WorkoutService {
     private cache: WorkoutCache;
@@ -19,16 +29,13 @@ export class CachedWorkoutService implements WorkoutService {
 
     constructor(baseService: WorkoutService) {
         this.baseService = baseService;
-        this.cache = new WorkoutCache({
-            ttl: 5 * 60 * 1000, // 5 minutes
-            maxSize: 100 // Store up to 100 workouts
-        });
+        this.cache = new WorkoutCache();
     }
 
     private generateCacheKey(userId: number, preferences: WorkoutPreferences): string {
         // Create a deterministic hash of the user ID and preferences
         const data = JSON.stringify({ userId, preferences });
-        return createHash('md5').update(data).digest('hex');
+        return hashString(data);
     }
 
     async generateWorkout(userId: number, preferences: WorkoutPreferences): Promise<WorkoutPlan> {

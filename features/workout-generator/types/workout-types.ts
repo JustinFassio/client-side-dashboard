@@ -3,7 +3,7 @@ import { DashboardError } from '../../../dashboard/types';
 export interface Exercise {
     id: string;
     name: string;
-    type: 'strength' | 'cardio' | 'flexibility';
+    type: 'strength' | 'cardio' | 'flexibility' | 'warmup';
     equipment: string[];
     targetMuscles: string[];
     difficulty: 'beginner' | 'intermediate' | 'advanced';
@@ -25,6 +25,11 @@ export interface WorkoutPlan {
     equipment?: string[];
     createdAt?: string;
     updatedAt?: string;
+    userId?: number;
+    preferences?: {
+        maxExercises: number;
+        minRestPeriod: number;
+    };
 }
 
 export interface WorkoutPreferences {
@@ -34,6 +39,8 @@ export interface WorkoutPreferences {
     targetMuscleGroups: string[];
     healthConditions: string[];
     workoutFrequency: number; // sessions per week
+    maxExercises?: number;
+    minRestPeriod?: number;
 }
 
 export interface GeneratorSettings {
@@ -59,7 +66,14 @@ export enum WorkoutErrorCode {
     GENERATION_FAILED = 'GENERATION_FAILED',
     VALIDATION_FAILED = 'VALIDATION_FAILED',
     RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
-    INVALID_INPUT = 'INVALID_INPUT'
+    INVALID_INPUT = 'INVALID_INPUT',
+    SAFETY_VALIDATION_FAILED = 'SAFETY_VALIDATION_FAILED',
+    MODIFICATION_FAILED = 'MODIFICATION_FAILED',
+    SAVE_FAILED = 'SAVE_FAILED',
+    HISTORY_FETCH_FAILED = 'HISTORY_FETCH_FAILED',
+    NO_ALTERNATIVES = 'NO_ALTERNATIVES',
+    ALTERNATIVE_FAILED = 'ALTERNATIVE_FAILED',
+    WORKOUT_NOT_FOUND = 'WORKOUT_NOT_FOUND'
 }
 
 export class WorkoutError extends Error {
@@ -157,4 +171,15 @@ export interface HistoryFilters {
     difficulty?: ('beginner' | 'intermediate' | 'advanced')[];
     equipment?: string[];
     limit?: number;
+}
+
+export interface ValidationResult {
+    isValid: boolean;
+    errors: Record<string, string[]>;
+}
+
+export interface WorkoutRequest {
+    userId: number;
+    preferences: WorkoutPreferences;
+    settings: GeneratorSettings;
 } 

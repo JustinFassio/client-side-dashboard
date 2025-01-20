@@ -4,13 +4,20 @@ import {
     UserProfile, 
     ExerciseConstraints,
     WorkoutError,
-    WorkoutErrorCode
+    WorkoutErrorCode,
+    ValidationResult
 } from '../types/workout-types';
 
 export interface WorkoutValidation {
     isValid: boolean;
     errors: string[];
     warnings: string[];
+}
+
+interface ValidationOptions {
+    maxExercises: number;
+    minRestPeriod: number;
+    requiredWarmup: boolean;
 }
 
 export class WorkoutValidator {
@@ -158,5 +165,37 @@ export class WorkoutValidator {
         };
 
         return injuryMuscleMap[injury] || [];
+    }
+
+    async validate(workout: WorkoutPlan, options: ValidationOptions): Promise<ValidationResult> {
+        const errors: Record<string, string[]> = {};
+
+        // Validate number of exercises
+        if (workout.exercises.length > options.maxExercises) {
+            errors.exercises = [`Workout exceeds maximum of ${options.maxExercises} exercises`];
+        }
+
+        // Validate rest periods
+        if (workout.exercises.some(ex => (ex.restPeriod || 0) < options.minRestPeriod)) {
+            errors.restPeriods = [`Some exercises have rest periods below minimum of ${options.minRestPeriod}s`];
+        }
+
+        // Validate warmup presence if required
+        if (options.requiredWarmup && !this.hasWarmup(workout)) {
+            errors.warmup = ['Workout must include a warmup exercise'];
+        }
+
+        return {
+            isValid: Object.keys(errors).length === 0,
+            errors
+        };
+    }
+
+    private hasWarmup(workout: WorkoutPlan): boolean {
+        return workout.exercises.some(ex => 
+            ex.type === 'warmup' || 
+            ex.name.toLowerCase().includes('warmup') || 
+            ex.name.toLowerCase().includes('warm-up')
+        );
     }
 } 

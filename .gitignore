@@ -40,6 +40,20 @@ wp-content/mu-plugins/
 wp-content/wp-cache-config.php
 wp-content/plugins/hello.php
 
+# WordPress core files
+wp-admin/
+wp-includes/
+wp-*.php
+xmlrpc.php
+license.txt
+readme.html
+index.php
+
+# Configuration files
+wp-config.php
+wp-config-*.php
+!wp-config-sample.php
+
 # Misc
 .cache/
 .temp/

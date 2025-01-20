@@ -3,136 +3,151 @@
 namespace AthleteDashboard\Features\WorkoutGenerator;
 
 class Bootstrap {
-    private $settings = [];
-    private $enabled_features = [];
+	private $settings         = array();
+	private $enabled_features = array();
 
-    public function __construct(array $settings = []) {
-        $this->settings = $settings;
-        $this->enabled_features = \get_option('workout_generator_settings', [
-            'tier_settings' => [
-                'foundation' => [
-                    'analytics' => false,
-                    'nutrition_tracking' => false,
-                    'habit_tracking' => false
-                ],
-                'performance' => [
-                    'analytics' => true,
-                    'nutrition_tracking' => false,
-                    'habit_tracking' => false
-                ],
-                'transformation' => [
-                    'analytics' => true,
-                    'nutrition_tracking' => true,
-                    'habit_tracking' => true
-                ]
-            ]
-        ]);
-    }
+	public function __construct( array $settings = array() ) {
+		$this->settings         = $settings;
+		$this->enabled_features = \get_option(
+			'workout_generator_settings',
+			array(
+				'tier_settings' => array(
+					'foundation'     => array(
+						'analytics'          => false,
+						'nutrition_tracking' => false,
+						'habit_tracking'     => false,
+					),
+					'performance'    => array(
+						'analytics'          => true,
+						'nutrition_tracking' => false,
+						'habit_tracking'     => false,
+					),
+					'transformation' => array(
+						'analytics'          => true,
+						'nutrition_tracking' => true,
+						'habit_tracking'     => true,
+					),
+				),
+			)
+		);
 
-    public function get_tier_settings($tier) {
-        $defaults = [
-            'foundation' => [
-                'requests' => 60,
-                'window' => 3600
-            ],
-            'performance' => [
-                'requests' => 120,
-                'window' => 3600
-            ],
-            'transformation' => [
-                'requests' => 180,
-                'window' => 3600
-            ]
-        ];
+		$this->init();
+	}
 
-        return $this->settings[$tier] ?? $defaults[$tier] ?? $defaults['foundation'];
-    }
+	public function init() {
+		add_action(
+			'rest_api_init',
+			function () {
+				$endpoints = new \AthleteDashboard\Features\WorkoutGenerator\WorkoutEndpoints();
+				$endpoints->register_routes();
+			}
+		);
+	}
 
-    public function is_feature_enabled($feature, $tier = null) {
-        if ($tier === null) {
-            $tier = \apply_filters('athlete_dashboard_get_user_tier', 'foundation');
-        }
+	public function get_tier_settings( $tier ) {
+		$defaults = array(
+			'foundation'     => array(
+				'requests' => 60,
+				'window'   => 3600,
+			),
+			'performance'    => array(
+				'requests' => 120,
+				'window'   => 3600,
+			),
+			'transformation' => array(
+				'requests' => 180,
+				'window'   => 3600,
+			),
+		);
 
-        if (!isset($this->enabled_features['tier_settings'][$tier])) {
-            return false;
-        }
+		return $this->settings[ $tier ] ?? $defaults[ $tier ] ?? $defaults['foundation'];
+	}
 
-        return $this->enabled_features['tier_settings'][$tier][$feature] ?? false;
-    }
+	public function is_feature_enabled( $feature, $tier = null ) {
+		if ( $tier === null ) {
+			$tier = \apply_filters( 'athlete_dashboard_get_user_tier', 'foundation' );
+		}
 
-    public function sanitize_settings($input) {
-        if (!isset($input['tier_settings']) || !is_array($input['tier_settings'])) {
-            return $this->get_default_settings();
-        }
+		if ( ! isset( $this->enabled_features['tier_settings'][ $tier ] ) ) {
+			return false;
+		}
 
-        $defaults = $this->get_default_settings();
-        $sanitized = $defaults;
+		return $this->enabled_features['tier_settings'][ $tier ][ $feature ] ?? false;
+	}
 
-        foreach (['foundation', 'performance', 'transformation'] as $tier) {
-            if (isset($input['tier_settings'][$tier])) {
-                // For foundation tier, always enforce default values
-                if ($tier === 'foundation') {
-                    $sanitized['tier_settings'][$tier] = $defaults['tier_settings'][$tier];
-                    continue;
-                }
+	public function sanitize_settings( $input ) {
+		if ( ! isset( $input['tier_settings'] ) || ! is_array( $input['tier_settings'] ) ) {
+			return $this->get_default_settings();
+		}
 
-                // For other tiers, validate and sanitize each feature
-                foreach (['analytics', 'nutrition_tracking', 'habit_tracking'] as $feature) {
-                    if (isset($input['tier_settings'][$tier][$feature])) {
-                        $sanitized['tier_settings'][$tier][$feature] = 
-                            (bool) $input['tier_settings'][$tier][$feature];
-                    }
-                }
+		$defaults  = $this->get_default_settings();
+		$sanitized = $defaults;
 
-                // Enforce tier-specific defaults
-                if ($tier === 'performance') {
-                    $sanitized['tier_settings'][$tier]['nutrition_tracking'] = false;
-                    $sanitized['tier_settings'][$tier]['habit_tracking'] = false;
-                }
-            }
-        }
+		foreach ( array( 'foundation', 'performance', 'transformation' ) as $tier ) {
+			if ( isset( $input['tier_settings'][ $tier ] ) ) {
+				// For foundation tier, always enforce default values
+				if ( $tier === 'foundation' ) {
+					$sanitized['tier_settings'][ $tier ] = $defaults['tier_settings'][ $tier ];
+					continue;
+				}
 
-        return $sanitized;
-    }
+				// For other tiers, validate and sanitize each feature
+				foreach ( array( 'analytics', 'nutrition_tracking', 'habit_tracking' ) as $feature ) {
+					if ( isset( $input['tier_settings'][ $tier ][ $feature ] ) ) {
+						$sanitized['tier_settings'][ $tier ][ $feature ] =
+							(bool) $input['tier_settings'][ $tier ][ $feature ];
+					}
+				}
 
-    private function get_default_settings() {
-        return [
-            'tier_settings' => [
-                'foundation' => [
-                    'analytics' => false,
-                    'nutrition_tracking' => false,
-                    'habit_tracking' => false
-                ],
-                'performance' => [
-                    'analytics' => true,
-                    'nutrition_tracking' => false,
-                    'habit_tracking' => false
-                ],
-                'transformation' => [
-                    'analytics' => true,
-                    'nutrition_tracking' => true,
-                    'habit_tracking' => true
-                ]
-            ]
-        ];
-    }
+				// Enforce tier-specific defaults
+				if ( $tier === 'performance' ) {
+					$sanitized['tier_settings'][ $tier ]['nutrition_tracking'] = false;
+					$sanitized['tier_settings'][ $tier ]['habit_tracking']     = false;
+				}
+			}
+		}
 
-    public function sanitize_tier_settings($settings) {
-        if (!is_array($settings)) {
-            return false;
-        }
+		return $sanitized;
+	}
 
-        if (!isset($settings['requests']) || !is_numeric($settings['requests']) || $settings['requests'] < 1) {
-            return false;
-        }
+	private function get_default_settings() {
+		return array(
+			'tier_settings' => array(
+				'foundation'     => array(
+					'analytics'          => false,
+					'nutrition_tracking' => false,
+					'habit_tracking'     => false,
+				),
+				'performance'    => array(
+					'analytics'          => true,
+					'nutrition_tracking' => false,
+					'habit_tracking'     => false,
+				),
+				'transformation' => array(
+					'analytics'          => true,
+					'nutrition_tracking' => true,
+					'habit_tracking'     => true,
+				),
+			),
+		);
+	}
 
-        if (!isset($settings['window']) || !is_numeric($settings['window']) || $settings['window'] < 60) {
-            return false;
-        }
+	public function sanitize_tier_settings( $settings ) {
+		if ( ! is_array( $settings ) ) {
+			return false;
+		}
 
-        return [
-            'requests' => (int) $settings['requests'],
-            'window' => (int) $settings['window']
-        ];
-    }
-} 
+		if ( ! isset( $settings['requests'] ) || ! is_numeric( $settings['requests'] ) || $settings['requests'] < 1 ) {
+			return false;
+		}
+
+		if ( ! isset( $settings['window'] ) || ! is_numeric( $settings['window'] ) || $settings['window'] < 60 ) {
+			return false;
+		}
+
+		return array(
+			'requests' => (int) $settings['requests'],
+			'window'   => (int) $settings['window'],
+		);
+	}
+}

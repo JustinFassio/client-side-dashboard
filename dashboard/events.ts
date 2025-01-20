@@ -1,11 +1,14 @@
 import { addAction, doAction } from '@wordpress/hooks';
-import { EventEmitter } from 'events';
+import { EventEmitter as NodeEventEmitter } from 'events';
 
-export interface DashboardEvents extends EventEmitter {
+export interface DashboardEvents extends NodeEventEmitter {
     emit(event: string, payload?: any): boolean;
     on(event: string, handler: (payload: any) => void): this;
     off(event: string, handler: (payload: any) => void): this;
 }
+
+// Create a singleton instance of EventEmitter that implements DashboardEvents
+export const dashboardEvents = new NodeEventEmitter() as DashboardEvents;
 
 // Event types
 export enum DashboardEventType {

@@ -75,6 +75,9 @@ add_action( 'init', 'init_cache_service', 5 ); // Run before cache stats widget 
 require_once get_stylesheet_directory() . '/features/profile/Config/Config.php';
 require_once get_stylesheet_directory() . '/features/profile/api/class-profile-endpoints.php';
 
+// Load workout generator feature
+require_once get_stylesheet_directory() . '/features/workout-generator/src/class-workout-generator-bootstrap.php';
+
 // Load REST API dependencies.
 require_once get_stylesheet_directory() . '/includes/rest-api/class-rate-limiter.php';
 require_once get_stylesheet_directory() . '/includes/rest-api/class-request-validator.php';
@@ -393,8 +396,12 @@ add_action(
 add_action(
 	'rest_api_init',
 	function () {
-		// Initialize profile endpoints.
+		// Initialize profile endpoints
 		AthleteDashboard\Features\Profile\api\Profile_Endpoints::init();
+
+		// Initialize workout generator endpoints
+		$workout_generator = new AthleteDashboard\Features\WorkoutGenerator\Workout_Generator_Bootstrap();
+		$workout_generator->init();
 
 		// Log registration and API details.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
@@ -522,13 +529,33 @@ require_once get_stylesheet_directory() . '/features/profile/database/migrations
  * Run migrations on theme activation
  */
 function athlete_dashboard_run_migrations() {
-	error_log('Running athlete dashboard migrations...');
+	error_log( 'Running athlete dashboard migrations...' );
 	$physical_table = new \AthleteDashboard\Features\Profile\Database\Migrations\Physical_Measurements_Table();
-	$result = $physical_table->up();
-	if (is_wp_error($result)) {
-		error_log('Failed to run physical measurements table migration: ' . $result->get_error_message());
+	$result         = $physical_table->up();
+	if ( is_wp_error( $result ) ) {
+		error_log( 'Failed to run physical measurements table migration: ' . $result->get_error_message() );
 	} else {
-		error_log('Physical measurements table migration completed successfully');
+		error_log( 'Physical measurements table migration completed successfully' );
 	}
 }
-add_action('after_switch_theme', 'athlete_dashboard_run_migrations');
+add_action( 'after_switch_theme', 'athlete_dashboard_run_migrations' );
+
+/**
+ * Validate AI Service Configuration
+ */
+add_action(
+	'admin_init',
+	function () {
+		if ( defined( 'AI_SERVICE_API_KEY' ) ) {
+			error_log( 'AI Service API Key is configured: ' . substr( AI_SERVICE_API_KEY, 0, 10 ) . '...' );
+		} else {
+			error_log( 'Warning: AI Service API Key is not configured' );
+		}
+
+		if ( defined( 'AI_SERVICE_ENDPOINT' ) ) {
+			error_log( 'AI Service Endpoint is configured: ' . AI_SERVICE_ENDPOINT );
+		} else {
+			error_log( 'Warning: AI Service Endpoint is not configured' );
+		}
+	}
+);

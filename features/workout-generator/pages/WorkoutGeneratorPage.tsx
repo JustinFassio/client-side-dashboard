@@ -91,7 +91,7 @@ const StyledWidget = styled.div`
 `;
 
 export const WorkoutGeneratorPage: React.FC = () => {
-    const { state, dispatch } = useWorkout();
+    const { state, dispatch, generateWorkout } = useWorkout();
     const { isLoading: loading, error, currentWorkout, workoutHistory: workouts } = state;
 
     const [preferences, setPreferences] = useState<WorkoutPreferences>(
@@ -111,15 +111,14 @@ export const WorkoutGeneratorPage: React.FC = () => {
 
     const handleGenerate = useCallback(async (prefs: WorkoutPreferences, sets: GeneratorSettings) => {
         try {
-            dispatch({ type: WorkoutEvent.GENERATE_REQUEST });
-            // The actual API call will be handled by the context/reducer
+            await generateWorkout(prefs, sets);
         } catch (err) {
             if (err instanceof Error) {
                 console.error('Error generating workout:', err);
                 dispatch({ type: WorkoutEvent.GENERATE_ERROR, payload: err.message });
             }
         }
-    }, [dispatch]);
+    }, [dispatch, generateWorkout]);
 
     const handleSaveWorkout = useCallback(async (workout: WorkoutPlan) => {
         try {

@@ -27,7 +27,7 @@ export interface RequestOptions {
     /** Request headers */
     headers?: Record<string, string>;
     /** Request body */
-    body?: unknown;
+    body?: string | FormData | URLSearchParams;
     /** Credentials mode */
     credentials?: RequestCredentials;
 }
