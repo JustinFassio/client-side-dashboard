@@ -16,6 +16,28 @@ jest.mock('@wordpress/element', () => ({
     useEffect: jest.fn(),
 }));
 
+// Mock crypto for UUID generation
+global.crypto = {
+    randomUUID: () => 'test-uuid'
+};
+
+// Extend expect matchers
+expect.extend({
+    toBeValidWorkoutPlan(received) {
+        const pass = received &&
+            typeof received === 'object' &&
+            Array.isArray(received.exercises) &&
+            typeof received.id === 'string' &&
+            typeof received.name === 'string';
+
+        return {
+            message: () =>
+                `expected ${received} to be a valid workout plan`,
+            pass
+        };
+    }
+});
+
 // Clean up after each test
 afterEach(() => {
     jest.clearAllMocks();

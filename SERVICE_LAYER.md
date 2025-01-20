@@ -437,3 +437,367 @@ By following these **expanded testing guidelines**—especially around file stru
 - **Efficient development**: Minimal overhead for new features, thanks to consistent patterns and examples.
 
 **Remember:** always keep your tests **small, focused, and consistent**. That way, each new component or feature can slot into the Service Layer smoothly—and pass its tests on the very first run. 
+
+## **8. Workout Generator Services**
+
+### **8.1 Architecture Overview**
+
+The workout generation system consists of three main services that work together to generate safe and appropriate workouts:
+
+```mermaid
+graph TD
+    A[AIService] --> B[PromptBuilder]
+    A[AIService] --> C[ConstraintManager]
+    B[PromptBuilder] --> D[AIPrompt]
+    C[ConstraintManager] --> E[Exercise Validation]
+    D --> F[AI API]
+    F --> A
+    E --> A
+```
+
+### **8.2 Service Responsibilities**
+
+1. **AIService**
+   - Acts as the main orchestrator for workout generation
+   - Handles communication with the AI API
+   - Manages error handling and response validation
+   - Coordinates between PromptBuilder and ConstraintManager
+
+2. **PromptBuilder**
+   - Constructs AI prompts from user data
+   - Applies initial constraints based on user profile
+   - Handles time and intensity limitations
+   - Manages injury-based exercise exclusions
+
+3. **ConstraintManager**
+   - Validates exercises against user constraints
+   - Manages equipment availability checks
+   - Handles experience level matching
+   - Suggests alternative exercises when needed
+
+### **8.3 Data Flow**
+
+1. **Input Phase**
+   ```typescript
+   // User data collection
+   interface WorkoutRequest {
+       profile: UserProfile;        // User profile with injuries, experience
+       preferences: WorkoutPreferences;  // Duration, muscle groups, etc.
+       equipment: EquipmentSet;     // Available equipment
+   }
+   ```
+
+2. **Processing Phase**
+   ```typescript
+   // Prompt generation
+   const prompt = promptBuilder.buildWorkoutPrompt(profile, preferences, equipment);
+   
+   // AI response processing
+   const response = await aiService.makeRequest('/generate', 'POST', prompt);
+   
+   // Constraint validation
+   const validExercises = await constraintManager.validateExercises(
+       response.exercises,
+       profile,
+       equipment
+   );
+   ```
+
+3. **Output Phase**
+   ```typescript
+   // Final workout plan
+   interface WorkoutPlan {
+       id: string;
+       exercises: Exercise[];
+       duration: number;
+       difficulty: string;
+       targetGoals: string[];
+       equipment: string[];
+   }
+   ```
+
+### **8.4 Error Handling**
+
+The services use a standardized error handling approach:
+
+```typescript
+// Error types
+enum WorkoutErrorCode {
+    GENERATION_FAILED = 'GENERATION_FAILED',
+    VALIDATION_FAILED = 'VALIDATION_FAILED',
+    RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED'
+}
+
+// Error structure
+interface WorkoutError {
+    message: string;
+    code: WorkoutErrorCode;
+    details?: Record<string, any>;
+}
+
+// Error handling example
+try {
+    const workout = await aiService.generateWorkout(profile, preferences, equipment);
+} catch (error) {
+    if (error instanceof WorkoutError) {
+        switch (error.code) {
+            case WorkoutErrorCode.RATE_LIMIT_EXCEEDED:
+                // Handle rate limiting
+                break;
+            case WorkoutErrorCode.VALIDATION_FAILED:
+                // Handle validation failures
+                break;
+            default:
+                // Handle other errors
+        }
+    }
+}
+```
+
+### **8.5 Integration Points**
+
+1. **With WordPress**
+   - User profiles stored in WP user meta
+   - Workout plans saved as custom post types
+   - Equipment preferences in user meta
+
+2. **With AI Service**
+   - RESTful API communication
+   - Rate limiting and error handling
+   - Response validation and processing
+
+3. **With Frontend**
+   - React hooks for workout generation
+   - Real-time constraint visualization
+   - Progress indicators and error displays
+
+### **8.6 Testing Guidelines**
+
+1. **Mock Data Setup**:
+   - Create realistic mock exercises with all required properties
+   - Define injury constraints that match real-world scenarios
+   - Use consistent experience levels and equipment lists
+
+2. **Validation Testing**:
+   - Test both positive and negative cases
+   - Verify all constraint types (injuries, equipment, experience)
+   - Check error messages for clarity and accuracy
+
+3. **Alternative Exercise Testing**:
+   - Test with various equipment combinations
+   - Verify similarity scoring works correctly
+   - Ensure alternatives respect all constraints
+
+4. **Edge Cases**:
+   - Test with empty equipment lists
+   - Test with no injuries
+   - Test with maximum intensity restrictions
+
+5. **Integration Points**:
+   - Test interaction between PromptBuilder and ConstraintManager
+   - Verify constraint propagation through the workout generation flow
+   - Test end-to-end workout generation with constraints
+
+### **8.7 Common Issues and Solutions**
+
+1. **Time Constraint Issues**:
+   ```typescript
+   // Wrong: Direct assignment
+   preferences.preferredDuration = constraints.timeConstraints.maxDuration;
+   
+   // Correct: Create new object
+   const adjustedPreferences = { ...preferences };
+   adjustedPreferences.preferredDuration = constraints.timeConstraints.maxDuration;
+   ```
+
+2. **Equipment Validation**:
+   ```typescript
+   // Wrong: Missing bodyweight check
+   if (!exercise.equipment.length) return true;
+   
+   // Correct: Check bodyweight availability
+   if (!exercise.equipment.length) {
+       return availableEquipment.includes('bodyweight');
+   }
+   ```
+
+3. **Alternative Suggestions**:
+   ```typescript
+   // Wrong: Return all alternatives
+   return validAlternatives;
+   
+   // Correct: Return only the best match
+   return validAlternatives
+       .sort((a, b) => calculateSimilarity(b) - calculateSimilarity(a))
+       .slice(0, 1);
+   ```
+
+### **8.8 Maintaining Test Stability**
+
+1. **Mock Data Management**:
+   - Keep mock data in separate files for reuse
+   - Use TypeScript interfaces to ensure mock data completeness
+   - Update mocks when adding new required fields
+
+2. **Test Independence**:
+   - Reset service instances in `beforeEach`
+   - Avoid shared state between tests
+   - Use deep clones for mock objects when needed
+
+3. **Constraint Management**:
+   - Keep default constraints in a central configuration
+   - Version control constraint changes
+   - Document constraint updates
+
+4. **Test Maintenance**:
+   - Review tests when modifying service behavior
+   - Update test descriptions to match current behavior
+   - Keep test coverage high for constraint logic 
+
+### **8.9 Integration Testing**
+
+The integration between `PromptBuilder` and `ConstraintManager` is critical for ensuring workout safety and appropriateness. Here's how to test their interaction:
+
+#### **8.9.1 Test Structure**
+
+```typescript
+describe('PromptBuilder and ConstraintManager Integration', () => {
+    let promptBuilder: PromptBuilder;
+    let constraintManager: ConstraintManager;
+    
+    beforeEach(() => {
+        // Share injury constraints between both services
+        const injuryConstraints = {
+            'knee': {
+                injury: 'knee',
+                excludedExercises: ['squats'],
+                excludedMuscleGroups: ['quadriceps'],
+                maxIntensity: 'medium'
+            }
+        };
+        
+        promptBuilder = new PromptBuilder(injuryConstraints);
+        constraintManager = new ConstraintManager(injuryConstraints);
+    });
+});
+```
+
+#### **8.9.2 Key Integration Points**
+
+1. **Constraint Consistency**
+   ```typescript
+   test('prompt constraints match constraint manager validation', async () => {
+       const prompt = await promptBuilder.buildWorkoutPrompt(profile, preferences);
+       mockExercises.forEach(exercise => {
+           const validationResult = constraintManager.validateExerciseForConstraints(
+               exercise,
+               profile.injuries,
+               equipment.available,
+               preferences.fitnessLevel
+           );
+           // Verify both systems agree on exercise validity
+       });
+   });
+   ```
+
+2. **Alternative Exercise Validation**
+   ```typescript
+   test('alternative exercises fit prompt constraints', async () => {
+       const prompt = await promptBuilder.buildWorkoutPrompt(profile, preferences);
+       const alternatives = constraintManager.suggestAlternativeExercises(
+           exercise,
+           profile.injuries,
+           equipment.available,
+           preferences.fitnessLevel,
+           availableExercises
+       );
+       // Verify alternatives respect prompt constraints
+   });
+   ```
+
+3. **Time Constraint Handling**
+   ```typescript
+   test('prompt time constraints are respected', async () => {
+       const prompt = await promptBuilder.buildWorkoutPrompt(profile, {
+           ...preferences,
+           preferredDuration: 90 // Over limit
+       });
+       expect(prompt.constraints.timeConstraints.maxDuration).toBe(60);
+   });
+   ```
+
+#### **8.9.3 Common Integration Issues**
+
+1. **Constraint Synchronization**
+   ```typescript
+   // Wrong: Different constraints
+   const promptBuilder = new PromptBuilder(constraintsA);
+   const constraintManager = new ConstraintManager(constraintsB);
+   
+   // Correct: Share constraints
+   const sharedConstraints = { /* ... */ };
+   const promptBuilder = new PromptBuilder(sharedConstraints);
+   const constraintManager = new ConstraintManager(sharedConstraints);
+   ```
+
+2. **Validation Flow**
+   ```typescript
+   // Wrong: Independent validation
+   const prompt = await promptBuilder.buildWorkoutPrompt(profile, preferences);
+   const exercises = await getExercises();
+   
+   // Correct: Coordinated validation
+   const prompt = await promptBuilder.buildWorkoutPrompt(profile, preferences);
+   const exercises = await getExercises();
+   exercises.filter(ex => constraintManager.validateExerciseForConstraints(
+       ex,
+       prompt.constraints
+   ));
+   ```
+
+3. **Alternative Exercise Handling**
+   ```typescript
+   // Wrong: Ignore prompt constraints
+   const alternatives = constraintManager.suggestAlternativeExercises(exercise);
+   
+   // Correct: Consider all constraints
+   const alternatives = constraintManager.suggestAlternativeExercises(
+       exercise,
+       prompt.constraints.injuries,
+       prompt.equipment,
+       prompt.constraints.experienceLevel
+   );
+   ```
+
+#### **8.9.4 Testing Best Practices**
+
+1. **Mock Data Management**
+   - Use shared mock data between both services
+   - Keep mock exercises realistic and varied
+   - Include edge cases in mock data
+
+2. **Constraint Verification**
+   - Test both positive and negative cases
+   - Verify constraint propagation
+   - Check conflict resolution
+
+3. **Performance Considerations**
+   - Test with realistic data volumes
+   - Monitor integration points for bottlenecks
+   - Consider caching strategies
+
+4. **Maintenance**
+   - Update integration tests when either service changes
+   - Document integration assumptions
+   - Keep mock data up to date
+
+#### **8.9.5 Integration Test Checklist**
+
+- [ ] Shared constraints are properly synchronized
+- [ ] Exercise validation is consistent between services
+- [ ] Alternative exercises respect all constraints
+- [ ] Time constraints are properly enforced
+- [ ] Conflicts are resolved consistently
+- [ ] Edge cases are handled gracefully
+- [ ] Performance remains acceptable
+- [ ] Documentation is up to date 

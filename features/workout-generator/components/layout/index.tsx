@@ -9,9 +9,9 @@ interface WorkoutLayoutProps {
 
 export const WorkoutLayout: React.FC<WorkoutLayoutProps> = ({ context }) => {
     const { state } = useWorkout();
-    const { loading, error, currentWorkout, workouts } = state;
+    const { isLoading, error, currentWorkout, workoutHistory } = state;
 
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="workout-layout">
                 <div className="loading">Loading workouts...</div>
@@ -22,7 +22,7 @@ export const WorkoutLayout: React.FC<WorkoutLayoutProps> = ({ context }) => {
     if (error) {
         return (
             <div className="workout-layout">
-                <div className="error">Error: {error}</div>
+                <div className="error">Error: {error.message}</div>
             </div>
         );
     }
@@ -40,7 +40,10 @@ export const WorkoutLayout: React.FC<WorkoutLayoutProps> = ({ context }) => {
                                 <h3>{exercise.name}</h3>
                                 <p>Sets: {exercise.sets}</p>
                                 <p>Reps: {exercise.reps}</p>
-                                {exercise.weight && <p>Weight: {exercise.weight}kg</p>}
+                                {exercise.duration && <p>Duration: {exercise.duration}s</p>}
+                                {exercise.restPeriod && <p>Rest: {exercise.restPeriod}s</p>}
+                                <p>Type: {exercise.type}</p>
+                                <p>Difficulty: {exercise.difficulty}</p>
                             </div>
                         ))}
                     </div>
@@ -54,14 +57,16 @@ export const WorkoutLayout: React.FC<WorkoutLayoutProps> = ({ context }) => {
                 </div>
             )}
 
-            {workouts.length > 0 && (
+            {workoutHistory.length > 0 && (
                 <div className="workout-history">
                     <h2>Workout History</h2>
                     <div className="workouts-list">
-                        {workouts.map(workout => (
+                        {workoutHistory.map(workout => (
                             <div key={workout.id} className="workout-item">
                                 <h3>{workout.name}</h3>
-                                <p>Created: {new Date(workout.createdAt).toLocaleDateString()}</p>
+                                <p>Created: {workout.createdAt && new Date(workout.createdAt).toLocaleDateString()}</p>
+                                <p>Duration: {workout.duration} minutes</p>
+                                <p>Difficulty: {workout.difficulty}</p>
                             </div>
                         ))}
                     </div>

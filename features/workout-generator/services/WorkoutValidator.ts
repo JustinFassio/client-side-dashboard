@@ -1,178 +1,162 @@
-import { WorkoutPlan, ValidationResult, Exercise } from '../types/workout-types';
+import { 
+    WorkoutPlan, 
+    Exercise, 
+    UserProfile, 
+    ExerciseConstraints,
+    WorkoutError,
+    WorkoutErrorCode
+} from '../types/workout-types';
 
-interface ValidationRules {
-    maxExercises: number;
-    minRestPeriod: number;
-    requiredWarmup: boolean;
-}
-
-interface ValidationError {
-    code: string;
-    message: string;
-    details?: any;
+export interface WorkoutValidation {
+    isValid: boolean;
+    errors: string[];
+    warnings: string[];
 }
 
 export class WorkoutValidator {
-    async validate(workout: WorkoutPlan, rules: ValidationRules): Promise<ValidationResult> {
-        const errors: ValidationError[] = [];
-
-        // Validate basic structure
-        if (!workout || !workout.exercises || !Array.isArray(workout.exercises)) {
-            errors.push({
-                code: 'INVALID_STRUCTURE',
-                message: 'Workout plan must contain an array of exercises'
-            });
-            return { isValid: false, errors };
-        }
-
-        // Check number of exercises
-        if (workout.exercises.length > rules.maxExercises) {
-            errors.push({
-                code: 'TOO_MANY_EXERCISES',
-                message: `Workout contains more than ${rules.maxExercises} exercises`,
-                details: { count: workout.exercises.length, max: rules.maxExercises }
-            });
-        }
-
-        // Validate rest periods
-        const invalidRestPeriods = workout.exercises.filter(
-            exercise => exercise.restPeriod && exercise.restPeriod < rules.minRestPeriod
-        );
-        if (invalidRestPeriods.length > 0) {
-            errors.push({
-                code: 'INSUFFICIENT_REST',
-                message: `Some exercises have rest periods shorter than ${rules.minRestPeriod} seconds`,
-                details: { exercises: invalidRestPeriods.map(e => e.id) }
-            });
-        }
-
-        // Check for warmup if required
-        if (rules.requiredWarmup) {
-            const hasWarmup = workout.exercises.some(exercise => 
-                exercise.type === 'warmup' || exercise.tags?.includes('warmup')
-            );
-            if (!hasWarmup) {
-                errors.push({
-                    code: 'MISSING_WARMUP',
-                    message: 'Workout plan must include a warmup exercise'
-                });
-            }
-        }
-
-        // Validate individual exercises
-        for (const exercise of workout.exercises) {
-            const exerciseErrors = this.validateExercise(exercise);
-            if (exerciseErrors.length > 0) {
-                errors.push(...exerciseErrors);
-            }
-        }
-
-        // Validate exercise sequence
-        const sequenceErrors = this.validateExerciseSequence(workout.exercises);
-        if (sequenceErrors.length > 0) {
-            errors.push(...sequenceErrors);
-        }
-
-        return {
-            isValid: errors.length === 0,
-            errors: errors.length > 0 ? errors : undefined
-        };
-    }
-
-    private validateExercise(exercise: Exercise): ValidationError[] {
-        const errors: ValidationError[] = [];
-
-        // Check required fields
-        if (!exercise.id) {
-            errors.push({
-                code: 'MISSING_ID',
-                message: 'Exercise must have an ID',
-                details: { exercise }
-            });
-        }
-
+    private validateExercise(exercise: Exercise): string[] {
+        const errors: string[] = [];
+        
         if (!exercise.name) {
-            errors.push({
-                code: 'MISSING_NAME',
-                message: 'Exercise must have a name',
-                details: { exerciseId: exercise.id }
-            });
+            errors.push('Exercise name is required');
         }
-
-        // Validate sets and reps
-        if (typeof exercise.sets !== 'number' || exercise.sets <= 0) {
-            errors.push({
-                code: 'INVALID_SETS',
-                message: 'Exercise must have a valid number of sets',
-                details: { exerciseId: exercise.id, sets: exercise.sets }
-            });
+        
+        if (!exercise.difficulty || !['beginner', 'intermediate', 'advanced'].includes(exercise.difficulty)) {
+            errors.push('Invalid exercise difficulty level');
         }
-
-        if (typeof exercise.reps !== 'number' || exercise.reps <= 0) {
-            errors.push({
-                code: 'INVALID_REPS',
-                message: 'Exercise must have a valid number of reps',
-                details: { exerciseId: exercise.id, reps: exercise.reps }
-            });
+        
+        if (!exercise.equipment || exercise.equipment.length === 0) {
+            errors.push('Exercise equipment is required');
         }
-
-        // Validate intensity if present
-        if (exercise.intensity !== undefined) {
-            if (typeof exercise.intensity !== 'number' || 
-                exercise.intensity < 0 || 
-                exercise.intensity > 100) {
-                errors.push({
-                    code: 'INVALID_INTENSITY',
-                    message: 'Exercise intensity must be between 0 and 100',
-                    details: { exerciseId: exercise.id, intensity: exercise.intensity }
-                });
-            }
+        
+        if (!exercise.targetMuscles || exercise.targetMuscles.length === 0) {
+            errors.push('Target muscles are required');
         }
-
+        
+        if (!exercise.type) {
+            errors.push('Exercise type is required');
+        }
+        
         return errors;
     }
 
-    private validateExerciseSequence(exercises: Exercise[]): ValidationError[] {
-        const errors: ValidationError[] = [];
+    public validateWorkoutPlan(plan: WorkoutPlan): WorkoutValidation {
+        const validation: WorkoutValidation = {
+            isValid: true,
+            errors: [],
+            warnings: []
+        };
 
-        // Check for proper exercise order (warmup → main → cooldown)
-        const warmupExercises = exercises.filter(e => 
-            e.type === 'warmup' || e.tags?.includes('warmup')
-        );
-        const cooldownExercises = exercises.filter(e => 
-            e.type === 'cooldown' || e.tags?.includes('cooldown')
-        );
+        // Validate required fields
+        if (!plan.id) {
+            validation.errors.push('Workout plan ID is required');
+        }
 
-        // All warmup exercises should come before non-warmup exercises
-        const lastWarmupIndex = exercises.findIndex(e => 
-            e.type === 'warmup' || e.tags?.includes('warmup')
-        );
-        const firstNonWarmupIndex = exercises.findIndex(e => 
-            e.type !== 'warmup' && !e.tags?.includes('warmup')
-        );
+        if (!plan.name) {
+            validation.errors.push('Workout plan name is required');
+        }
 
-        if (lastWarmupIndex > firstNonWarmupIndex && firstNonWarmupIndex !== -1) {
-            errors.push({
-                code: 'INVALID_WARMUP_SEQUENCE',
-                message: 'Warmup exercises must come before main exercises'
+        if (!plan.exercises || plan.exercises.length === 0) {
+            validation.errors.push('Workout plan must include at least one exercise');
+        } else {
+            // Validate each exercise
+            plan.exercises.forEach((exercise, index) => {
+                const exerciseErrors = this.validateExercise(exercise);
+                if (exerciseErrors.length > 0) {
+                    validation.errors.push(`Exercise ${index + 1} (${exercise.name || 'unnamed'}): ${exerciseErrors.join(', ')}`);
+                }
             });
         }
 
-        // All cooldown exercises should come after non-cooldown exercises
-        const firstCooldownIndex = exercises.findIndex(e => 
-            e.type === 'cooldown' || e.tags?.includes('cooldown')
-        );
-        const lastNonCooldownIndex = exercises.findIndex(e => 
-            e.type !== 'cooldown' && !e.tags?.includes('cooldown')
-        );
-
-        if (firstCooldownIndex < lastNonCooldownIndex && firstCooldownIndex !== -1) {
-            errors.push({
-                code: 'INVALID_COOLDOWN_SEQUENCE',
-                message: 'Cooldown exercises must come after main exercises'
-            });
+        if (!plan.duration || plan.duration <= 0) {
+            validation.errors.push('Invalid workout duration');
         }
 
-        return errors;
+        if (!plan.difficulty || !['beginner', 'intermediate', 'advanced'].includes(plan.difficulty)) {
+            validation.errors.push('Invalid workout difficulty level');
+        }
+
+        // Add warnings for potential issues
+        if (plan.exercises && plan.exercises.length > 10) {
+            validation.warnings.push('Workout plan contains more than 10 exercises');
+        }
+
+        if (plan.duration && plan.duration > 120) {
+            validation.warnings.push('Workout duration exceeds 2 hours');
+        }
+
+        validation.isValid = validation.errors.length === 0;
+        return validation;
+    }
+
+    public validateExerciseSafety(exercise: Exercise, profile: UserProfile): boolean {
+        // Check if exercise targets injured areas
+        if (profile.injuries && profile.injuries.length > 0) {
+            const injuryRelatedMuscles = new Set(profile.injuries.flatMap(injury => this.getAffectedMuscles(injury)));
+            const exerciseMuscles = new Set(exercise.targetMuscles);
+            
+            if ([...injuryRelatedMuscles].some(muscle => exerciseMuscles.has(muscle))) {
+                return false;
+            }
+        }
+
+        // Check if exercise difficulty matches user's experience level
+        const difficultyLevels = { beginner: 1, intermediate: 2, advanced: 3 };
+        const exerciseDifficulty = difficultyLevels[exercise.difficulty];
+        const userLevel = difficultyLevels[profile.experienceLevel];
+
+        if (exerciseDifficulty > userLevel) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public validateConstraints(exercises: Exercise[], constraints: ExerciseConstraints): boolean {
+        return exercises.every(exercise => {
+            // Check equipment constraints
+            if (constraints.equipment && constraints.equipment.length > 0) {
+                const hasRequiredEquipment = exercise.equipment.some(eq => 
+                    constraints.equipment.includes(eq)
+                );
+                if (!hasRequiredEquipment) return false;
+            }
+
+            // Check experience level constraints
+            if (constraints.experienceLevel) {
+                const difficultyLevels = { beginner: 1, intermediate: 2, advanced: 3 };
+                const exerciseDifficulty = difficultyLevels[exercise.difficulty];
+                const maxDifficulty = difficultyLevels[constraints.experienceLevel];
+                if (exerciseDifficulty > maxDifficulty) return false;
+            }
+
+            // Check injury constraints
+            if (constraints.injuries && constraints.injuries.length > 0) {
+                const injuryRelatedMuscles = new Set(
+                    constraints.injuries.flatMap(injury => this.getAffectedMuscles(injury))
+                );
+                const exerciseMuscles = new Set(exercise.targetMuscles);
+                
+                if ([...injuryRelatedMuscles].some(muscle => exerciseMuscles.has(muscle))) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
+    }
+
+    private getAffectedMuscles(injury: string): string[] {
+        // Map injuries to affected muscle groups
+        const injuryMuscleMap: Record<string, string[]> = {
+            'shoulder': ['shoulders', 'deltoids', 'rotator cuff'],
+            'knee': ['quadriceps', 'hamstrings', 'calves'],
+            'back': ['lower back', 'lats', 'trapezius'],
+            'wrist': ['forearms'],
+            'ankle': ['calves', 'tibialis anterior'],
+            'hip': ['hip flexors', 'glutes', 'quadriceps']
+        };
+
+        return injuryMuscleMap[injury] || [];
     }
 } 

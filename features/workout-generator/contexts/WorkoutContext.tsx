@@ -1,25 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { WorkoutEvent } from '../events';
-
-interface Workout {
-    id: number;
-    name: string;
-    exercises: Array<{
-        name: string;
-        sets: number;
-        reps: number;
-        weight?: number;
-    }>;
-    createdAt: string;
-    updatedAt: string;
-}
-
-interface WorkoutState {
-    workouts: Workout[];
-    loading: boolean;
-    error: string | null;
-    currentWorkout: Workout | null;
-}
+import { WorkoutPlan, WorkoutPreferences, GeneratorSettings, WorkoutState } from '../types/workout-types';
+import { DashboardError } from '../../../dashboard/types';
 
 interface WorkoutContextType {
     state: WorkoutState;
@@ -28,17 +10,19 @@ interface WorkoutContextType {
 
 type WorkoutAction = 
     | { type: WorkoutEvent.FETCH_REQUEST }
-    | { type: WorkoutEvent.FETCH_SUCCESS; payload: Workout[] }
+    | { type: WorkoutEvent.FETCH_SUCCESS; payload: WorkoutPlan[] }
     | { type: WorkoutEvent.FETCH_ERROR; payload: string }
     | { type: WorkoutEvent.GENERATE_REQUEST }
-    | { type: WorkoutEvent.GENERATE_SUCCESS; payload: Workout }
+    | { type: WorkoutEvent.GENERATE_SUCCESS; payload: WorkoutPlan }
     | { type: WorkoutEvent.GENERATE_ERROR; payload: string };
 
 const initialState: WorkoutState = {
-    workouts: [],
-    loading: false,
+    isLoading: false,
     error: null,
-    currentWorkout: null
+    preferences: null,
+    settings: null,
+    currentWorkout: null,
+    workoutHistory: []
 };
 
 const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
@@ -46,22 +30,40 @@ const WorkoutContext = createContext<WorkoutContextType | undefined>(undefined);
 function workoutReducer(state: WorkoutState, action: WorkoutAction): WorkoutState {
     switch (action.type) {
         case WorkoutEvent.FETCH_REQUEST:
-            return { ...state, loading: true, error: null };
+            return { ...state, isLoading: true, error: null };
         case WorkoutEvent.FETCH_SUCCESS:
-            return { ...state, loading: false, workouts: action.payload };
+            return { ...state, isLoading: false, workoutHistory: action.payload };
         case WorkoutEvent.FETCH_ERROR:
-            return { ...state, loading: false, error: action.payload };
+            return { 
+                ...state, 
+                isLoading: false, 
+                error: {
+                    name: 'WorkoutError',
+                    message: action.payload,
+                    code: 'WORKOUT_FETCH_ERROR',
+                    timestamp: Date.now()
+                }
+            };
         case WorkoutEvent.GENERATE_REQUEST:
-            return { ...state, loading: true, error: null };
+            return { ...state, isLoading: true, error: null };
         case WorkoutEvent.GENERATE_SUCCESS:
             return {
                 ...state,
-                loading: false,
+                isLoading: false,
                 currentWorkout: action.payload,
-                workouts: [...state.workouts, action.payload]
+                workoutHistory: [...state.workoutHistory, action.payload]
             };
         case WorkoutEvent.GENERATE_ERROR:
-            return { ...state, loading: false, error: action.payload };
+            return { 
+                ...state, 
+                isLoading: false, 
+                error: {
+                    name: 'WorkoutError',
+                    message: action.payload,
+                    code: 'WORKOUT_GENERATE_ERROR',
+                    timestamp: Date.now()
+                }
+            };
         default:
             return state;
     }

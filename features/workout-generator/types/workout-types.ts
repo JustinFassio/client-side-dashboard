@@ -15,16 +15,16 @@ export interface Exercise {
 }
 
 export interface WorkoutPlan {
-    id: string;
-    name: string;
-    description: string;
-    difficulty: 'beginner' | 'intermediate' | 'advanced';
-    duration: number; // in minutes
+    id?: string;
+    name?: string;
+    description?: string;
+    difficulty: string;
+    duration: number;
     exercises: Exercise[];
     targetGoals: string[];
-    equipment: string[];
-    createdAt: string;
-    updatedAt: string;
+    equipment?: string[];
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface WorkoutPreferences {
@@ -55,18 +55,21 @@ export interface WorkoutState {
 
 export type WorkoutStatus = 'pending' | 'generating' | 'completed' | 'failed';
 
-export interface WorkoutError extends DashboardError {
-    code: WorkoutErrorCode;
-}
-
 export enum WorkoutErrorCode {
     GENERATION_FAILED = 'GENERATION_FAILED',
-    INVALID_PREFERENCES = 'INVALID_PREFERENCES',
-    INVALID_SETTINGS = 'INVALID_SETTINGS',
-    SAVE_FAILED = 'SAVE_FAILED',
-    LOAD_FAILED = 'LOAD_FAILED',
-    NETWORK_ERROR = 'NETWORK_ERROR',
-    UNKNOWN_ERROR = 'UNKNOWN_ERROR'
+    VALIDATION_FAILED = 'VALIDATION_FAILED',
+    RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
+    INVALID_INPUT = 'INVALID_INPUT'
+}
+
+export class WorkoutError extends Error {
+    constructor(
+        message: string,
+        public readonly code: WorkoutErrorCode
+    ) {
+        super(message);
+        this.name = 'WorkoutError';
+    }
 }
 
 export interface WorkoutValidation {
@@ -90,4 +93,68 @@ export interface WorkoutConfig {
         preferences: WorkoutPreferences;
         settings: GeneratorSettings;
     };
+}
+
+export interface UserProfile {
+    id: string;
+    injuries: string[];
+    heightCm: number;
+    weightKg: number;
+    experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+}
+
+export interface TrainingPreferences {
+    preferredDays: string[];
+    preferredTime: 'morning' | 'afternoon' | 'evening';
+    focusAreas: string[];
+}
+
+export interface EquipmentSet {
+    available: string[];
+    preferred: string[];
+}
+
+export interface AIPrompt {
+    profile: UserProfile;
+    preferences: WorkoutPreferences;
+    trainingPreferences: TrainingPreferences;
+    equipment: string[];
+    constraints: {
+        injuries: any[];
+        equipment: string[];
+        experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+        timeConstraints: {
+            maxDuration: number;
+            minRestPeriod: number;
+        };
+    };
+}
+
+export interface ExerciseConstraints {
+    injuries: string[];
+    equipment: string[];
+    experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+    maxIntensity?: 'low' | 'medium' | 'high';
+}
+
+export interface WorkoutModification {
+    exerciseId: string;
+    action: 'replace' | 'remove' | 'modify';
+    replacement?: Exercise;
+    modifications?: {
+        sets?: number;
+        reps?: number;
+        weight?: number;
+        duration?: number;
+        intensity?: number;
+    };
+}
+
+export interface HistoryFilters {
+    startDate?: string;
+    endDate?: string;
+    type?: string[];
+    difficulty?: ('beginner' | 'intermediate' | 'advanced')[];
+    equipment?: string[];
+    limit?: number;
 } 

@@ -3,8 +3,8 @@ import { Feature, FeatureContext, FeatureMetadata } from '../../dashboard/contra
 import { ErrorBoundary } from '../../dashboard/components/ErrorBoundary';
 import { WorkoutEvent } from './events';
 import { WorkoutProvider } from './contexts/WorkoutContext';
-import { WorkoutLayout } from './components/layout';
 import { UserProvider } from '../user/context/UserContext';
+import { WorkoutGeneratorPage } from './pages/WorkoutGeneratorPage';
 
 export class WorkoutGeneratorFeature implements Feature {
     public readonly identifier = 'workout-generator';
@@ -44,7 +44,7 @@ export class WorkoutGeneratorFeature implements Feature {
         return true;
     }
 
-    render({ _userId }: { userId: number }): React.ReactElement | null {
+    render({ userId }: { userId: number }): React.ReactElement | null {
         if (!this.context) {
             console.error('[WorkoutGeneratorFeature] Context not initialized');
             return null;
@@ -54,7 +54,7 @@ export class WorkoutGeneratorFeature implements Feature {
             <ErrorBoundary>
                 <UserProvider>
                     <WorkoutProvider>
-                        <WorkoutLayout context={this.context} />
+                        <WorkoutGeneratorPage />
                     </WorkoutProvider>
                 </UserProvider>
             </ErrorBoundary>
