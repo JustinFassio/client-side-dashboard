@@ -1,0 +1,173 @@
+/* Profile Layout Styles */
+.profile-layout {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.profile-layout h1 {
+    color: var(--text-primary);
+    margin-bottom: 2rem;
+    font-size: 2rem;
+}
+
+.profile-sections {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.profile-section {
+    background: var(--surface-background);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.profile-section h2 {
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+.profile-section .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.profile-section label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.profile-section input[type="text"],
+.profile-section input[type="email"],
+.profile-section input[type="number"],
+.profile-section select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background: var(--input-background);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.profile-section input[type="text"]:focus,
+.profile-section input[type="email"]:focus,
+.profile-section input[type="number"]:focus,
+.profile-section select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-alpha);
+    outline: none;
+}
+
+.profile-section input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.profile-error {
+    background: var(--error-background);
+    color: var(--error-text);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+}
+
+.profile-error h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+.profile-error p {
+    margin: 0 0 1rem;
+}
+
+/* Section-specific styles */
+.section-error {
+    background: var(--error-background);
+    color: var(--error-text);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin: 1rem 0;
+}
+
+.section-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Physical Section Styles */
+.physical-section {
+    grid-column: span 2;
+}
+
+.physical-section .measurement-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.physical-section .form-group {
+    margin-bottom: 1rem;
+}
+
+.physical-section .unit-toggle {
+    margin-bottom: 1.5rem;
+}
+
+.physical-section .history-view {
+    margin-top: 2rem;
+}
+
+.physical-section .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+.physical-section .history-table th,
+.physical-section .history-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.physical-section .history-table th {
+    background: var(--surface-background-alt);
+    font-weight: 500;
+}
+
+.physical-section .pagination {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .profile-layout {
+        padding: 1rem;
+    }
+
+    .profile-sections {
+        grid-template-columns: 1fr;
+    }
+
+    .physical-section {
+        grid-column: span 1;
+    }
+
+    .physical-section .measurement-form {
+        grid-template-columns: 1fr;
+    }
+} 

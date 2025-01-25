@@ -1,0 +1,98 @@
+/* Layout */
+:root {
+    --dashboard-header-height: var(--header-height);
+    --dashboard-sidebar-width: var(--sidebar-width);
+}
+
+/* Container */
+.container {
+    width: 100%;
+    max-width: var(--container-width);
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+}
+
+/* Grid System */
+.grid {
+    display: grid;
+    gap: var(--spacing-md);
+}
+
+.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 768px) {
+    .grid-cols-2,
+    .grid-cols-3,
+    .grid-cols-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Flex Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1; }
+
+/* Spacing Utilities */
+.m-0 { margin: 0; }
+.mt-1 { margin-top: var(--spacing-md); }
+.mb-1 { margin-bottom: var(--spacing-md); }
+.ml-1 { margin-left: var(--spacing-md); }
+.mr-1 { margin-right: var(--spacing-md); }
+
+.p-0 { padding: 0; }
+.pt-1 { padding-top: var(--spacing-md); }
+.pb-1 { padding-bottom: var(--spacing-md); }
+.pl-1 { padding-left: var(--spacing-md); }
+.pr-1 { padding-right: var(--spacing-md); }
+
+/* Loading States */
+.feature-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    padding: var(--spacing-lg);
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: var(--border-width) solid var(--color-background);
+    border-radius: 50%;
+    border-top-color: var(--color-primary);
+    animation: spin 1s ease-in-out infinite;
+    margin-bottom: var(--spacing-md);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error States */
+.feature-error {
+    background: var(--color-surface);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    text-align: center;
+    max-width: 500px;
+    margin: var(--spacing-lg) auto;
+    box-shadow: var(--shadow-md);
+}
+
+/* Feature Wrapper */
+.feature-wrapper {
+    opacity: 0;
+    animation: fadeIn var(--transition-fast) ease-in forwards;
+}
+
+@keyframes fadeIn {
+    to { opacity: 1; }
+} 

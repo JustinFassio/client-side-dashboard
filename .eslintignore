@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+build/
+dist/
+coverage/
+
+# Config files
+*.config.js
+*.conf.js
+
+# Other
+*.min.js
+*.bundle.js
+*.test.js.snap 

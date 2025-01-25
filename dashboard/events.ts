@@ -1,34 +1,71 @@
-type EventCallback = (data: any) => void;
+import { addAction, doAction } from '@wordpress/hooks';
+import { EventEmitter as NodeEventEmitter } from 'events';
 
-class EventBus {
-    private listeners: Map<string, EventCallback[]> = new Map();
-    private debug: boolean = false;
-
-    public enableDebug(): void {
-        this.debug = true;
-    }
-
-    public on(event: string, callback: EventCallback): void {
-        if (!this.listeners.has(event)) {
-            this.listeners.set(event, []);
-        }
-        this.listeners.get(event)?.push(callback);
-    }
-
-    public emit(event: string, data: any): void {
-        if (this.debug) {
-            console.log(`Event emitted: ${event}`, data);
-        }
-        this.listeners.get(event)?.forEach(callback => callback(data));
-    }
-
-    public off(event: string, callback: EventCallback): void {
-        const callbacks = this.listeners.get(event) || [];
-        const index = callbacks.indexOf(callback);
-        if (index > -1) {
-            callbacks.splice(index, 1);
-        }
-    }
+export interface DashboardEvents extends NodeEventEmitter {
+    emit(event: string, payload?: any): boolean;
+    on(event: string, handler: (payload: any) => void): this;
+    off(event: string, handler: (payload: any) => void): this;
 }
 
-export const Events = new EventBus(); 
+// Create a singleton instance of EventEmitter that implements DashboardEvents
+export const dashboardEvents = new NodeEventEmitter() as DashboardEvents;
+
+// Event types
+export enum DashboardEventType {
+    FEATURE_LOADED = 'feature_loaded',
+    FEATURE_UNLOADED = 'feature_unloaded',
+    NAVIGATION_CHANGED = 'navigation_changed',
+}
+
+// Event data interfaces
+export interface FeatureLoadedEvent {
+    featureId: string;
+    timestamp: number;
+}
+
+export interface FeatureUnloadedEvent {
+    featureId: string;
+    timestamp: number;
+}
+
+export interface NavigationChangedEvent {
+    from: string;
+    to: string;
+    timestamp: number;
+}
+
+// Event emitter functions
+export const emitFeatureLoaded = (featureId: string) => {
+    doAction(DashboardEventType.FEATURE_LOADED, {
+        featureId,
+        timestamp: Date.now(),
+    } as FeatureLoadedEvent);
+};
+
+export const emitFeatureUnloaded = (featureId: string) => {
+    doAction(DashboardEventType.FEATURE_UNLOADED, {
+        featureId,
+        timestamp: Date.now(),
+    } as FeatureUnloadedEvent);
+};
+
+export const emitNavigationChanged = (from: string, to: string) => {
+    doAction(DashboardEventType.NAVIGATION_CHANGED, {
+        from,
+        to,
+        timestamp: Date.now(),
+    } as NavigationChangedEvent);
+};
+
+// Event listener functions
+export const onFeatureLoaded = (callback: (event: FeatureLoadedEvent) => void) => {
+    addAction(DashboardEventType.FEATURE_LOADED, 'athlete-dashboard', callback);
+};
+
+export const onFeatureUnloaded = (callback: (event: FeatureUnloadedEvent) => void) => {
+    addAction(DashboardEventType.FEATURE_UNLOADED, 'athlete-dashboard', callback);
+};
+
+export const onNavigationChanged = (callback: (event: NavigationChangedEvent) => void) => {
+    addAction(DashboardEventType.NAVIGATION_CHANGED, 'athlete-dashboard', callback);
+}; 

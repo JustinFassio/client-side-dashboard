@@ -16,13 +16,15 @@ The **Athlete Dashboard** is a **Feature-First** WordPress child theme that inte
    - Each feature is self-contained with its UI, logic, assets, and data.  
    - No unintended dependencies or shared state between features.
 
-2. **Minimal Shared Files**  
-   - Only essential shared assets (e.g., an event bus, global style tokens if absolutely needed).  
-   - All other resources reside within each feature’s folder.
+2. **WordPress Integration**
+   - Uses WordPress's built-in React (`wp-element`)
+   - Leverages WordPress hooks and filters
+   - Follows WordPress coding standards
 
 3. **Event-Driven Communication**  
-   - Features communicate via a centralized event system (`events.ts` in `dashboard/`), emitting and listening to typed events.  
-   - WordPress hooks (`do_action`, `add_action`) mirror this concept on the PHP side.
+   - Features communicate via WordPress hooks (`do_action`, `add_action`)
+   - React components use event system for frontend communication
+   - Typed events ensure type safety across features
 
 4. **Scalability & Maintainability**  
    - Each feature can be independently developed, tested, or replaced.  
@@ -35,7 +37,7 @@ The **Athlete Dashboard** is a **Feature-First** WordPress child theme that inte
 ### **Why Feature-First?**
 - **Clarity**: Each feature directory holds everything for that feature (React components, SCSS, PHP integration, documentation).  
 - **Rapid Development**: New features can be added without disturbing others.  
-- **Easy Collaboration**: Developers quickly understand each feature’s scope and dependencies.
+- **Easy Collaboration**: Developers quickly understand each feature's scope and dependencies.
 
 ### **Typical Feature Layout**
 ```plaintext
@@ -48,8 +50,7 @@ features/
     │   │   └── trainingPersonaService.ts
     │   └── scss/
     │       └── trainingPersona.scss
-    ├── events.ts
-    ├── TrainingPersonaFeature.ts
+    ├── index.ts
     └── README.md
 ```
 
@@ -64,7 +65,7 @@ features/
   - `_profile_age`, `_profile_gender`, `_profile_injuries`, `_training_persona_level`, `_user_equipment`, etc.
 - **Access**:  
   - PHP: `update_user_meta($user_id, '_profile_age', $new_age);`  
-  - React/TS: via WP’s REST API or a custom AJAX endpoint that retrieves or updates user meta.
+  - React/TS: via WP REST API or AJAX endpoints
 
 ### **2. Custom Post Type for Workouts**
 
@@ -72,34 +73,22 @@ features/
 - **Post Meta** stores workout details like `_workout_exercises`, `_workout_program`, `_workout_ai_prompt`, etc.
 - **Advantages**:  
   - Built-in WordPress admin pages for listing, editing, or searching workouts.  
-  - Easy to group workouts into “Programs” via a taxonomy (e.g., `program`) or a meta field like `_program_id`.
+  - Easy to group workouts into "Programs" via taxonomy or meta field.
 
 ---
 
-## **Event-Driven Design**
+## **Build System**
 
-1. **Front-End Events**: Centralized in `dashboard/events.ts`, using a strongly typed system for React/TS.  
-   ```typescript
-   Events.on('profile:updated', (data) => { /* ... */ });
-   Events.emit('ai-workout:generated', { workoutData });
-   ```
-2. **Back-End Hooks**: Use `do_action` and `add_action` in PHP for integration with WordPress.  
-   ```php
-   do_action('workout_completed', $workout_id);
-   add_action('workout_completed', function($workout_id) { /* ... */ });
-   ```
-3. **Feature Independence**: Each feature manages its own events (`events.ts`), referencing the shared event bus to communicate externally.
+1. **Development**
+   - Uses `@wordpress/scripts` for modern development workflow
+   - Hot reloading for React components
+   - TypeScript compilation
+   - SCSS processing
 
----
-
-## **AI Integration**
-
-- **Purpose**: Generate new workouts or iterate existing ones using user meta (Profile, Persona, Equipment).  
-- **Flow**:  
-  1. **Gather Data** from `user_meta` (training level, injuries, equipment, etc.).  
-  2. **Construct AI Prompt** in a service (e.g., `generatorService.ts`).  
-  3. **AI Response** is parsed, and a new `workout` post is created or updated.  
-  4. **Final Display** in a React component (e.g., `AiWorkoutModal.tsx`), allowing the user to edit sets/reps before saving.
+2. **Production**
+   - Optimized builds with WordPress scripts
+   - Asset versioning and cache busting
+   - Proper WordPress integration
 
 ---
 
@@ -109,57 +98,32 @@ features/
 athlete-dashboard-child/
 ├── dashboard/                  # Core dashboard framework
 │   ├── core/                   # Core PHP classes
-│   ├── components/             # Shared React components (only if necessary)
-│   ├── events.ts               # Event bus for the entire dashboard
-│   ├── styles/                 # Shared style tokens (optional, minimal usage)
+│   ├── components/             # Shared React components
 │   └── templates/              # Dashboard PHP templates
 ├── features/                   # Modular features
 │   ├── profile/                # Profile feature (user meta)
 │   ├── training-persona/       # Training persona feature (user meta)
 │   ├── environment/            # Equipment/Environment feature (user meta)
 │   └── ai-workout-generator/   # AI generator feature (writes to workout CPT)
-├── assets/                     # Compiled assets
-│   ├── dist/                   # Production-ready assets
-│   └── src/                    # Source files (if any shared scripts exist)
+├── assets/                     # Static assets
+│   ├── build/                  # Production-ready assets
+│   └── src/                    # Source files
 └── tests/                      # Unit and integration tests
 ```
-
----
-
-## **Asset Management**
-
-- **Vite** is used for bundling in development and production.  
-  - **`npm run dev`**: Hot reloading with React.  
-  - **`npm run build`**: Minified, hashed assets go to `assets/dist/`.
-- **WordPress Enqueue**:  
-  ```php
-  function enqueue_workout_assets() {
-    wp_enqueue_script(
-      'workout-js',
-      get_theme_file_uri('/assets/dist/js/workout.abc123.js'),
-      ['wp-element'],
-      null,
-      true
-    );
-  }
-  add_action('wp_enqueue_scripts', 'enqueue_workout_assets');
-  ```
 
 ---
 
 ## **Testing & Debugging**
 
 1. **Unit Tests**:  
-   - **JavaScript/TypeScript**: `npm run test`.  
-   - **PHP**: `composer test -- --filter=<FeatureTest>`.
+   - JavaScript/TypeScript: `npm run test`
+   - PHP: WordPress testing framework
 2. **Integration Tests**:  
-   - Validate event-driven flows between features.  
-   - Confirm workouts are correctly saved as `workout` posts.
+   - Validate feature interactions
+   - Test WordPress hooks and filters
 3. **Debug Mode**:  
-   ```typescript
-   import { Events } from '@dashboard/events';
-   Events.enableDebug();
-   // Logs all emitted events to the console
+   ```php
+   define('WP_DEBUG', true);
    ```
 
 ---
@@ -167,30 +131,31 @@ athlete-dashboard-child/
 ## **Next Steps**
 
 1. **Finalize Profile & Persona**  
-   - Make sure user meta fields and forms align with your data needs.  
-   - Emit `profile:updated` or `training-persona:updated` events as appropriate.
+   - Implement user meta fields and forms
+   - Set up WordPress hooks for updates
 2. **Implement Equipment/Environment**  
-   - Store `_user_equipment` or `_user_environment` in user meta, with the option to expand if needed.
+   - Store equipment data in user meta
 3. **Build the AI Workout Generator**  
-   - Merge data from user meta to form AI prompts.  
-   - Write or update `workout` posts with the returned exercise data.
-4. **Add Optional Analytics**  
-   - Tally workout data from the `workout` CPT to display progress or track usage over time.
+   - Create workout custom post type
+   - Implement AI integration
+4. **Add Analytics**  
+   - Track workout progress
+   - Monitor system usage
 
 ---
 
 ## **Conclusion**
 
-This **Feature-First** WordPress architecture marries **React/TypeScript** with a **minimal** reliance on shared files. By storing user data in `user_meta` and workouts as a custom post type, you:
+This **Feature-First** WordPress architecture marries **React/TypeScript** with WordPress's robust backend. By storing user data in `user_meta` and workouts as a custom post type, you:
 
-- **Stay fully in WordPress’s ecosystem**  
+- **Stay fully in WordPress's ecosystem**  
 - **Encourage modularity** via self-contained features  
-- **Enable easy expansion** of AI-driven functionalities and advanced analytics
+- **Enable easy expansion** of AI-driven functionalities
 
-Keep each feature isolated, rely on an event bus for communication, and let WordPress handle the data storage. This approach ensures a **scalable, maintainable**, and **developer-friendly** foundation for your athlete-focused dashboard and AI-driven workout generation.
+Keep each feature isolated, rely on WordPress hooks for communication, and let WordPress handle the data storage. This approach ensures a **scalable, maintainable**, and **developer-friendly** foundation for your athlete-focused dashboard.
 
 ---
 
 **Need more details?**  
-- Refer to each feature’s own `README.md` for implementation specifics.  
+- Refer to each feature's own `README.md` for implementation specifics.  
 - Check the main `README.md` for setup commands, build instructions, and testing guides.  

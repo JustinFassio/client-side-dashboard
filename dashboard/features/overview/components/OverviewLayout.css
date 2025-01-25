@@ -1,0 +1,180 @@
+.overview-layout {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.overview-loading,
+.overview-error {
+    text-align: center;
+    padding: 2rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.overview-error {
+    color: #dc3545;
+    background: #fff5f5;
+}
+
+/* Stats Section */
+.overview-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card h3 {
+    margin: 0 0 1rem;
+    color: #666;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+}
+
+/* Goals Section */
+.overview-goals {
+    margin-bottom: 2rem;
+}
+
+.overview-goals h2 {
+    margin-bottom: 1rem;
+}
+
+.goals-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.goal-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.goal-card h4 {
+    margin: 0 0 1rem;
+}
+
+.goal-progress {
+    height: 8px;
+    background: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    height: 100%;
+    background: #4caf50;
+    transition: width 0.3s ease;
+}
+
+.goal-details {
+    display: flex;
+    justify-content: space-between;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Activity Section */
+.overview-activity {
+    margin-bottom: 2rem;
+}
+
+.overview-activity h2 {
+    margin-bottom: 1rem;
+}
+
+.activity-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.activity-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-type {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: #e9ecef;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.5rem;
+}
+
+.activity-content h4 {
+    margin: 0 0 0.25rem;
+}
+
+.activity-date {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.dismiss-button {
+    background: none;
+    border: none;
+    color: #999;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    margin-left: 1rem;
+    transition: color 0.2s ease;
+}
+
+.dismiss-button:hover {
+    color: #666;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .overview-layout {
+        padding: 1rem;
+    }
+
+    .stat-card {
+        padding: 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+    }
+
+    .activity-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .dismiss-button {
+        align-self: flex-end;
+        margin-top: 0.5rem;
+    }
+} 

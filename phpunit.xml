@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd"
+         bootstrap="features/profile/tests/bootstrap.php"
+         colors="true"
+         verbose="true">
+    <testsuites>
+        <testsuite name="All">
+            <directory suffix="Test.php">features/*/tests/Unit</directory>
+            <directory suffix="Test.php">features/*/tests/Integration</directory>
+        </testsuite>
+        <testsuite name="Profile Unit">
+            <directory suffix="Test.php">features/profile/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Profile Integration">
+            <directory suffix="Test.php">features/profile/tests/Integration</directory>
+        </testsuite>
+        <testsuite name="Workout Generator Unit">
+            <directory suffix="Test.php">features/workout-generator/tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Workout Generator Integration">
+            <directory suffix="Test.php">features/workout-generator/tests/Integration</directory>
+        </testsuite>
+    </testsuites>
+    <coverage>
+        <include>
+            <directory suffix=".php">features/profile</directory>
+            <directory suffix=".php">features/workout-generator</directory>
+        </include>
+        <exclude>
+            <directory suffix=".php">features/profile/tests</directory>
+            <directory suffix=".php">features/workout-generator/tests</directory>
+        </exclude>
+    </coverage>
+    <php>
+        <env name="WP_PHPUNIT__TESTS_CONFIG" value="features/profile/tests/wp-config.php"/>
+        <env name="WP_CONTENT_DIR" value="/Users/justinfassio/Local Sites/aiworkoutgenerator-local/app/public/wp-content"/>
+        <env name="ABSPATH" value="/Users/justinfassio/Local Sites/aiworkoutgenerator-local/app/public/"/>
+    </php>
+</phpunit> 

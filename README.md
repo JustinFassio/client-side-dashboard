@@ -1,7 +1,3 @@
-Below is a **final, detailed `README.md`** suited for **Cursor AI** integration. It provides a clear overview of your **Feature-First**, **WordPress-based** project design, references your new **`ARCHITECTURE.md`**, and outlines development workflows, data storage strategies, and testing procedures.
-
----
-
 # Athlete Dashboard
 
 A **React/TypeScript-powered** WordPress child theme designed to help athletes track and analyze workouts, goals, and progress. This project follows a **Feature-First** architecture, relying on **WordPress user meta** for storing user information (Profile, Training Persona, Equipment/Environment) and a **custom post type** for workouts.
@@ -14,16 +10,20 @@ A **React/TypeScript-powered** WordPress child theme designed to help athletes t
    - Each feature is self-contained, including its own logic, UI components, styling, and documentation.  
    - Communication happens via an **event-driven** system, ensuring features remain decoupled.
 
-2. **Hybrid WordPress + React**  
-   - **React/TypeScript** forms the interactive frontend (modals, dashboards).  
+2. **WordPress + React Integration**  
    - **WordPress PHP** provides the backend, using user meta for profile data and a custom post type (`workout`) for repeated entries.
+   - **React/TypeScript** forms the interactive frontend (modals, dashboards).
+   - Uses `@wordpress/scripts` for modern development workflow.
 
-3. **Key Objectives**  
+3. **Key Features**  
    - **Profile Management**: Collect user details (e.g., Age, Gender, Height, Weight, Injuries).  
    - **Training Persona**: Store preferences (experience level, workout frequency) in user meta.  
    - **Equipment/Environment**: Let users specify gym equipment or environment constraints.  
    - **AI Workout Generator**: Merge user data to generate or iterate workouts, storing them as `workout` posts.  
-   - **Optional Analytics**: In the future, gather insights from the stored workouts to track progress and guide further AI-driven suggestions.
+   - **Centralized User Data**: Management via `useUser` hook.
+   - **Feature-based Routing**: Dynamic feature loading and routing system.
+   - **Debug Mode**: Detailed system information for development.
+   - **Manifest-based Asset Management**: Efficient asset handling and versioning.
 
 ---
 
@@ -33,12 +33,70 @@ This project uses a **Feature-First** architecture described in detail in **[`AR
 
 - **Encapsulation**: Each feature manages its own assets and logic.  
 - **Minimal Shared Files**: Only essential shared resources (like an event bus) live outside feature folders.  
-- **Event-Driven**: Features emit and listen for typed events to coordinate actions between React components and PHP hooks.  
+- **Event-Driven**: Features emit and listen for typed events to coordinate actions.
 - **WordPress Data Model**: 
   - **User meta** for storing Profile, Persona, Equipment/Environment.  
   - **Custom Post Type** (`workout`) for logging and organizing workouts.
 
-Please refer to **[`ARCHITECTURE.md`](./ARCHITECTURE.md)** for a comprehensive architectural breakdown.
+---
+
+## **Data Flow**
+
+1. WordPress Template (`dashboard.php`) → Feature Router
+2. Feature Router → React Initialization
+3. React Components → REST API
+4. User Data Management through `useUser` hook
+
+```mermaid
+graph LR
+    A[dashboard.php] --> B[feature-router.php]
+    B --> C[React Init]
+    C --> D[Feature Components]
+    D --> E[REST API]
+    D --> F[useUser Hook]
+```
+
+---
+
+## **WordPress Integration Details**
+
+- Custom REST API endpoint (`/custom/v1/profile`) for user data
+- Feature routing through `feature-router.php`
+- Script/style enqueuing through manifest-based system
+- WordPress nonce integration for REST API security
+
+---
+
+## **Debugging**
+
+Debug information is available when `WP_DEBUG` is enabled:
+
+- Dashboard template displays debug panel with:
+  - Template information
+  - Current feature data
+  - Script paths and existence
+  - REST API configuration
+- Console logging for React component lifecycle
+- Network request monitoring for API calls
+
+---
+
+## **Common Issues**
+
+1. **Script Loading Issues**
+   - Check manifest.json exists in build directory
+   - Verify build directory permissions
+   - Confirm script enqueuing in functions.php
+
+2. **REST API 404s**
+   - Verify endpoint registration
+   - Check user permissions
+   - Confirm nonce configuration
+
+3. **Feature Not Found**
+   - Verify feature registration
+   - Check routing configuration
+   - Confirm feature name matches registration
 
 ---
 
@@ -48,20 +106,18 @@ A typical layout (simplified):
 
 ```plaintext
 athlete-dashboard-child/
-├── dashboard/                  # Core WP+React framework
-│   ├── core/                   # PHP core classes
-│   ├── components/             # (Optional) shared React components
-│   ├── events.ts               # Event bus for the entire dashboard
-│   ├── styles/                 # Shared style tokens (optional)
-│   └── templates/              # WP templates
-├── features/                   # Modular feature folders
-│   ├── profile/                # Basic user profile data in user meta
-│   ├── training-persona/       # Persona data (level, frequency) in user meta
-│   ├── environment/            # Equipment/environment data in user meta
-│   └── ai-workout-generator/   # Generates or iterates workouts, stored as CPT
-├── assets/                     # Static assets and build outputs
-│   ├── dist/                   # Production builds (Vite output)
-│   └── src/                    # Source assets (if shared)
+├── dashboard/                  # Core dashboard framework
+│   ├── core/                   # Core PHP classes
+│   ├── components/             # Shared React components
+│   └── templates/              # Dashboard PHP templates
+├── features/                   # Modular features
+│   ├── profile/                # Profile feature (user meta)
+│   ├── training-persona/       # Training persona feature (user meta)
+│   ├── environment/            # Equipment/Environment feature (user meta)
+│   └── ai-workout-generator/   # AI generator feature (writes to workout CPT)
+├── assets/                     # Static assets
+│   ├── build/                  # Production-ready assets
+│   └── src/                    # Source files
 └── tests/                      # Unit and integration tests
 ```
 
@@ -107,114 +163,52 @@ Each **feature** has its own:
    ```
 
 2. **Install Dependencies**  
-   - **Node.js & npm** (for frontend build)  
-   - **Composer** (for PHP dependencies)
    ```bash
    npm install
-   composer install
    ```
 
 3. **Development Build**  
    ```bash
-   npm run dev
+   npm run start
    ```
-   - Runs Vite’s development server with hot module replacement (HMR).
+   - Runs WordPress scripts development server with hot reload
 
 4. **Production Build**  
    ```bash
    npm run build
    ```
-   - Outputs hashed, minified assets to `assets/dist/`.
+   - Creates optimized production build in `assets/build`
 
 5. **Activate the Child Theme**  
-   - Copy the theme folder to `wp-content/themes/`.  
-   - Activate it in **WordPress Admin** (`Appearance > Themes`).
+   - Copy the theme folder to `wp-content/themes/`
+   - Activate via WordPress Admin (`Appearance > Themes`)
 
 ---
 
-## **How to Develop Features**
+## **Development Workflow**
 
-1. **Create a Feature Folder**  
-   - `features/<feature-name>/`  
-   - Inside, create subfolders: `components/`, `assets/js/`, `assets/scss/`, and `events.ts`.  
-2. **Implement `FeatureInterface`**  
-   - A typical `FeatureInterface` includes methods like `register()` and `init()`.  
-   - Ensure the feature is recognized by the main dashboard loader.  
-3. **Define Events**  
-   - Add typed events to your `events.ts`.  
-   - Use the shared `Events` bus in `dashboard/events.ts` to emit or listen.  
-4. **Enqueue Assets**  
-   - In a PHP file (e.g., `functions.php` or a dedicated loader), enqueue the built script and style for your feature.  
-   - WordPress automatically looks for your compiled files in `assets/dist/`.
-
-For a **step-by-step** example, see any existing feature’s `README.md`.
-
----
-
-## **Workflow Example: Generating an AI Workout**
-
-1. **Profile & Persona Data**  
-   - A user updates their basic profile (e.g., Age, Injuries) and training persona (Level, Frequency) in user meta.  
-2. **Equipment**  
-   - The user specifies available equipment in `environment` feature.  
-3. **AI Generator Request**  
-   - The user clicks “Generate Workout.” The `ai-workout-generator` feature collects user meta, constructs a prompt, and calls the AI.  
-4. **New Workout Stored**  
-   - The returned workout is saved as a `workout` custom post, with sets/reps in post meta.  
-5. **Final Editing & Logging**  
-   - The user edits sets or reps and logs the workout for the day.  
-   - An event like `workout:logged` is emitted.
-
----
-
-## **Testing**
-
-1. **JavaScript/TypeScript Tests**  
+1. **Start Development Server**
    ```bash
-   npm run test
+   npm run start
    ```
-   - Uses a test runner (e.g., Jest) for unit tests.  
-2. **PHP Tests**  
-   ```bash
-   composer test
-   ```
-   - Runs PHPUnit tests. Filter specific features:  
-     ```bash
-     composer test -- --filter=<FeatureTest>
-     ```
-3. **Integration Tests**  
-   - Validate event flows between multiple features (e.g., a profile update triggering a persona update).  
-4. **Browser Dev Tools**  
-   - Check console logs if `Events.enableDebug()` is activated in `dashboard/events.ts`.
+   - Enables hot reloading for React components
+   - Compiles TypeScript in watch mode
+   - Processes SCSS files
 
----
-
-## **Deployment**
-
-1. **Build Assets**  
+2. **Build for Production**
    ```bash
    npm run build
    ```
-   - Minifies and hashes JS/CSS into `assets/dist/`.
-2. **Deploy Theme**  
-   - Upload the `athlete-dashboard-child` theme folder (including `dist/` assets) to your WordPress install.  
-   - Activate via **WordPress Admin**.
-3. **Verify**  
-   - Check if all features (Profile, Persona, Environment, etc.) are accessible, and the AI generator is functioning with proper network calls.
+   - Creates minified, production-ready assets
+   - Generates asset manifest for WordPress
 
----
-
-## **Troubleshooting**
-
-1. **Assets Not Loading**  
-   - Ensure `npm run build` was run before uploading.  
-   - Verify script enqueue paths in your loader or `functions.php`.
-2. **No Events Detected**  
-   - Confirm event strings match exactly in `Events.on(...)` and `Events.emit(...)`.  
-   - Check if `Events.enableDebug()` logs appear in the console.
-3. **Data Not Updating**  
-   - Confirm you’re using `update_user_meta()` and reading from the correct meta key.  
-   - Make sure your custom post type is registered and `wp_insert_post` or `update_post_meta` calls are correct.
+3. **Run Tests**
+   ```bash
+   npm run test
+   ```
+   - Runs all test suites
+   - See `docs/TESTING.md` for detailed testing guide
+   - Feature-specific test documentation available in `features/*/tests/README.md`
 
 ---
 
@@ -225,17 +219,18 @@ For a **step-by-step** example, see any existing feature’s `README.md`.
    git checkout -b feature/<your-feature>
    ```
 2. **Add Your Feature**  
-   - Follow **Feature-First** guidelines: new folder, self-contained assets, event definitions.  
-   - Write or update tests.  
+   - Follow Feature-First guidelines
+   - Write tests
+   - Update documentation
 3. **Pull Request**  
-   - Make sure everything passes `npm run test` and `composer test`.  
-   - Submit a PR with a clear summary of your changes.
+   - Ensure tests pass
+   - Follow coding standards
 
 ---
 
 ## **License**
 
-GNU General Public License v2 (or later). Refer to [LICENSE](LICENSE) for details.
+GNU General Public License v2 (or later). See [LICENSE](LICENSE) for details.
 
 ---
 
@@ -250,3 +245,42 @@ GNU General Public License v2 (or later). Refer to [LICENSE](LICENSE) for detail
 **This `README.md`** provides the starting point for **Cursor AI** to scaffold and automate coding tasks. If you have further questions or need to expand features, consult the **feature-specific READMEs** or reach out to the development team. 
 
 Enjoy building your **Athlete Dashboard**!
+
+## Database Configuration for Testing
+
+### Local Development Database
+The project uses Local by Flywheel for local development. The default database configuration is:
+- Host: `localhost:/Users/justinfassio/Library/Application Support/Local/run/8U-IQPW3o/mysql/mysqld.sock`
+- Database: `wordpress`
+- Username: `root`
+- Password: `root`
+
+### Test Database
+For running tests, a separate test database is required. Configure it as follows:
+
+1. Create a test database:
+```sql
+CREATE DATABASE wordpress_test;
+```
+
+2. Configure test environment:
+- Copy `wp-tests-config-sample.php` to `wp-tests-config.php`
+- Update the database configuration:
+```php
+define( 'DB_NAME', 'wordpress_test' );
+define( 'DB_USER', 'root' );
+define( 'DB_PASSWORD', 'root' );
+define( 'DB_HOST', 'localhost:/Users/justinfassio/Library/Application Support/Local/run/8U-IQPW3o/mysql/mysqld.sock' );
+```
+
+3. Install WordPress test suite:
+```bash
+./bin/install-wp-tests.sh wordpress_test root root localhost:/path/to/mysql/socket
+```
+
+### Troubleshooting Database Connections
+If you encounter database connection issues:
+1. Verify your Local by Flywheel installation is running
+2. Check the MySQL socket path in your configuration
+3. Ensure the database user has appropriate permissions
+4. For test failures, ensure the test database exists and is accessible

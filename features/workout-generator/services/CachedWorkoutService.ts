@@ -1,0 +1,79 @@
+import { 
+    WorkoutPlan, 
+    WorkoutPreferences, 
+    WorkoutModification,
+    Exercise,
+    ExerciseConstraints,
+    WorkoutValidation,
+    HistoryFilters,
+    UserProfile
+} from '../types/workout-types';
+
+import { WorkoutService } from './workout-service';
+import { WorkoutCache } from './WorkoutCache';
+
+// Simple hash function for browser environment
+function hashString(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(16);
+}
+
+export class CachedWorkoutService implements WorkoutService {
+    private cache: WorkoutCache;
+    private baseService: WorkoutService;
+
+    constructor(baseService: WorkoutService) {
+        this.baseService = baseService;
+        this.cache = new WorkoutCache();
+    }
+
+    private generateCacheKey(userId: number, preferences: WorkoutPreferences): string {
+        // Create a deterministic hash of the user ID and preferences
+        const data = JSON.stringify({ userId, preferences });
+        return hashString(data);
+    }
+
+    async generateWorkout(userId: number, preferences: WorkoutPreferences): Promise<WorkoutPlan> {
+        const cacheKey = this.generateCacheKey(userId, preferences);
+        
+        return this.cache.getOrFetch(cacheKey, async () => {
+            const workout = await this.baseService.generateWorkout(userId, preferences);
+            return workout;
+        });
+    }
+
+    async modifyWorkout(workoutId: string, modifications: WorkoutModification): Promise<WorkoutPlan> {
+        // Don't cache modifications as they're unique operations
+        return this.baseService.modifyWorkout(workoutId, modifications);
+    }
+
+    async saveWorkout(workout: WorkoutPlan): Promise<void> {
+        await this.baseService.saveWorkout(workout);
+        
+        // Since WorkoutPlan doesn't include userId or preferences, we'll just invalidate the history cache
+        this.cache.invalidate(`history:${workout.id}`);
+    }
+
+    async getWorkoutHistory(userId: number, filters?: HistoryFilters): Promise<WorkoutPlan[]> {
+        const cacheKey = `history:${userId}${filters ? ':' + JSON.stringify(filters) : ''}`;
+        
+        return this.cache.getOrFetch(cacheKey, async () => {
+            return this.baseService.getWorkoutHistory(userId, filters);
+        });
+    }
+
+    async provideExerciseAlternative(exerciseId: string, constraints: ExerciseConstraints): Promise<Exercise> {
+        // Don't cache alternative suggestions as they should be fresh each time
+        return this.baseService.provideExerciseAlternative(exerciseId, constraints);
+    }
+
+    async validateWorkoutSafety(workout: WorkoutPlan, userProfile: UserProfile): Promise<WorkoutValidation> {
+        // Don't cache safety validations as they should be fresh each time
+        return this.baseService.validateWorkoutSafety(workout, userProfile);
+    }
+} 

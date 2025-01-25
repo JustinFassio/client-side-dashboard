@@ -1,0 +1,84 @@
+.athlete-dashboard-cache-stats {
+    padding: 12px;
+}
+
+.athlete-dashboard-cache-stats .cache-stats-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.athlete-dashboard-cache-stats .stat-box {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    padding: 15px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.athlete-dashboard-cache-stats .stat-box h4 {
+    margin: 0 0 10px;
+    color: #23282d;
+    font-size: 14px;
+}
+
+.athlete-dashboard-cache-stats .stat-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2271b1;
+}
+
+.athlete-dashboard-cache-stats .cache-stats-chart {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    height: 300px;
+}
+
+.athlete-dashboard-cache-stats .cache-stats-logs {
+    background: #fff;
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.athlete-dashboard-cache-stats .cache-stats-logs h4 {
+    margin: 0 0 15px;
+    color: #23282d;
+}
+
+.athlete-dashboard-cache-stats .widefat {
+    border: none;
+    box-shadow: none;
+}
+
+.athlete-dashboard-cache-stats .widefat th {
+    font-weight: 600;
+}
+
+.athlete-dashboard-cache-stats .widefat td,
+.athlete-dashboard-cache-stats .widefat th {
+    padding: 12px 10px;
+}
+
+.athlete-dashboard-cache-stats .widefat tr:nth-child(odd) {
+    background-color: #f9f9f9;
+}
+
+@media screen and (max-width: 782px) {
+    .athlete-dashboard-cache-stats .cache-stats-summary {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .athlete-dashboard-cache-stats .stat-value {
+        font-size: 20px;
+    }
+
+    .athlete-dashboard-cache-stats .cache-stats-chart {
+        height: 250px;
+    }
+} 
