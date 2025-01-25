@@ -50,6 +50,24 @@ interface APIResponse {
     };
 }
 
+// Add polyfill for crypto.randomUUID
+function generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+// Use the polyfill if crypto.randomUUID is not available
+const getUUID = () => {
+    try {
+        return crypto.randomUUID();
+    } catch {
+        return generateUUID();
+    }
+};
+
 /**
  * Main service class for generating and managing AI-powered workouts.
  * Handles integration with AI service, constraint validation, and workout management.
@@ -187,6 +205,7 @@ export class AIService implements AIIntegrationService {
         equipment: EquipmentSet
     ): Promise<WorkoutPlan> {
         try {
+            const workoutId = getUUID();
             const prompt = this.promptBuilder.buildWorkoutPrompt(profile, preferences, equipment);
             const response = await this.makeRequest('/api/workout/generate', 'POST', prompt);
 
@@ -205,7 +224,7 @@ export class AIService implements AIIntegrationService {
             }
 
             return {
-                id: crypto.randomUUID(),
+                id: workoutId,
                 name: `Workout for ${profile.id}`,
                 description: 'AI Generated Workout Plan',
                 exercises: validatedExercises,

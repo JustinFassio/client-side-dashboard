@@ -56,14 +56,35 @@ export const getMetaKey = (field: string): string => {
 // Debug helper to verify URL construction
 export const getFullEndpointUrl = (endpoint: keyof typeof ProfileConfig.endpoints): string => {
     const baseUrl = window.athleteDashboardData.apiUrl.replace(/\/?$/, '');
-    // Ensure we don't have wp-json in both places
     const path = ProfileConfig.endpoints[endpoint].replace(/^\/+/, '');
     const url = `${baseUrl}/${path}`;
-    console.debug('URL Construction:', {
-        baseUrl,
-        path,
-        finalUrl: url,
-        wpData: window.athleteDashboardData
+    
+    // Enhanced debug logging
+    console.group('URL Construction Debug');
+    console.log('Input endpoint key:', endpoint);
+    console.log('Base URL:', {
+        raw: window.athleteDashboardData.apiUrl,
+        cleaned: baseUrl,
+        hasNamespace: baseUrl.includes('athlete-dashboard/v1'),
+        hasWpJson: baseUrl.includes('wp-json')
     });
+    console.log('Endpoint path:', {
+        raw: ProfileConfig.endpoints[endpoint],
+        cleaned: path,
+        hasLeadingSlash: ProfileConfig.endpoints[endpoint].startsWith('/'),
+        includesNamespace: path.includes('athlete-dashboard/v1')
+    });
+    console.log('Final URL:', {
+        constructed: url,
+        expectedPattern: '/wp-json/athlete-dashboard/v1/profile/user',
+        matches: url.includes('/wp-json/athlete-dashboard/v1/profile/')
+    });
+    console.log('athleteDashboardData:', {
+        ...window.athleteDashboardData,
+        apiUrl: window.athleteDashboardData.apiUrl,
+        nonce: window.athleteDashboardData.nonce ? '[PRESENT]' : '[MISSING]'
+    });
+    console.groupEnd();
+    
     return url;
 }; 

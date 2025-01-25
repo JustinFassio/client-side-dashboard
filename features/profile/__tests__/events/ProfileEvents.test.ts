@@ -1,6 +1,7 @@
 import { Events } from '../../../../dashboard/core/events';
-import { ProfileEvent } from '../../events';
+import { ProfileEvent } from '../../events/types';
 import { ProfileData } from '../../types/profile';
+import { ApiError } from '../../../../dashboard/types/api';
 
 describe('Profile Events', () => {
     beforeEach(() => {
@@ -20,34 +21,31 @@ describe('Profile Events', () => {
             const listener = jest.fn();
             const mockProfile: ProfileData = {
                 id: 1,
-                username: 'johndoe',
-                email: 'john@example.com',
-                displayName: 'John Doe',
-                firstName: 'John',
-                lastName: 'Doe',
+                username: 'testuser',
+                email: 'test@example.com',
+                displayName: 'Test User',
+                firstName: 'Test',
+                lastName: 'User',
+                nickname: 'tester',
+                roles: ['subscriber'],
+                phone: '',
                 age: 30,
+                dateOfBirth: '1993-01-01',
                 gender: 'male',
-                height: 180,
-                weight: 80,
-                fitnessLevel: 'intermediate',
-                activityLevel: 'moderately_active',
+                heightCm: 175,
+                weightKg: 70,
+                experienceLevel: 'intermediate',
+                medicalClearance: true,
+                medicalNotes: '',
                 medicalConditions: [],
                 exerciseLimitations: [],
                 medications: '',
-                physicalMetrics: [
-                    {
-                        type: 'height',
-                        value: 180,
-                        unit: 'cm',
-                        date: '2023-01-01'
-                    },
-                    {
-                        type: 'weight',
-                        value: 80,
-                        unit: 'kg',
-                        date: '2023-01-01'
-                    }
-                ]
+                emergencyContactName: '',
+                emergencyContactPhone: '',
+                injuries: [],
+                equipment: [],
+                fitnessGoals: ['strength', 'endurance'],
+                dominantSide: 'right'
             };
 
             Events.on(ProfileEvent.FETCH_SUCCESS, listener);
@@ -58,7 +56,11 @@ describe('Profile Events', () => {
 
         it('emits fetch error event', () => {
             const listener = jest.fn();
-            const error = new Error('Fetch failed');
+            const error: ApiError = {
+                code: 'NETWORK_ERROR',
+                message: 'Fetch failed',
+                status: 500
+            };
 
             Events.on(ProfileEvent.FETCH_ERROR, listener);
             Events.emit(ProfileEvent.FETCH_ERROR, { error });
@@ -93,29 +95,26 @@ describe('Profile Events', () => {
                 displayName: 'Jane Doe',
                 firstName: 'Jane',
                 lastName: 'Doe',
+                nickname: 'jane',
+                roles: ['subscriber'],
+                phone: '',
                 age: 28,
+                dateOfBirth: '1995-01-01',
                 gender: 'female',
-                height: 165,
-                weight: 60,
-                fitnessLevel: 'intermediate',
-                activityLevel: 'moderately_active',
+                heightCm: 165,
+                weightKg: 60,
+                experienceLevel: 'intermediate',
+                medicalClearance: true,
+                medicalNotes: '',
                 medicalConditions: [],
                 exerciseLimitations: [],
                 medications: '',
-                physicalMetrics: [
-                    {
-                        type: 'height',
-                        value: 165,
-                        unit: 'cm',
-                        date: '2023-01-01'
-                    },
-                    {
-                        type: 'weight',
-                        value: 60,
-                        unit: 'kg',
-                        date: '2023-01-01'
-                    }
-                ]
+                emergencyContactName: '',
+                emergencyContactPhone: '',
+                injuries: [],
+                equipment: [],
+                fitnessGoals: ['strength', 'endurance'],
+                dominantSide: 'right'
             };
 
             Events.on(ProfileEvent.UPDATE_SUCCESS, listener);
@@ -128,6 +127,91 @@ describe('Profile Events', () => {
                 profile: mockProfile,
                 updatedFields: ['firstName']
             });
+        });
+    });
+
+    describe('error handling', () => {
+        it('emits update error event with attempted data', () => {
+            const listener = jest.fn();
+            const error: ApiError = {
+                code: 'NETWORK_ERROR',
+                message: 'Update failed',
+                status: 500
+            };
+            const attemptedData = { firstName: 'Jane' };
+
+            Events.on(ProfileEvent.UPDATE_ERROR, listener);
+            Events.emit(ProfileEvent.UPDATE_ERROR, { 
+                error,
+                attemptedData 
+            });
+
+            expect(listener).toHaveBeenCalledWith({ 
+                error,
+                attemptedData 
+            });
+        });
+
+        it('emits validation error event', () => {
+            const listener = jest.fn();
+            const errors = {
+                firstName: ['First name is required'],
+                email: ['Invalid email format']
+            };
+
+            Events.on(ProfileEvent.VALIDATION_ERROR, listener);
+            Events.emit(ProfileEvent.VALIDATION_ERROR, { errors });
+
+            expect(listener).toHaveBeenCalledWith({ errors });
+        });
+
+        it('handles network errors during profile update', () => {
+            const listener = jest.fn();
+            const networkError: ApiError = {
+                code: 'NETWORK_ERROR',
+                message: 'Network request failed',
+                status: 500
+            };
+            
+            Events.on(ProfileEvent.UPDATE_ERROR, listener);
+            Events.emit(ProfileEvent.UPDATE_ERROR, { 
+                error: networkError,
+                attemptedData: { firstName: 'John' }
+            });
+
+            expect(listener).toHaveBeenCalledWith({
+                error: networkError,
+                attemptedData: { firstName: 'John' }
+            });
+        });
+
+        it('handles invalid response data errors', () => {
+            const listener = jest.fn();
+            const invalidDataError: ApiError = {
+                code: 'INVALID_RESPONSE',
+                message: 'Invalid profile data structure',
+                status: 400
+            };
+            
+            Events.on(ProfileEvent.UPDATE_ERROR, listener);
+            Events.emit(ProfileEvent.UPDATE_ERROR, { 
+                error: invalidDataError
+            });
+
+            expect(listener).toHaveBeenCalledWith({
+                error: invalidDataError
+            });
+        });
+    });
+
+    describe('form reset', () => {
+        it('emits form reset event', () => {
+            const listener = jest.fn();
+            
+            Events.on(ProfileEvent.FORM_RESET, listener);
+            Events.emit(ProfileEvent.FORM_RESET);
+
+            expect(listener).toHaveBeenCalled();
         });
     });
 

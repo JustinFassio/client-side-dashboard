@@ -1,7 +1,3 @@
-Below is a **final, detailed `README.md`** suited for **Cursor AI** integration. It provides a clear overview of your **Feature-First**, **WordPress-based** project design, references your new **`ARCHITECTURE.md`**, and outlines development workflows, data storage strategies, and testing procedures.
-
----
-
 # Athlete Dashboard
 
 A **React/TypeScript-powered** WordPress child theme designed to help athletes track and analyze workouts, goals, and progress. This project follows a **Feature-First** architecture, relying on **WordPress user meta** for storing user information (Profile, Training Persona, Equipment/Environment) and a **custom post type** for workouts.
@@ -250,65 +246,41 @@ GNU General Public License v2 (or later). See [LICENSE](LICENSE) for details.
 
 Enjoy building your **Athlete Dashboard**!
 
-## Testing Overview
+## Database Configuration for Testing
 
-The Athlete Dashboard uses a comprehensive testing approach covering both backend (PHP/WordPress) and frontend (React/TypeScript) components.
+### Local Development Database
+The project uses Local by Flywheel for local development. The default database configuration is:
+- Host: `localhost:/Users/justinfassio/Library/Application Support/Local/run/8U-IQPW3o/mysql/mysqld.sock`
+- Database: `wordpress`
+- Username: `root`
+- Password: `root`
 
-### Quick Start
+### Test Database
+For running tests, a separate test database is required. Configure it as follows:
 
-1. **Backend Tests**
-```bash
-# Install dependencies
-composer install
-
-# Run tests
-composer test
+1. Create a test database:
+```sql
+CREATE DATABASE wordpress_test;
 ```
 
-2. **Frontend Tests**
-```bash
-# Install dependencies
-cd features/profile/assets
-npm install
-
-# Run tests
-npm test
+2. Configure test environment:
+- Copy `wp-tests-config-sample.php` to `wp-tests-config.php`
+- Update the database configuration:
+```php
+define( 'DB_NAME', 'wordpress_test' );
+define( 'DB_USER', 'root' );
+define( 'DB_PASSWORD', 'root' );
+define( 'DB_HOST', 'localhost:/Users/justinfassio/Library/Application Support/Local/run/8U-IQPW3o/mysql/mysqld.sock' );
 ```
 
-### Documentation
-
-- [Backend Testing Guide](tests/README.md) - Complete guide for PHP/WordPress testing
-- [Profile Feature Testing](features/profile/README.md) - Profile-specific testing documentation
-
-### Performance Testing
-
-Performance tests are run automatically in CI/CD and can be run locally:
-
+3. Install WordPress test suite:
 ```bash
-# Backend performance
-composer test -- --testsuite performance
-
-# Frontend performance
-cd features/profile/assets
-npm run test:perf
+./bin/install-wp-tests.sh wordpress_test root root localhost:/path/to/mysql/socket
 ```
 
-Performance reports are generated in:
-- Backend: `tests/reports/performance/`
-- Frontend: `features/profile/assets/tests/performance/results.json`
-
-### Test Environment Setup
-
-1. **Local WordPress Environment**
-```bash
-# Set up test database
-bin/install-wp-tests.sh wordpress_test root root localhost latest
-```
-
-2. **Mock Environment** (for quick unit tests)
-```bash
-# Uses WP_Mock, already included in composer dependencies
-composer install
-```
-
-For detailed setup instructions, see the [Backend Testing Guide](tests/README.md).
+### Troubleshooting Database Connections
+If you encounter database connection issues:
+1. Verify your Local by Flywheel installation is running
+2. Check the MySQL socket path in your configuration
+3. Ensure the database user has appropriate permissions
+4. For test failures, ensure the test database exists and is accessible

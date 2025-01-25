@@ -44,17 +44,17 @@ class Physical_Update extends Base_Endpoint {
 	 * @return bool|WP_Error True if has permission, WP_Error if not.
 	 */
 	public function check_permission( WP_REST_Request $request ): bool|WP_Error {
-		error_log('Physical_Update: Starting permission check');
-		error_log('Physical_Update: Current user ID: ' . get_current_user_id());
-		error_log('Physical_Update: Is user logged in: ' . (is_user_logged_in() ? 'Yes' : 'No'));
-		error_log('Physical_Update: Request nonce: ' . $request->get_header('X-WP-Nonce'));
-		
+		error_log( 'Physical_Update: Starting permission check' );
+		error_log( 'Physical_Update: Current user ID: ' . get_current_user_id() );
+		error_log( 'Physical_Update: Is user logged in: ' . ( is_user_logged_in() ? 'Yes' : 'No' ) );
+		error_log( 'Physical_Update: Request nonce: ' . $request->get_header( 'X-WP-Nonce' ) );
+
 		$user_id = $request->get_param( 'user_id' );
-		error_log('Physical_Update: Requested user ID: ' . $user_id);
-		
+		error_log( 'Physical_Update: Requested user ID: ' . $user_id );
+
 		$result = $this->check_resource_owner( $user_id );
-		error_log('Physical_Update: Resource owner check result: ' . (is_wp_error($result) ? $result->get_error_message() : 'Success'));
-		
+		error_log( 'Physical_Update: Resource owner check result: ' . ( is_wp_error( $result ) ? $result->get_error_message() : 'Success' ) );
+
 		return $result;
 	}
 
@@ -103,7 +103,7 @@ class Physical_Update extends Base_Endpoint {
 	 *
 	 * @return array
 	 */
-	protected function get_schema(): array {
+	public function get_schema(): array {
 		return array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
 			'title'      => 'physical',
@@ -145,7 +145,7 @@ class Physical_Update extends Base_Endpoint {
 					'type'        => 'object',
 					'required'    => false,
 					'properties'  => array(
-						'showMetric'   => array(
+						'showMetric' => array(
 							'type' => 'boolean',
 						),
 					),

@@ -14,11 +14,6 @@ interface PaginationState {
   total: number;
 }
 
-interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-}
-
 export const HistoryView: React.FC<HistoryViewProps> = ({ userId }) => {
   const [history, setHistory] = useState<PhysicalHistory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,15 +32,18 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ userId }) => {
         userId,
         pagination.offset,
         pagination.limit
-      ) as unknown as ApiResponse<PhysicalHistoryResponse>;
+      );
       console.log('History response:', response);
       
-      // Unwrap the response data
-      const historyData = response.success ? response.data : { items: [], total: 0, limit: 10, offset: 0 };
-      console.log('Unwrapped history data:', historyData);
-      
-      setHistory(historyData.items);
-      setPagination(prev => ({ ...prev, total: historyData.total }));
+      if (!response) {
+        throw new Error('No response received');
+      }
+
+      setHistory(response.items || []);
+      setPagination(prev => ({ 
+        ...prev, 
+        total: response.total || 0 
+      }));
       setError(null);
     } catch (e) {
       console.error('Failed to load history:', e);

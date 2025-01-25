@@ -133,7 +133,11 @@ class User_Update extends Base_Endpoint {
 		if ( $request->has_param( 'email' ) ) {
 			$email = sanitize_email( $request->get_param( 'email' ) );
 			if ( ! is_email( $email ) ) {
-				return $this->error( __( 'Invalid email address.', 'athlete-dashboard' ), 400 );
+				return new WP_Error(
+					'invalid_email',
+					__( 'Invalid email address.', 'athlete-dashboard' ),
+					array( 'status' => 400 )
+				);
 			}
 			$user_data['user_email'] = $email;
 		}
@@ -198,34 +202,151 @@ class User_Update extends Base_Endpoint {
 	private function validate_meta_updates( WP_REST_Request $request ): array|WP_Error {
 		$meta = $request->get_param( 'meta' );
 		if ( ! is_array( $meta ) ) {
-			return $this->error( __( 'Meta must be an array.', 'athlete-dashboard' ), 400 );
+			return new WP_Error(
+				'invalid_meta',
+				__( 'Meta must be an array.', 'athlete-dashboard' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$user = wp_get_current_user();
+		if ( ! $user || ! $user->exists() ) {
+			return new WP_Error(
+				'user_not_found',
+				__( 'User not found.', 'athlete-dashboard' ),
+				array( 'status' => 404 )
+			);
 		}
 
 		$allowed_meta = array(
-			'comment_shortcuts' => array(
+			'comment_shortcuts'   => array(
 				'type' => 'boolean',
 			),
-			'admin_color'       => array(
+			'admin_color'         => array(
 				'type' => 'string',
 			),
-			'rich_editing'      => array(
+			'rich_editing'        => array(
 				'type' => 'boolean',
+			),
+			'workout_preferences' => array(
+				'type'       => 'object',
+				'properties' => array(
+					'experienceLevel' => array(
+						'type' => 'string',
+						'enum' => array( 'beginner', 'intermediate', 'advanced' ),
+					),
+					'equipment'       => array(
+						'type' => 'array',
+					),
+				),
 			),
 		);
 
 		$validated_meta = array();
 		foreach ( $meta as $key => $value ) {
 			if ( ! isset( $allowed_meta[ $key ] ) ) {
-						continue;
+				continue;
 			}
 
 			if ( 'boolean' === $allowed_meta[ $key ]['type'] ) {
-				$validated_meta[ $key ] = (bool) $value;
+				// Convert boolean to '1' or '0' for WordPress meta
+				$validated_meta[ $key ] = $value ? '1' : '0';
 			} elseif ( 'string' === $allowed_meta[ $key ]['type'] ) {
 				$validated_meta[ $key ] = sanitize_text_field( $value );
+			} elseif ( 'object' === $allowed_meta[ $key ]['type'] && 'workout_preferences' === $key ) {
+				// Handle workout preferences
+				if ( isset( $value['experienceLevel'] ) ) {
+					// Validate experience level
+					if ( ! in_array( $value['experienceLevel'], $allowed_meta[ $key ]['properties']['experienceLevel']['enum'], true ) ) {
+						return new WP_Error(
+							'invalid_experience_level',
+							__( 'Invalid experience level. Must be one of: beginner, intermediate, advanced.', 'athlete-dashboard' ),
+							array( 'status' => 400 )
+						);
+					}
+
+					// Get current profile data
+					$current_profile = $this->service->get_profile( $user->ID );
+					if ( is_wp_error( $current_profile ) ) {
+						return $current_profile;
+					}
+
+					// Merge new data with current data, giving precedence to new data
+					$update_data = array(
+						'experienceLevel' => $value['experienceLevel'],
+						'equipment'       => isset( $value['equipment'] ) ? $value['equipment'] : ( $current_profile['equipment'] ?? array() ),
+						'fitnessGoals'    => $current_profile['fitnessGoals'] ?? array(),
+						'age'             => $current_profile['age'] ?? null,
+						'gender'          => $current_profile['gender'] ?? null,
+						'heightCm'        => $current_profile['heightCm'] ?? null,
+						'weightKg'        => $current_profile['weightKg'] ?? null,
+						'activityLevel'   => $current_profile['activityLevel'] ?? null,
+					);
+
+					// Update profile data through the Profile Service
+					$profile_update = $this->service->update_profile(
+						$user->ID,
+						$update_data
+					);
+
+					if ( is_wp_error( $profile_update ) ) {
+						return $profile_update;
+					}
+				}
 			}
 		}
 
 		return $validated_meta;
+	}
+
+	/**
+	 * Get the schema for user update data.
+	 *
+	 * @return array Schema data.
+	 */
+	public function get_schema(): array {
+		return array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'user',
+			'type'       => 'object',
+			'properties' => array(
+				'email'                => array(
+					'type'        => 'string',
+					'format'      => 'email',
+					'description' => __( 'User email address.', 'athlete-dashboard' ),
+				),
+				'password'             => array(
+					'type'        => 'string',
+					'minLength'   => 8,
+					'maxLength'   => 100,
+					'description' => __( 'New password.', 'athlete-dashboard' ),
+				),
+				'passwordConfirmation' => array(
+					'type'        => 'string',
+					'description' => __( 'Password confirmation.', 'athlete-dashboard' ),
+				),
+				'currentPassword'      => array(
+					'type'        => 'string',
+					'description' => __( 'Current password.', 'athlete-dashboard' ),
+				),
+				'meta'                 => array(
+					'type'       => 'object',
+					'properties' => array(
+						'comment_shortcuts' => array(
+							'type'        => 'boolean',
+							'description' => __( 'Enable keyboard shortcuts for comments.', 'athlete-dashboard' ),
+						),
+						'admin_color'       => array(
+							'type'        => 'string',
+							'description' => __( 'Admin color scheme.', 'athlete-dashboard' ),
+						),
+						'rich_editing'      => array(
+							'type'        => 'boolean',
+							'description' => __( 'Enable rich text editor.', 'athlete-dashboard' ),
+						),
+					),
+				),
+			),
+		);
 	}
 }

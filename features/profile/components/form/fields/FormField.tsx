@@ -57,7 +57,7 @@ export const FormField: React.FC<FormFieldProps> = ({
     const fieldClassName = `form-field ${hasError ? 'has-error' : ''}`;
 
     // Ensure string values are properly displayed
-    const displayValue = value ?? '';  // Convert null/undefined to empty string
+    const displayValue = isArray && Array.isArray(value) ? (value[0] || '') : (value ?? '');
 
     return (
         <div className={fieldClassName}>

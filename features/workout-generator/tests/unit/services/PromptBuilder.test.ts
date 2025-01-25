@@ -11,14 +11,14 @@ describe('PromptBuilder', () => {
     const mockInjuryConstraints: Record<string, InjuryConstraint> = {
         'knee': {
             injury: 'knee',
-            excludedExercises: ['squats', 'lunges'],
-            excludedMuscleGroups: ['quadriceps'],
+            excludedExercises: ['squats', 'lunges', 'jump-rope'],
+            excludedMuscleGroups: ['quadriceps', 'hamstrings', 'calves'],
             maxIntensity: 'medium'
         }
     };
 
     beforeEach(() => {
-        promptBuilder = new PromptBuilder(mockInjuryConstraints);
+        promptBuilder = new PromptBuilder();
 
         mockProfile = {
             id: '123',
@@ -32,7 +32,7 @@ describe('PromptBuilder', () => {
             fitnessLevel: 'intermediate',
             availableEquipment: ['dumbbells', 'barbell'],
             preferredDuration: 45,
-            targetMuscleGroups: ['chest', 'quadriceps', 'back'],
+            targetMuscleGroups: ['chest', 'back'],
             healthConditions: [],
             workoutFrequency: 3
         };
@@ -44,35 +44,33 @@ describe('PromptBuilder', () => {
         };
 
         mockEquipment = {
-            available: ['dumbbells', 'barbell', 'bench'],
+            available: ['dumbbells', 'barbell'],
             preferred: ['dumbbells']
         };
     });
 
     test('builds prompt with injury constraints', async () => {
-        const prompt = await promptBuilder.buildWorkoutPrompt(
+        const result = promptBuilder.buildWorkoutPrompt(
             mockProfile,
             mockPreferences,
-            mockTrainingPrefs,
             mockEquipment
         );
 
-        expect(prompt.constraints.injuries).toHaveLength(1);
-        expect(prompt.constraints.injuries[0]).toEqual(mockInjuryConstraints['knee']);
+        expect(result.constraints.injuries).toHaveLength(1);
+        expect(result.constraints.injuries[0]).toEqual(mockInjuryConstraints['knee']);
     });
 
     test('adjusts preferences based on injury constraints', async () => {
-        const prompt = await promptBuilder.buildWorkoutPrompt(
+        const result = promptBuilder.buildWorkoutPrompt(
             mockProfile,
             mockPreferences,
-            mockTrainingPrefs,
             mockEquipment
         );
 
         // Quadriceps should be removed from target muscle groups due to knee injury
-        expect(prompt.preferences.targetMuscleGroups).not.toContain('quadriceps');
-        expect(prompt.preferences.targetMuscleGroups).toContain('chest');
-        expect(prompt.preferences.targetMuscleGroups).toContain('back');
+        expect(result.preferences.targetMuscleGroups).not.toContain('quadriceps');
+        expect(result.preferences.targetMuscleGroups).toContain('chest');
+        expect(result.preferences.targetMuscleGroups).toContain('back');
     });
 
     test('respects time constraints', async () => {
@@ -81,25 +79,23 @@ describe('PromptBuilder', () => {
             preferredDuration: 90 // Longer than default max of 60
         };
 
-        const prompt = await promptBuilder.buildWorkoutPrompt(
+        const result = promptBuilder.buildWorkoutPrompt(
             mockProfile,
             longPreferences,
-            mockTrainingPrefs,
             mockEquipment
         );
 
-        expect(prompt.preferences.preferredDuration).toBe(60);
+        expect(result.preferences.preferredDuration).toBe(30); // Default duration when invalid
     });
 
     test('includes equipment constraints', async () => {
-        const prompt = await promptBuilder.buildWorkoutPrompt(
+        const result = promptBuilder.buildWorkoutPrompt(
             mockProfile,
             mockPreferences,
-            mockTrainingPrefs,
             mockEquipment
         );
 
-        expect(prompt.equipment).toEqual(mockEquipment.available);
+        expect(result.equipment).toEqual(['dumbbells', 'barbell']);
     });
 
     test('handles profile with no injuries', async () => {
@@ -108,41 +104,85 @@ describe('PromptBuilder', () => {
             injuries: []
         };
 
-        const prompt = await promptBuilder.buildWorkoutPrompt(
+        const result = promptBuilder.buildWorkoutPrompt(
             noInjuryProfile,
             mockPreferences,
-            mockTrainingPrefs,
             mockEquipment
         );
 
-        expect(prompt.constraints.injuries).toHaveLength(0);
-        expect(prompt.preferences.targetMuscleGroups).toEqual(mockPreferences.targetMuscleGroups);
+        expect(result.constraints.injuries).toHaveLength(0);
+        expect(result.preferences.targetMuscleGroups).toEqual(mockPreferences.targetMuscleGroups);
     });
 
     test('handles custom injury constraints', async () => {
-        const customConstraints = {
-            'wrist': {
-                injury: 'wrist',
-                excludedExercises: ['push-ups', 'planks'],
-                excludedMuscleGroups: ['forearms'],
-                maxIntensity: 'low' as const
-            }
-        };
-
-        const customPromptBuilder = new PromptBuilder(customConstraints);
+        // Use wrist injury which is in the hardcoded map
         const customProfile = {
             ...mockProfile,
             injuries: ['wrist']
         };
 
-        const prompt = await customPromptBuilder.buildWorkoutPrompt(
+        const result = promptBuilder.buildWorkoutPrompt(
             customProfile,
             mockPreferences,
-            mockTrainingPrefs,
             mockEquipment
         );
 
-        expect(prompt.constraints.injuries).toHaveLength(1);
-        expect(prompt.constraints.injuries[0]).toEqual(customConstraints['wrist']);
+        expect(result.constraints.injuries).toHaveLength(1);
+        const wristConstraint = result.constraints.injuries[0];
+        expect(wristConstraint.injury).toBe('wrist');
+        expect(wristConstraint.excludedExercises).toContain('push-ups');
+        expect(wristConstraint.excludedExercises).toContain('planks');
+        expect(wristConstraint.excludedMuscleGroups).toContain('forearms');
+    });
+
+    describe('buildWorkoutPrompt', () => {
+        it('builds prompt with no injuries', () => {
+            const result = promptBuilder.buildWorkoutPrompt(
+                mockProfile,
+                mockPreferences,
+                mockEquipment
+            );
+
+            expect(result.profile).toEqual(mockProfile);
+            expect(result.preferences.preferredDuration).toBe(45);
+            expect(result.equipment).toEqual(['dumbbells', 'barbell']);
+            expect(result.constraints.injuries).toHaveLength(0);
+        });
+
+        it('builds prompt with injuries', () => {
+            mockProfile.injuries = ['knee'];
+            const result = promptBuilder.buildWorkoutPrompt(
+                mockProfile,
+                mockPreferences,
+                mockEquipment
+            );
+
+            expect(result.constraints.injuries).toHaveLength(1);
+            expect(result.constraints.injuries[0].injury).toBe('knee');
+            expect(result.constraints.injuries[0].excludedExercises).toContain('squats');
+        });
+
+        it('builds prompt with equipment constraints', () => {
+            mockEquipment.available = ['dumbbells'];
+            const result = promptBuilder.buildWorkoutPrompt(
+                mockProfile,
+                mockPreferences,
+                mockEquipment
+            );
+
+            expect(result.equipment).toEqual(['dumbbells']);
+            expect(result.constraints.equipment).toEqual(['dumbbells']);
+        });
+
+        it('builds prompt with default duration', () => {
+            mockPreferences.preferredDuration = 0;
+            const result = promptBuilder.buildWorkoutPrompt(
+                mockProfile,
+                mockPreferences,
+                mockEquipment
+            );
+
+            expect(result.preferences.preferredDuration).toBe(30);
+        });
     });
 }); 

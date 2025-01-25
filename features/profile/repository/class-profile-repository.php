@@ -20,7 +20,7 @@ class Profile_Repository {
 	 *
 	 * @var string
 	 */
-	private const PROFILE_META_KEY = 'athlete_profile';
+	private const PROFILE_META_KEY = '_athlete_profile_data';
 
 	/**
 	 * Get profile data for a user.
@@ -33,10 +33,9 @@ class Profile_Repository {
 			error_log( sprintf( 'Profile Repository: Fetching profile for user %d', $user_id ) );
 		}
 
-		$profile_data = get_user_meta( $user_id, self::PROFILE_META_KEY, true );
-
-		// Check if user exists
-		if ( ! get_userdata( $user_id ) ) {
+		// Check if user exists first
+		$user = get_userdata( $user_id );
+		if ( ! $user ) {
 			return new WP_Error(
 				'user_not_found',
 				__( 'User not found.', 'athlete-dashboard' ),
@@ -44,25 +43,43 @@ class Profile_Repository {
 			);
 		}
 
-		// If no profile data exists, return a structured error
+		// Get stored profile data
+		$profile_data = get_user_meta( $user_id, self::PROFILE_META_KEY, true );
+
+		// If no profile data exists, create initial structure from user data
 		if ( empty( $profile_data ) ) {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( sprintf( 'Profile Repository: No profile found for user %d', $user_id ) );
+				error_log( sprintf( 'Profile Repository: Creating initial profile structure for user %d', $user_id ) );
 			}
-			return new WP_Error(
-				'profile_not_found',
-				__( 'Profile not found for user.', 'athlete-dashboard' ),
-				array(
-					'status'   => 404,
-					'user_id'  => $user_id,
-					'meta_key' => self::PROFILE_META_KEY,
-				)
-			);
-		}
 
-		// Log profile data in debug mode
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf( 'Profile Repository: Retrieved profile data: %s', print_r( $profile_data, true ) ) );
+			$profile_data = array(
+				'id'                    => $user_id,
+				'email'                 => $user->user_email,
+				'username'              => $user->user_login,
+				'firstName'             => $user->first_name,
+				'lastName'              => $user->last_name,
+				'displayName'           => $user->display_name,
+				'roles'                 => $user->roles,
+				// Initialize empty sections that can be filled out
+				'fitnessGoals'          => array(),
+				'preferredWorkoutTypes' => array(),
+				'equipment'             => array(),
+				'injuries'              => array(),
+				'medicalNotes'          => '',
+				'emergencyContactName'  => '',
+				'emergencyContactPhone' => '',
+				'height'                => null,
+				'weight'                => null,
+				'age'                   => null,
+				'gender'                => '',
+			);
+
+			// Store this initial profile data
+			update_user_meta( $user_id, self::PROFILE_META_KEY, $profile_data );
+
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( sprintf( 'Profile Repository: Initial profile structure created: %s', print_r( $profile_data, true ) ) );
+			}
 		}
 
 		return $profile_data;
@@ -97,7 +114,7 @@ class Profile_Repository {
 		}
 
 		// Merge new data with existing data
-		$updated_data = array_merge( $existing_data, $data );
+		$updated_data = $this->merge_profile_data( $existing_data, $data );
 
 		// Update the profile data
 		$result = update_user_meta( $user_id, self::PROFILE_META_KEY, $updated_data );
@@ -115,6 +132,35 @@ class Profile_Repository {
 		}
 
 		return $updated_data;
+	}
+
+	/**
+	 * Merge profile data, handling nested arrays correctly.
+	 *
+	 * @param array $existing_data Existing profile data.
+	 * @param array $new_data New profile data.
+	 * @return array Merged profile data.
+	 */
+	private function merge_profile_data( array $existing_data, array $new_data ): array {
+		$merged_data = $existing_data;
+
+		foreach ( $new_data as $key => $value ) {
+			// If the value is an array and the existing data has the same key as an array
+			if ( is_array( $value ) && isset( $existing_data[ $key ] ) && is_array( $existing_data[ $key ] ) ) {
+				// For arrays that represent lists (equipment, fitnessGoals), replace entirely
+				if ( isset( $value[0] ) || isset( $existing_data[ $key ][0] ) ) {
+					$merged_data[ $key ] = $value;
+				} else {
+					// For associative arrays, merge recursively
+					$merged_data[ $key ] = $this->merge_profile_data( $existing_data[ $key ], $value );
+				}
+			} else {
+				// For non-array values or when the key doesn't exist in existing data
+				$merged_data[ $key ] = $value;
+			}
+		}
+
+		return $merged_data;
 	}
 
 	/**
@@ -152,7 +198,7 @@ class Profile_Repository {
 	 * @return bool Whether the profile exists.
 	 */
 	public function profile_exists( int $user_id ): bool {
-		$profile_data = get_user_meta( $user_id, 'athlete_profile', true );
+		$profile_data = get_user_meta( $user_id, self::PROFILE_META_KEY, true );
 		return ! empty( $profile_data );
 	}
 }

@@ -251,16 +251,16 @@ class Profile_Update extends Base_Endpoint {
 	 *
 	 * @return array Schema data.
 	 */
-	protected function get_schema(): array {
+	public function get_schema(): array {
 		if ( $this->schema ) {
 			return $this->schema;
 		}
 
 		$this->schema = array(
-			'$schema'              => 'http://json-schema.org/draft-04/schema#',
-			'title'                => 'profile-update',
-			'type'                 => 'object',
-			'properties'           => array(
+			'$schema'    => 'http://json-schema.org/draft-04/schema#',
+			'title'      => 'profile-update',
+			'type'       => 'object',
+			'properties' => array(
 				'firstName'   => array(
 					'type'        => 'string',
 					'description' => __( 'User first name.', 'athlete-dashboard' ),

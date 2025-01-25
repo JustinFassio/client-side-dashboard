@@ -2,6 +2,7 @@ const defaultConfig = require('@wordpress/scripts/config/webpack.config');
 const path = require('path');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 
 module.exports = {
   ...defaultConfig,
@@ -95,6 +96,23 @@ module.exports = {
           reuseExistingChunk: true
         }
       }
-    }
-  }
+    },
+    minimize: true,
+    minimizer: [
+      new TerserPlugin({
+        terserOptions: {
+          compress: {
+            drop_console: false,
+            pure_funcs: ['console.info', 'console.debug', 'console.warn']
+          },
+          mangle: {
+            reserved: ['ApiClient', 'normalizeUrl']
+          },
+          keep_classnames: true,
+          keep_fnames: true
+        }
+      })
+    ]
+  },
+  devtool: 'source-map'
 }; 

@@ -1,5 +1,8 @@
 import { ProfileData, ProfileErrorCode } from '../types/profile';
 import { ProfileConfig, getFullEndpointUrl } from '../config';
+import { ApiClient } from '../../../dashboard/services/api';
+import { FeatureContext } from '../../../dashboard/contracts/Feature';
+import { AxiosInstance } from 'axios';
 
 export class ProfileError extends Error {
     constructor(
@@ -14,32 +17,38 @@ export class ProfileError extends Error {
     }
 }
 
+interface ApiError {
+    code: string;
+    message: string;
+    status: number;
+}
+
+interface ApiResponse<T> {
+    success: boolean;
+    data: T;
+    error?: ApiError;
+}
+
+interface ProfileApiResponse {
+    id: number;
+    profile: ProfileData;
+}
+
+type ProfileResponse = ApiResponse<ProfileApiResponse>;
+
+export interface UserProfile {
+    user_id: number;
+    data: Record<string, any>;
+}
+
 export class ProfileService {
-    private readonly apiUrl: string;
-    private readonly nonce: string;
     private currentUserData: ProfileData | null = null;
+    private readonly apiClient: ApiClient;
+    private readonly nonce: string | null = null;
 
-    // Field groups for data validation
-    private readonly CORE_FIELDS = [
-        'username',
-        'email',
-        'displayName',
-        'firstName',
-        'lastName'
-    ] as const;
-
-    private readonly EXTENDED_FIELDS = [
-        'nickname',
-        'roles'
-    ] as const;
-
-    constructor(apiUrl: string, nonce: string) {
-        this.apiUrl = apiUrl.replace(/\/$/, '');
-        this.nonce = nonce;
-        console.log('ProfileService initialized with:', {
-            apiUrl: this.apiUrl,
-            noncePresent: !!nonce
-        });
+    constructor(apiClient: ApiClient, nonce?: string) {
+        this.apiClient = apiClient;
+        this.nonce = nonce || null;
     }
 
     public async fetchProfile(userId: number): Promise<ProfileData> {
@@ -47,48 +56,51 @@ export class ProfileService {
             console.group('ProfileService: fetchProfile');
             console.log('Fetching profile for user:', userId);
             
-            const endpoint = `${this.apiUrl}/athlete-dashboard/v1/profile/user`;
+            if (!userId) {
+                throw new ProfileError({
+                    code: 'VALIDATION_ERROR',
+                    message: 'User ID is required',
+                    status: 400
+                });
+            }
+            
+            const endpoint = `profile/user/${userId}`;
                 
             console.log('API URL:', endpoint);
             console.log('Headers:', {
-                'X-WP-Nonce': this.nonce ? '[PRESENT]' : '[MISSING]'
+                'X-WP-Nonce': this.nonce ? '[PRESENT]' : '[MISSING]',
+                'Content-Type': 'application/json'
             });
             
-            const response = await fetch(endpoint, {
-                headers: {
-                    'X-WP-Nonce': this.nonce,
-                    'Accept': 'application/json'
-                }
-            });
+            const response = await this.apiClient.fetch<ProfileApiResponse>(endpoint);
 
-            console.log('Profile fetch response status:', response.status);
-            const responseText = await response.text();
-            console.log('Raw response:', responseText);
-
-            if (!response.ok) {
-                if (response.status === 404) {
-                    console.error('Profile endpoint not found. Please ensure the WordPress REST API route is registered.');
-                }
+            if (!response) {
                 throw new ProfileError({
                     code: 'NETWORK_ERROR',
-                    message: `Failed to fetch profile data: ${response.status} ${response.statusText}`,
-                    status: response.status
+                    message: 'No response received from server',
+                    status: 500
                 });
             }
 
-            let data;
-            try {
-                data = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error('Error parsing response:', parseError);
+            if (response.error) {
+                console.error('API Error:', response.error);
                 throw new ProfileError({
-                    code: 'NETWORK_ERROR',
-                    message: 'Invalid JSON response from server',
-                    status: response.status
+                    code: response.error.code === 'validation_error' ? 'VALIDATION_ERROR' : 'NETWORK_ERROR',
+                    message: response.error.message || 'Failed to fetch profile data',
+                    status: response.error.status || (response.error.code === 'validation_error' ? 400 : 500)
                 });
             }
 
-            const normalizedData = this.normalizeProfileData(data);
+            if (!response.data?.profile) {
+                console.error('Invalid response:', response);
+                throw new ProfileError({
+                    code: 'INVALID_RESPONSE',
+                    message: 'No profile data received from server',
+                    status: 500
+                });
+            }
+
+            const normalizedData = this.normalizeProfileData(response.data.profile);
             console.log('Normalized profile data:', normalizedData);
             console.groupEnd();
             return normalizedData;
@@ -96,8 +108,9 @@ export class ProfileService {
             console.error('Profile fetch error:', error);
             console.groupEnd();
             throw error instanceof ProfileError ? error : new ProfileError({
-                code: 'NETWORK_ERROR',
-                message: error instanceof Error ? error.message : 'Failed to fetch profile data'
+                code: error instanceof Error && error.message.includes('validation') ? 'VALIDATION_ERROR' : 'NETWORK_ERROR',
+                message: error instanceof Error ? error.message : 'Failed to fetch profile data',
+                status: error instanceof Error && error.message.includes('validation') ? 400 : 500
             });
         }
     }
@@ -107,18 +120,7 @@ export class ProfileService {
             console.group('ProfileService: updateProfile');
             console.log('Updating profile for user:', userId);
             
-            // Add detailed email logging
-            console.group('Profile Update Request');
-            console.log('Request Data:', {
-                userId,
-                email: data.email, // Log email specifically
-                emailType: typeof data.email,
-                emailExists: 'email' in data,
-                fullData: data
-            });
-            console.groupEnd();
-            
-            const endpoint = `${this.apiUrl}/${ProfileConfig.endpoints.base}`;
+            const endpoint = `profile/user/${userId}`;
             console.log('API URL:', endpoint);
             console.log('Headers:', {
                 'Content-Type': 'application/json',
@@ -126,50 +128,29 @@ export class ProfileService {
             });
 
             const denormalizedData = this.denormalizeProfileData(data);
-            console.log('Denormalized data for backend:', {
-                ...denormalizedData,
-                email: denormalizedData.email, // Log email after denormalization
-                emailType: typeof denormalizedData.email
-            });
+            console.log('Denormalized data for backend:', denormalizedData);
             
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-WP-Nonce': this.nonce,
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(denormalizedData)
-            });
+            const response = await this.apiClient.post<ProfileApiResponse>(endpoint, denormalizedData);
 
-            console.log('Profile update response status:', response.status);
-            const responseText = await response.text();
-            console.log('Raw update response:', responseText);
-
-            if (!response.ok) {
-                if (response.status === 404) {
-                    console.error('Profile endpoint not found. Please ensure the WordPress REST API route is registered.');
-                }
+            if (response.error) {
+                console.error('API Error:', response.error);
                 throw new ProfileError({
-                    code: 'NETWORK_ERROR',
-                    message: `Failed to update profile data: ${response.status} ${response.statusText}`,
-                    status: response.status
+                    code: response.error.code === 'validation_error' ? 'VALIDATION_ERROR' : 'NETWORK_ERROR',
+                    message: response.error.message || 'Failed to update profile data',
+                    status: response.error.status || (response.error.code === 'validation_error' ? 400 : 500)
                 });
             }
 
-            let updatedData;
-            try {
-                updatedData = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error('Error parsing response:', parseError);
+            if (!response.data?.profile) {
+                console.error('Invalid response:', response);
                 throw new ProfileError({
-                    code: 'NETWORK_ERROR',
-                    message: 'Invalid JSON response from server',
-                    status: response.status
+                    code: 'INVALID_RESPONSE',
+                    message: 'No profile data received from server',
+                    status: 500
                 });
             }
 
-            const normalizedData = this.normalizeProfileData(updatedData);
+            const normalizedData = this.normalizeProfileData(response.data.profile);
             console.log('Normalized updated data:', normalizedData);
             console.groupEnd();
             return normalizedData;
@@ -177,8 +158,9 @@ export class ProfileService {
             console.error('Profile update error:', error);
             console.groupEnd();
             throw error instanceof ProfileError ? error : new ProfileError({
-                code: 'NETWORK_ERROR',
-                message: error instanceof Error ? error.message : 'Failed to update profile data'
+                code: error instanceof Error && error.message.includes('validation') ? 'VALIDATION_ERROR' : 'NETWORK_ERROR',
+                message: error instanceof Error ? error.message : 'Failed to update profile data',
+                status: error instanceof Error && error.message.includes('validation') ? 400 : 500
             });
         }
     }
@@ -188,12 +170,8 @@ export class ProfileService {
         console.log('Raw data received:', data);
 
         // Extract profile data from the response structure
-        const profileData = data.data?.profile || data.data || data;
+        const profileData = data;
         console.log('Extracted profile data:', profileData);
-
-        // Detect response format
-        const isNewEndpoint = 'user_login' in profileData;
-        console.log('[ProfileService] Response format:', 'new');
 
         // Validate required fields
         const hasRequiredFields = 'user_login' in profileData || 'username' in profileData;
@@ -203,7 +181,8 @@ export class ProfileService {
             console.groupEnd();
             throw new ProfileError({
                 code: 'INVALID_RESPONSE',
-                message: 'Profile data is missing required fields'
+                message: 'Profile data is missing required fields',
+                status: 500
             });
         }
 
@@ -230,34 +209,48 @@ export class ProfileService {
             id: Number(profileData.id) || 0,
             username: profileData.user_login || profileData.username || '',
             email: profileData.user_email || profileData.email || '',
-            displayName: profileData.display_name || profileData.name || '',
+            displayName: profileData.display_name || profileData.displayName || '',
             firstName: profileData.first_name || profileData.firstName || '',
             lastName: profileData.last_name || profileData.lastName || '',
             nickname: profileData.nickname || '',
             roles: Array.isArray(profileData.roles) ? profileData.roles : [],
 
-            // Custom profile fields remain unchanged
+            // Physical measurements
+            heightCm: Number(profileData.height_cm || profileData.heightCm) || 0,
+            weightKg: Number(profileData.weight_kg || profileData.weightKg) || 0,
+            experienceLevel: profileData.experience_level || profileData.experienceLevel || 'beginner',
+
+            // Medical information
+            medicalConditions: Array.isArray(profileData.medical_conditions || profileData.medicalConditions) ? profileData.medical_conditions || profileData.medicalConditions : [],
+            exerciseLimitations: Array.isArray(profileData.exercise_limitations || profileData.exerciseLimitations) ? profileData.exercise_limitations || profileData.exerciseLimitations : [],
+            medications: profileData.medications || '',
+            medicalClearance: Boolean(profileData.medical_clearance || profileData.medicalClearance),
+            medicalNotes: profileData.medical_notes || profileData.medicalNotes || '',
+
+            // Custom profile fields
             phone: profileData.phone || '',
             age: Number(profileData.age) || 0,
-            dateOfBirth: profileData.date_of_birth || '',
+            dateOfBirth: profileData.date_of_birth || profileData.dateOfBirth || '',
             gender: profileData.gender || '',
-            dominantSide: profileData.dominant_side || '',
-            medicalClearance: Boolean(profileData.medical_clearance),
-            medicalNotes: profileData.medical_notes || '',
-            emergencyContactName: profileData.emergency_contact_name || '',
-            emergencyContactPhone: profileData.emergency_contact_phone || '',
+            dominantSide: profileData.dominant_side || profileData.dominantSide || '',
+            emergencyContactName: profileData.emergency_contact_name || profileData.emergencyContactName || '',
+            emergencyContactPhone: profileData.emergency_contact_phone || profileData.emergencyContactPhone || '',
             injuries: Array.isArray(profileData.injuries)
                 ? profileData.injuries.map((injury: any) => ({
-                      id: injury.id || String(Date.now()),
-                      name: injury.name || '',
-                      details: injury.details || '',
-                      type: injury.type || 'general',
-                      description: injury.description || injury.details || '',
-                      date: injury.date || new Date().toISOString(),
-                      severity: injury.severity || 'medium',
-                      isCustom: true,
-                      status: injury.status || 'active'
-                  }))
+                    id: injury.id || String(Date.now()),
+                    name: injury.name || '',
+                    details: injury.details || '',
+                    type: injury.type || 'general',
+                    description: injury.description || injury.details || '',
+                    date: injury.date || new Date().toISOString(),
+                    severity: injury.severity || 'medium',
+                    isCustom: true,
+                    status: injury.status || 'active'
+                }))
+                : [],
+            equipment: Array.isArray(profileData.equipment) ? profileData.equipment : [],
+            fitnessGoals: Array.isArray(profileData.fitness_goals || profileData.fitnessGoals) 
+                ? profileData.fitness_goals || profileData.fitnessGoals 
                 : []
         };
 
@@ -317,14 +310,19 @@ export class ProfileService {
             first_name: data.firstName || '',
             last_name: data.lastName || '',
 
+            // Medical information
+            medical_conditions: data.medicalConditions,
+            exercise_limitations: data.exerciseLimitations,
+            medications: data.medications,
+            medical_clearance: data.medicalClearance,
+            medical_notes: data.medicalNotes,
+
             // Custom profile fields
             phone: data.phone,
             age: data.age,
             date_of_birth: data.dateOfBirth,
             gender: data.gender,
             dominant_side: data.dominantSide,
-            medical_clearance: data.medicalClearance,
-            medical_notes: data.medicalNotes,
             emergency_contact_name: data.emergencyContactName,
             emergency_contact_phone: data.emergencyContactPhone,
             injuries: data.injuries?.map(injury => ({
@@ -349,5 +347,31 @@ export class ProfileService {
         console.log('Denormalized data for backend:', denormalized);
         console.groupEnd();
         return denormalized;
+    }
+
+    async fetchUserProfile(userId: number): Promise<UserProfile> {
+        try {
+            const response = await this.apiClient.fetch<UserProfile>(`profile/user/${userId}`);
+            if (response.error || !response.data) {
+                throw new Error(response.error?.message || 'No data received');
+            }
+            return response.data;
+        } catch (error) {
+            console.error('[ProfileService] Error fetching user profile:', error);
+            throw error;
+        }
+    }
+
+    async updateUserProfile(userId: number, data: Partial<UserProfile['data']>): Promise<UserProfile> {
+        try {
+            const response = await this.apiClient.post<UserProfile>(`profile/user/${userId}`, data);
+            if (response.error || !response.data) {
+                throw new Error(response.error?.message || 'No data received');
+            }
+            return response.data;
+        } catch (error) {
+            console.error('[ProfileService] Error updating user profile:', error);
+            throw error;
+        }
     }
 } 

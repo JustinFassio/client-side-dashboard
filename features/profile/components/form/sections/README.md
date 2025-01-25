@@ -87,25 +87,71 @@ The Physical section handles user physical attributes and measurements.
 
 ---
 
-## Basic Section (To Be Updated)
-The Basic section manages fundamental user information.
-*Documentation pending new implementation*
+## Basic Section
+The Basic section manages fundamental user information, implementing the standard button styling pattern used across profile sections.
 
-### Current Features
-- Name fields
-- Contact preferences
-- Basic demographics
+### Features
+- Name fields (First Name, Last Name)
+- Display Name
+- Email field
+- Standardized save button with physical feature styling
+
+### Button Implementation
+```typescript
+<Button
+    onClick={onSave}
+    disabled={isSaving}
+    isLoading={isSaving}
+    feature="physical"
+>
+    Save Basic Information
+</Button>
+```
+
+### Button States
+1. **Default**
+   - Citron green background (#e2ff32)
+   - Dark text for contrast
+   - Standard padding and border radius
+
+2. **Hover**
+   - Slight opacity reduction
+   - Subtle upward transform
+   - Maintains contrast ratio
+
+3. **Loading**
+   - Disabled state
+   - "Loading..." text
+   - Visual loading indicator
+   - Maintains button width
+
+4. **Disabled**
+   - Reduced opacity
+   - No hover effects
+   - Cursor: not-allowed
+
+### Testing Considerations
+- Verify button class (`btn--feature-physical`)
+- Test loading state text and attributes
+- Confirm hover state styles
+- Validate disabled state behavior
 
 ---
 
 ## Medical Section (To Be Updated)
 The Medical section handles health-related information.
-*Documentation pending new implementation*
 
-### Current Features
+### Features
 - Medical history
 - Current conditions
 - Emergency contacts
+- Standardized button implementation
+
+### Button Implementation
+Follows the established pattern:
+- Physical feature styling
+- Loading state management
+- Consistent interaction states
 
 ---
 
@@ -135,4 +181,45 @@ The Medical section handles health-related information.
 - Implement proper memoization
 - Optimize re-renders
 - Use efficient form state management
-- Consider code splitting if sections grow large 
+- Consider code splitting if sections grow large
+
+### Accessibility Guidelines
+1. Maintain color contrast ratios
+2. Provide loading state indicators
+3. Use appropriate ARIA attributes
+4. Ensure keyboard navigation
+5. Test with screen readers
+
+### Button Implementation Standards
+1. Use the Button component from dashboard/components/Button
+2. Apply physical feature styling using `feature="physical"`
+3. Implement loading states with `isLoading` prop
+4. Handle disabled states appropriately
+5. Maintain consistent button text and actions
+
+### Testing Requirements
+- Verify button styling classes
+- Test loading states and transitions
+- Validate hover interactions
+- Confirm disabled state behavior
+- Check responsive design
+
+### Error Handling Best Practices
+1. Use consistent error message format
+2. Implement proper validation
+3. Handle API errors gracefully
+4. Provide user feedback
+5. Log errors appropriately
+
+### Performance Considerations
+- Implement proper memoization
+- Optimize re-renders
+- Use efficient form state management
+- Consider code splitting if sections grow large
+
+### Accessibility Guidelines
+1. Maintain color contrast ratios
+2. Provide loading state indicators
+3. Use appropriate ARIA attributes
+4. Ensure keyboard navigation
+5. Test with screen readers 

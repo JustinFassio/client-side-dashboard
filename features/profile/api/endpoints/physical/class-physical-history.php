@@ -104,7 +104,7 @@ class Physical_History extends Base_Endpoint {
 	 *
 	 * @return array
 	 */
-	protected function get_schema(): array {
+	public function get_schema(): array {
 		return array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
 			'title'      => 'physical_history',
@@ -146,23 +146,23 @@ class Physical_History extends Base_Endpoint {
 							'weight' => array(
 								'type' => 'number',
 							),
-							'chest' => array(
+							'chest'  => array(
 								'type' => 'number',
 							),
-							'waist' => array(
+							'waist'  => array(
 								'type' => 'number',
 							),
-							'hips' => array(
+							'hips'   => array(
 								'type' => 'number',
 							),
 							'units'  => array(
 								'type'       => 'object',
 								'properties' => array(
-									'height' => array(
+									'height'       => array(
 										'type' => 'string',
 										'enum' => array( 'cm', 'ft' ),
 									),
-									'weight' => array(
+									'weight'       => array(
 										'type' => 'string',
 										'enum' => array( 'kg', 'lbs' ),
 									),

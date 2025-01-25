@@ -72,13 +72,12 @@ export const AccountSection: React.FC<AccountSectionProps> = ({
 
             <div className={styles.actions}>
                 <Button
-                    variant="primary"
-                    feature="profile"
                     onClick={onSave}
                     disabled={isSaving}
-                    aria-busy={isSaving}
+                    isLoading={isSaving}
+                    feature="physical"
                 >
-                    {isSaving ? 'Saving...' : 'Save Account Settings'}
+                    Save Account Settings
                 </Button>
             </div>
         </div>

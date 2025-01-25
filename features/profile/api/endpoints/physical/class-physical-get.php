@@ -119,7 +119,7 @@ class Physical_Get extends Base_Endpoint {
 	 *
 	 * @return array
 	 */
-	protected function get_schema(): array {
+	public function get_schema(): array {
 		return array(
 			'$schema'    => 'http://json-schema.org/draft-04/schema#',
 			'title'      => 'physical',
@@ -160,11 +160,11 @@ class Physical_Get extends Base_Endpoint {
 					'type'        => 'object',
 					'required'    => false,
 					'properties'  => array(
-						'height' => array(
+						'height'       => array(
 							'type' => 'string',
 							'enum' => array( 'cm', 'ft' ),
 						),
-						'weight' => array(
+						'weight'       => array(
 							'type' => 'string',
 							'enum' => array( 'kg', 'lbs' ),
 						),
@@ -179,7 +179,7 @@ class Physical_Get extends Base_Endpoint {
 					'type'        => 'object',
 					'required'    => false,
 					'properties'  => array(
-						'showMetric'   => array(
+						'showMetric' => array(
 							'type' => 'boolean',
 						),
 					),

@@ -90,13 +90,12 @@ export const InjuryTracker = ({
 
             <div className={styles.actions}>
                 <Button
-                    variant="primary"
-                    feature="profile"
                     onClick={onSave}
                     disabled={isSaving}
-                    aria-busy={isSaving}
+                    isLoading={isSaving}
+                    feature="physical"
                 >
-                    {isSaving ? 'Saving...' : 'Save Injury Information'}
+                    Save Injury Information
                 </Button>
             </div>
         </div>

@@ -1,6 +1,8 @@
 declare module '*.module.css' {
   const loading: string;
   const error: string;
+  const section: string;
+  const actions: string;
   const physicalSection: string;
   const measurementForm: string;
   const formGroup: string;
@@ -14,6 +16,8 @@ declare module '*.module.css' {
   export {
     loading,
     error,
+    section,
+    actions,
     physicalSection,
     measurementForm,
     formGroup,

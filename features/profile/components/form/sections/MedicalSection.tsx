@@ -89,13 +89,12 @@ export const MedicalSection: React.FC<MedicalSectionProps> = ({
 
             <div className={styles.actions}>
                 <Button
-                    variant="primary"
-                    feature="profile"
                     onClick={onSave}
                     disabled={isSaving}
-                    aria-busy={isSaving}
+                    isLoading={isSaving}
+                    feature="physical"
                 >
-                    {isSaving ? 'Saving...' : 'Save Medical Information'}
+                    Save Medical Information
                 </Button>
             </div>
         </div>

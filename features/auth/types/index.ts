@@ -182,33 +182,4 @@ export interface AuthResponse {
         message: string;
         details?: Record<string, any>;
     };
-}
-
-export interface User {
-    id: number;
-    username: string;
-    email: string;
-    roles: string[];
-}
-
-export interface LoginRequest {
-    username: string;
-    password: string;
-}
-
-export interface LoginResponse {
-    success: boolean;
-    user: User;
-    token: string;
-}
-
-export interface RegisterRequest {
-    username: string;
-    email: string;
-    password: string;
-}
-
-export interface RegisterResponse {
-    success: boolean;
-    user: User;
 } 

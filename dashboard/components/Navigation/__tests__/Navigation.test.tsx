@@ -1,115 +1,99 @@
 import React from 'react';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Navigation } from '../index';
-import { Events } from '../../../core/events';
-import { Feature, FeatureMetadata } from '../../../contracts/Feature';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Feature, FeatureContext, FeatureMetadata } from '@dashboard/contracts/Feature';
 
-// Mock the Events module
-jest.mock('../../../core/events', () => ({
-    Events: {
-        emit: jest.fn()
-    }
-}));
-
-// Create a mock feature class
 class MockFeature implements Feature {
-    constructor(
-        public readonly identifier: string,
-        public readonly metadata: FeatureMetadata
-    ) {}
+  constructor(
+    public readonly identifier: string,
+    public readonly metadata: FeatureMetadata
+  ) {}
 
-    async register() {}
-    async init() {}
-    isEnabled() { return true; }
-    render() { return null; }
-    async cleanup() {}
+  async register(_context: FeatureContext): Promise<void> {}
+  async init(): Promise<void> {}
+  isEnabled(): boolean { return true; }
+  render(): JSX.Element | null { return null; }
+  async cleanup(): Promise<void> {}
 }
 
 describe('Navigation', () => {
-    const mockFeatures = [
-        new MockFeature('overview', {
-            name: 'Overview',
-            description: 'Dashboard overview',
-            order: 0
-        }),
-        new MockFeature('profile', {
-            name: 'Profile',
-            description: 'User profile',
-            order: 1
-        })
-    ];
+  const mockFeatures: Feature[] = [
+    new MockFeature('dashboard', {
+      name: 'Dashboard',
+      description: 'Main dashboard',
+      order: 1
+    }),
+    new MockFeature('profile', {
+      name: 'Profile', 
+      description: 'User profile',
+      order: 2
+    }),
+    new MockFeature('workouts', {
+      name: 'Workouts',
+      description: 'Workout plans',
+      order: 3
+    }),
+    new MockFeature('settings', {
+      name: 'Settings',
+      description: 'User settings',
+      order: 4
+    })
+  ];
 
-    beforeEach(() => {
-        // Clear URL parameters
-        window.history.pushState({}, '', '/');
-        // Clear mock calls
-        jest.clearAllMocks();
-    });
+  const renderWithRouter = (ui: React.ReactElement, { route = '/' } = {}) => {
+    window.history.pushState({}, 'Test page', route);
+    
+    return render(
+      <MemoryRouter initialEntries={[route]}>
+        <Routes>
+          <Route path="/*" element={ui} />
+        </Routes>
+      </MemoryRouter>
+    );
+  };
 
-    it('renders all features in correct order', () => {
-        render(<Navigation features={mockFeatures} currentFeature="overview" />);
-        
-        const buttons = screen.getAllByRole('button');
-        expect(buttons).toHaveLength(2);
-        expect(buttons[0]).toHaveTextContent('Overview');
-        expect(buttons[1]).toHaveTextContent('Profile');
-    });
+  beforeAll(() => {
+    // Mock window.athleteDashboardData
+    window.athleteDashboardData = {
+      apiUrl: 'http://test.local/wp-json',
+      nonce: 'test-nonce',
+      siteUrl: 'http://test.local',
+      debug: false,
+      userId: 1,
+      feature: {
+        name: 'dashboard',
+        label: 'Dashboard'
+      }
+    };
+  });
 
-    it('marks current feature as active', () => {
-        render(<Navigation features={mockFeatures} currentFeature="profile" />);
-        
-        const profileButton = screen.getByText('Profile').closest('button');
-        expect(profileButton).toHaveClass('active');
-        expect(profileButton).toHaveAttribute('aria-current', 'page');
-    });
+  it('renders all navigation links', () => {
+    renderWithRouter(<Navigation features={mockFeatures} />);
 
-    it('emits navigation event and updates URL on feature click', () => {
-        render(<Navigation features={mockFeatures} currentFeature="overview" />);
-        
-        const profileButton = screen.getByText('Profile');
-        fireEvent.click(profileButton);
+    expect(screen.getByRole('button', { name: /dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /profile/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /workouts/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+  });
 
-        // Check if event was emitted
-        expect(Events.emit).toHaveBeenCalledWith('navigation:changed', {
-            identifier: 'profile'
-        });
+  it('highlights active link based on current route', () => {
+    renderWithRouter(<Navigation features={mockFeatures} currentFeature="profile" />);
 
-        // Check if URL was updated
-        const url = new URL(window.location.href);
-        expect(url.searchParams.get('dashboard_feature')).toBe('profile');
-    });
+    const profileButton = screen.getByRole('button', { name: /profile/i });
+    expect(profileButton).toHaveClass('active');
+    
+    const dashboardButton = screen.getByRole('button', { name: /dashboard/i });
+    expect(dashboardButton).not.toHaveClass('active');
+  });
 
-    it('displays feature descriptions when available', () => {
-        render(<Navigation features={mockFeatures} currentFeature="overview" />);
-        
-        expect(screen.getByText('Dashboard overview')).toBeInTheDocument();
-        expect(screen.getByText('User profile')).toBeInTheDocument();
-    });
+  it('navigates to correct route when clicking links', async () => {
+    renderWithRouter(<Navigation features={mockFeatures} />);
 
-    it('sorts features by order metadata', () => {
-        const unorderedFeatures = [
-            new MockFeature('profile', {
-                name: 'Profile',
-                description: 'User profile',
-                order: 2
-            }),
-            new MockFeature('overview', {
-                name: 'Overview',
-                description: 'Dashboard overview',
-                order: 0
-            }),
-            new MockFeature('workouts', {
-                name: 'Workouts',
-                description: 'Workout tracking',
-                order: 1
-            })
-        ];
-
-        render(<Navigation features={unorderedFeatures} currentFeature="overview" />);
-        
-        const buttons = screen.getAllByRole('button');
-        expect(buttons[0]).toHaveTextContent('Overview');
-        expect(buttons[1]).toHaveTextContent('Workouts');
-        expect(buttons[2]).toHaveTextContent('Profile');
-    });
+    const profileButton = screen.getByRole('button', { name: /profile/i });
+    await userEvent.click(profileButton);
+    
+    expect(window.location.search).toContain('dashboard_feature=profile');
+  });
 }); 

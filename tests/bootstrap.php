@@ -1,8 +1,6 @@
 <?php
 /**
  * PHPUnit bootstrap file
- *
- * @package AthleteDashboard
  */
 
 // Load composer autoloader
@@ -54,50 +52,3 @@ tests_add_filter(
 
 // Load WordPress test bootstrap
 require_once $wp_tests_dir . '/includes/bootstrap.php';
-
-// Load mocks
-require_once __DIR__ . '/mocks/wp-functions.php';
-require_once __DIR__ . '/mocks/wp-rest-functions.php';
-
-/**
- * Test case base class
- */
-class AD_UnitTestCase extends \PHPUnit\Framework\TestCase {
-	protected function setUp(): void {
-		parent::setUp();
-		$this->resetWPDBMock();
-		$this->resetWPCacheMock();
-		$this->resetWPRESTMock();
-	}
-
-	protected function tearDown(): void {
-		parent::tearDown();
-	}
-
-	protected function resetWPDBMock(): void {
-		global $wpdb;
-		$wpdb = $this->getMockBuilder( 'wpdb' )
-			->disableOriginalConstructor()
-			->getMock();
-	}
-
-	protected function resetWPCacheMock(): void {
-		WP_Mock::userFunction(
-			'wp_cache_get',
-			array(
-				'return' => false,
-			)
-		);
-		WP_Mock::userFunction(
-			'wp_cache_set',
-			array(
-				'return' => true,
-			)
-		);
-	}
-
-	protected function resetWPRESTMock(): void {
-		global $wp_rest_server;
-		$wp_rest_server = new WP_REST_Server();
-	}
-}

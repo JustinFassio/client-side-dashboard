@@ -50,6 +50,7 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
             console.log('Update successful:', updatedData);
             setPhysicalData(updatedData);
             setUpdateError(null);
+            await onSave();
         } catch (err) {
             console.error('Update failed:', err);
             setUpdateError(err instanceof Error ? err.message : 'Failed to update physical data');
@@ -84,6 +85,7 @@ export const PhysicalSection: React.FC<PhysicalSectionProps> = ({
                     <MeasurementForm 
                         initialData={physicalData}
                         onUpdate={handleUpdate}
+                        isSaving={isSaving}
                     />
                     <HistoryView userId={userId} />
                     {(updateError || externalError) && (

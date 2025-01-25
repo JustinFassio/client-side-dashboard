@@ -3,74 +3,83 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Button } from '../index';
 
-describe('Button Component', () => {
+describe('Button', () => {
   it('renders with default props', () => {
     render(<Button>Click me</Button>);
-    const button = screen.getByRole('button', { name: /click me/i });
     
+    const button = screen.getByRole('button', { name: /click me/i });
     expect(button).toBeInTheDocument();
-    expect(button).toHaveClass('btn', 'btn--primary');
+    expect(button).toHaveClass('btn');
+    expect(button).not.toHaveClass('btn--primary');
+    expect(button).not.toBeDisabled();
   });
 
-  it('renders with different variants', () => {
-    const { rerender } = render(
-      <Button variant="secondary">Secondary Button</Button>
-    );
+  it('renders with primary variant', () => {
+    render(<Button variant="primary">Primary Button</Button>);
     
-    let button = screen.getByRole('button');
-    expect(button).toHaveClass('btn--secondary');
-    
-    rerender(<Button variant="primary">Primary Button</Button>);
-    button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /primary button/i });
     expect(button).toHaveClass('btn--primary');
   });
 
-  it('applies feature-specific styles', () => {
-    render(<Button feature="physical">Physical Button</Button>);
-    const button = screen.getByRole('button');
+  it('renders with secondary variant', () => {
+    render(<Button variant="secondary">Secondary Button</Button>);
     
-    expect(button).toHaveClass('btn--feature-physical');
-  });
-
-  it('combines custom className with default classes', () => {
-    render(<Button className="custom-class">Custom Button</Button>);
-    const button = screen.getByRole('button');
-    
-    expect(button).toHaveClass('btn', 'btn--primary', 'custom-class');
+    const button = screen.getByRole('button', { name: /secondary button/i });
+    expect(button).toHaveClass('btn--secondary');
   });
 
   it('handles click events', async () => {
     const handleClick = jest.fn();
     render(<Button onClick={handleClick}>Click me</Button>);
     
-    const button = screen.getByRole('button');
+    const button = screen.getByRole('button', { name: /click me/i });
     await userEvent.click(button);
     
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
 
-  it('handles disabled state', () => {
+  it('can be disabled', () => {
     render(<Button disabled>Disabled Button</Button>);
-    const button = screen.getByRole('button');
     
+    const button = screen.getByRole('button', { name: /disabled button/i });
     expect(button).toBeDisabled();
-    expect(button).toHaveClass('btn');
+    expect(button).toHaveClass('btn--disabled');
   });
 
-  it('passes through additional HTML button attributes', () => {
+  it('does not trigger click when disabled', async () => {
+    const handleClick = jest.fn();
+    render(<Button disabled onClick={handleClick}>Disabled Button</Button>);
+    
+    const button = screen.getByRole('button', { name: /disabled button/i });
+    await userEvent.click(button);
+    
+    expect(handleClick).not.toHaveBeenCalled();
+  });
+
+  it('shows loading state', () => {
+    render(<Button isLoading>Click me</Button>);
+    
+    const button = screen.getByRole('button', { name: 'Loading...' });
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveClass('btn--loading');
+    expect(button).toBeDisabled();
+  });
+
+  it('renders with custom className', () => {
+    render(<Button className="custom-class">Custom Button</Button>);
+    
+    const button = screen.getByRole('button', { name: /custom button/i });
+    expect(button).toHaveClass('btn', 'custom-class');
+  });
+
+  it('forwards additional props to button element', () => {
     render(
-      <Button 
-        type="submit"
-        aria-label="Submit form"
-        data-testid="submit-btn"
-      >
-        Submit
+      <Button data-testid="custom-button" aria-label="Custom button">
+        Button Text
       </Button>
     );
     
-    const button = screen.getByRole('button');
-    expect(button).toHaveAttribute('type', 'submit');
-    expect(button).toHaveAttribute('aria-label', 'Submit form');
-    expect(button).toHaveAttribute('data-testid', 'submit-btn');
+    const button = screen.getByTestId('custom-button');
+    expect(button).toHaveAttribute('aria-label', 'Custom button');
   });
 }); 

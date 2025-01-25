@@ -81,41 +81,57 @@ class AI_Service {
 		error_log( 'AI Service: Making request to endpoint: ' . $endpoint );
 		error_log( 'AI Service: Request data: ' . print_r( $data, true ) );
 
+		// Get rate limit headers before any operation
+		$rate_limit_headers = $this->rate_limiter->get_rate_limit_headers();
+		error_log( 'AI Service: Rate limit headers: ' . print_r( $rate_limit_headers, true ) );
+
+		// Check rate limit
 		if ( ! $this->rate_limiter->check_limit() ) {
-			$headers = $this->rate_limiter->get_rate_limit_headers();
+			error_log( 'AI Service: Rate limit exceeded' );
 			throw new AI_Service_Exception(
-				'Rate limit exceeded. Reset in ' . $headers['X-RateLimit-Reset'] . ' seconds.',
+				sprintf(
+					'Rate limit exceeded. Limit: %d, Reset in %d seconds.',
+					$rate_limit_headers['X-RateLimit-Limit'],
+					$rate_limit_headers['X-RateLimit-Reset'] - time()
+				),
 				'RATE_LIMIT_EXCEEDED',
-				$headers
+				$rate_limit_headers
 			);
 		}
 
-		$url  = rtrim( AI_SERVICE_ENDPOINT, '/' ) . '/' . ltrim( $endpoint, '/' );
-		$args = array(
-			'method'  => $method,
-			'headers' => array_merge(
-				array(
-					'Content-Type' => 'application/json',
-					'X-API-Key'    => AI_SERVICE_API_KEY,
-					'User-Agent'   => call_user_func( $this->wp_functions['get_bloginfo'], 'name' ) . ' WordPress Plugin',
-				),
-				$this->rate_limiter->get_rate_limit_headers()
-			),
-			'timeout' => 30,
+		$url          = rtrim( AI_SERVICE_ENDPOINT, '/' ) . '/' . ltrim( $endpoint, '/' );
+		$base_headers = array(
+			'Content-Type' => 'application/json',
+			'X-API-Key'    => AI_SERVICE_API_KEY,
+			'User-Agent'   => call_user_func( $this->wp_functions['get_bloginfo'], 'name' ) . ' WordPress Plugin',
 		);
 
-		error_log( 'AI Service: Request URL: ' . $url );
-		error_log( 'AI Service: Request headers: ' . print_r( $args['headers'], true ) );
+		// Merge rate limit headers with base headers
+		$headers = array_merge( $base_headers, $rate_limit_headers );
+
+		$args = array(
+			'method'  => $method,
+			'headers' => $headers,
+			'timeout' => 30,
+		);
 
 		if ( $data !== null ) {
 			$args['body'] = call_user_func( $this->wp_functions['wp_json_encode'], $data );
 		}
 
+		error_log( 'AI Service: Making request with headers: ' . print_r( $args['headers'], true ) );
 		$response = call_user_func( $this->wp_functions['wp_remote_request'], $url, $args );
 
 		if ( call_user_func( $this->wp_functions['is_wp_error'], $response ) ) {
 			error_log( 'AI Service: Request failed with error: ' . $response->get_error_message() );
-			throw new AI_Service_Exception( $response->get_error_message(), 'REQUEST_FAILED' );
+			throw new AI_Service_Exception(
+				'Request failed: ' . $response->get_error_message(),
+				'REQUEST_FAILED',
+				array_merge(
+					array( 'error' => $response->get_error_message() ),
+					$rate_limit_headers
+				)
+			);
 		}
 
 		$status_code = call_user_func( $this->wp_functions['wp_remote_retrieve_response_code'], $response );
@@ -125,17 +141,47 @@ class AI_Service {
 		error_log( 'AI Service: Response body: ' . $body );
 
 		if ( $status_code >= 400 ) {
+			$error_code = 'API_ERROR';
+			$error_data = array(
+				'status_code' => $status_code,
+				'response'    => $body,
+			);
+
+			if ( $status_code === 401 ) {
+				$error_code = 'UNAUTHORIZED';
+			} elseif ( $status_code === 429 ) {
+				$error_code = 'RATE_LIMIT_EXCEEDED';
+			}
+
+			$error_data = array_merge( $error_data, $rate_limit_headers );
+
 			throw new AI_Service_Exception(
 				'Request failed with status ' . $status_code,
-				'HTTP_ERROR',
-				array(
-					'status_code' => $status_code,
-					'response'    => $body,
+				$error_code,
+				$error_data
+			);
+		}
+
+		$decoded = json_decode( $body, true );
+		if ( $decoded === null && $body !== '' ) {
+			throw new AI_Service_Exception(
+				'Invalid JSON response',
+				'INVALID_RESPONSE',
+				array_merge(
+					array( 'response' => $body ),
+					$rate_limit_headers
 				)
 			);
 		}
 
-		return json_decode( $body, true );
+		// Check if we need to update the user's tier based on response headers
+		if ( isset( $response['headers']['X-User-Tier'] ) ) {
+			$new_tier = $response['headers']['X-User-Tier'];
+			error_log( "AI Service: Updating user tier to {$new_tier}" );
+			$this->rate_limiter->update_user_tier( $new_tier );
+		}
+
+		return $decoded;
 	}
 
 	/**
@@ -234,18 +280,18 @@ class AI_Service {
 	/**
 	 * Generate a workout plan based on user preferences and profile data.
 	 *
-	 * @param array $preferences User's workout preferences.
-	 * @param array $profile_data User's profile data.
+	 * @param array $preferences The workout preferences.
+	 * @param array $profile_data The user's profile data.
 	 * @return array Generated workout plan.
 	 * @throws AI_Service_Exception If the request fails.
 	 */
-	public function generate_workout_plan( $preferences, $profile_data ) {
+	public function generate_workout_plan( $preferences = array(), $profile_data = array() ) {
 		error_log( 'AI Service: Generating workout plan with preferences: ' . print_r( $preferences, true ) );
 		error_log( 'AI Service: User profile data: ' . print_r( $profile_data, true ) );
 
 		try {
-			$this->validate_preferences( $preferences );
 			$this->validate_profile_data( $profile_data );
+			$this->validate_preferences( $preferences );
 
 			$request_data = array(
 				'preferences' => $preferences,
@@ -254,15 +300,21 @@ class AI_Service {
 
 			$response = $this->make_request( 'POST', 'generate', $request_data );
 			error_log( 'AI Service: Generated workout plan: ' . print_r( $response, true ) );
-
 			return $response;
-		} catch ( Exception $e ) {
+		} catch ( AI_Service_Exception $e ) {
 			error_log( 'AI Service: Error generating workout plan: ' . $e->getMessage() );
+			error_log( 'AI Service: Stack trace: ' . $e->getTraceAsString() );
+			throw $e;
+		} catch ( Exception $e ) {
+			error_log( 'AI Service: Unexpected error: ' . $e->getMessage() );
 			error_log( 'AI Service: Stack trace: ' . $e->getTraceAsString() );
 			throw new AI_Service_Exception(
 				'Failed to generate workout plan: ' . $e->getMessage(),
 				'GENERATION_FAILED',
-				array( 'preferences' => $preferences )
+				array_merge(
+					array( 'error' => $e->getMessage() ),
+					$this->rate_limiter->get_rate_limit_headers()
+				)
 			);
 		}
 	}

@@ -8,21 +8,36 @@ export interface ProfileData {
     displayName: string;
     firstName: string;
     lastName: string;
-    age: number;
-    gender: string;
-    height: number;
-    weight: number;
-    fitnessLevel: string;
-    activityLevel: string;
+    nickname: string;
+    roles: string[];
+    heightCm: number;
+    weightKg: number;
+    experienceLevel: 'beginner' | 'intermediate' | 'advanced';
     medicalConditions: string[];
     exerciseLimitations: string[];
     medications: string;
-    physicalMetrics: Array<{
+    medicalClearance: boolean;
+    medicalNotes: string;
+    phone: string;
+    age: number;
+    dateOfBirth: string;
+    gender: 'male' | 'female' | 'other' | '';
+    dominantSide: 'left' | 'right' | '';
+    emergencyContactName: string;
+    emergencyContactPhone: string;
+    injuries: Array<{
+        id: string;
+        name: string;
+        details: string;
         type: string;
-        value: number;
-        unit: string;
+        description: string;
         date: string;
+        severity: string;
+        status: string;
+        isCustom?: boolean;
     }>;
+    equipment?: string[];
+    fitnessGoals?: string[];
 }
 
 export const mockProfileData: ProfileData = {
@@ -32,29 +47,26 @@ export const mockProfileData: ProfileData = {
     displayName: 'Test User',
     firstName: 'Test',
     lastName: 'User',
-    age: 25,
-    gender: 'male',
-    height: 180,
-    weight: 75,
-    fitnessLevel: 'intermediate',
-    activityLevel: 'moderately_active',
+    nickname: 'tester',
+    roles: ['subscriber'],
+    heightCm: 180,
+    weightKg: 75,
+    experienceLevel: 'intermediate',
     medicalConditions: [],
     exerciseLimitations: [],
     medications: '',
-    physicalMetrics: [
-        {
-            type: 'height',
-            value: 180,
-            unit: 'cm',
-            date: '2023-01-01'
-        },
-        {
-            type: 'weight',
-            value: 75,
-            unit: 'kg',
-            date: '2023-01-01'
-        }
-    ]
+    medicalClearance: false,
+    medicalNotes: '',
+    phone: '123-456-7890',
+    age: 25,
+    dateOfBirth: '1998-01-01',
+    gender: 'male',
+    dominantSide: 'right',
+    emergencyContactName: '',
+    emergencyContactPhone: '',
+    injuries: [],
+    equipment: [],
+    fitnessGoals: ['strength', 'endurance']
 };
 
 export const mockFeatureContext = (): FeatureContext => ({

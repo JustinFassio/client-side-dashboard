@@ -13,39 +13,30 @@ export enum ProfileEvent {
     UPDATE_REQUEST = 'profile:update-request',
     UPDATE_SUCCESS = 'profile:update-success',
     UPDATE_ERROR = 'profile:update-error',
-    SECTION_CHANGE = 'profile:section-change'
+    SECTION_CHANGE = 'profile:section-change',
+    VALIDATION_ERROR = 'profile:validation-error',
+    FORM_RESET = 'profile:form-reset',
+    PREFERENCES_UPDATED = 'profile:preferences-updated'
 }
 
 export interface ProfileEventPayloads {
-    [ProfileEvent.FETCH_REQUEST]: {
-        userId: number;
-    };
-    [ProfileEvent.FETCH_SUCCESS]: {
-        profile: ProfileData;
-    };
-    [ProfileEvent.FETCH_ERROR]: {
-        error: Error;
-    };
-    [ProfileEvent.UPDATE_REQUEST]: {
-        userId: number;
-        data: Partial<ProfileData>;
-    };
-    [ProfileEvent.UPDATE_SUCCESS]: {
-        profile: ProfileData;
-    };
-    [ProfileEvent.UPDATE_ERROR]: {
-        error: Error;
-    };
-    [ProfileEvent.SECTION_CHANGE]: {
-        section: string;
-    };
+    [ProfileEvent.FETCH_REQUEST]: { userId: number };
+    [ProfileEvent.FETCH_SUCCESS]: { profile: ProfileData };
+    [ProfileEvent.FETCH_ERROR]: { error: Error };
+    [ProfileEvent.UPDATE_REQUEST]: { userId: number; data: Partial<ProfileData> };
+    [ProfileEvent.UPDATE_SUCCESS]: { profile: ProfileData };
+    [ProfileEvent.UPDATE_ERROR]: { error: Error };
+    [ProfileEvent.SECTION_CHANGE]: { section: string };
+    [ProfileEvent.VALIDATION_ERROR]: { error: Error };
+    [ProfileEvent.FORM_RESET]: null;
+    [ProfileEvent.PREFERENCES_UPDATED]: ProfileData;
 }
 
-export type ProfileEventType = ProfileEvent;
+export type ProfileEventType = keyof ProfileEventPayloads;
 
 export const PROFILE_EVENTS = ProfileEvent;
 
-export const emitProfileEvent = <T extends ProfileEventType>(
+export const emitProfileEvent = <T extends keyof ProfileEventPayloads>(
     events: DashboardEvents,
     type: T,
     payload: ProfileEventPayloads[T]
@@ -53,7 +44,7 @@ export const emitProfileEvent = <T extends ProfileEventType>(
     events.emit(type, payload);
 };
 
-export const onProfileEvent = <T extends ProfileEventType>(
+export const onProfileEvent = <T extends keyof ProfileEventPayloads>(
     events: DashboardEvents,
     type: T,
     handler: (payload: ProfileEventPayloads[T]) => void
@@ -61,7 +52,7 @@ export const onProfileEvent = <T extends ProfileEventType>(
     events.on(type, handler);
 };
 
-export const offProfileEvent = <T extends ProfileEventType>(
+export const offProfileEvent = <T extends keyof ProfileEventPayloads>(
     events: DashboardEvents,
     type: T,
     handler: (payload: ProfileEventPayloads[T]) => void

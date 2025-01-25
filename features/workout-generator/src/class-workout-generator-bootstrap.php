@@ -47,7 +47,7 @@ class Workout_Generator_Bootstrap {
 		require_once dirname( __DIR__ ) . '/api/class-rate-limiter.php';
 		require_once dirname( __DIR__ ) . '/api/class-workout-validator.php';
 		require_once dirname( __DIR__ ) . '/api/class-workout-endpoints.php';
-		require_once get_stylesheet_directory() . '/features/profile/services/class-profile-service.php';
+		require_once dirname( dirname( dirname( __DIR__ ) ) ) . '/features/profile/services/class-profile-service.php';
 		error_log( 'Workout generator dependencies loaded' );
 	}
 

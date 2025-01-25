@@ -128,7 +128,7 @@ class Profile_Delete extends Base_Endpoint {
 	 *
 	 * @return array Schema data.
 	 */
-	protected function get_schema(): array {
+	public function get_schema(): array {
 		if ( $this->schema ) {
 			return $this->schema;
 		}

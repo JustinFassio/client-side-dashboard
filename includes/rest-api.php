@@ -10,7 +10,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use AthleteDashboard\Core\Config\Debug;
-use AthleteDashboard\Features\Profile\API\Profile_Endpoints;
 
-// Initialize the Profile_Endpoints class
-add_action( 'init', array( Profile_Endpoints::class, 'init' ) );
+// Profile endpoints are now handled by the modular endpoint system
+// through the Profile_Bootstrap class in functions.php

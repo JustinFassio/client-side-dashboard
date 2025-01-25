@@ -3,10 +3,10 @@ import {
     LoginResponse, 
     RegisterRequest, 
     RegisterResponse, 
-    User,
     AuthEventType,
     AuthErrorCode
 } from '../types';
+import { User } from '../../../dashboard/types';
 import { AuthServiceError, shouldRetry } from './errors';
 import { ApiConfig, RequestOptions, RetryConfig } from './types';
 import { dashboardEvents } from '../../../dashboard/events';
@@ -18,13 +18,13 @@ import { RateLimiter } from './rateLimiting';
  */
 export class AuthService {
     private static config: ApiConfig = {
-        baseUrl: '/wp-json/athlete-dashboard/v1/auth',
+        baseUrl: '/wp-json/athlete-dashboard/v1',
         endpoints: {
-            login: '/login',
-            logout: '/logout',
-            register: '/register',
-            refresh: '/refresh',
-            user: '/user'
+            login: '/auth/login',
+            logout: '/auth/logout',
+            register: '/auth/register',
+            refresh: '/auth/refresh',
+            user: '/profile'
         },
         headers: {
             'Content-Type': 'application/json',
@@ -142,14 +142,23 @@ export class AuthService {
      */
     public static async getCurrentUser(): Promise<User> {
         try {
-            const response = await this.makeRequest<{ user: User }>(
+            const response = await this.makeRequest<{ profile: { user: User } }>(
                 this.config.endpoints.user,
                 { method: 'GET' }
             );
 
             this.validateResponse(response);
-            return response.user;
+
+            if (!response.profile?.user) {
+                throw new AuthServiceError(
+                    AuthErrorCode.INVALID_RESPONSE,
+                    'Invalid user data in response'
+                );
+            }
+
+            return response.profile.user;
         } catch (error) {
+            console.error('Failed to get current user:', error);
             throw this.handleError(error);
         }
     }
@@ -230,9 +239,21 @@ export class AuthService {
      */
     private static validateResponse<T>(response: T): void {
         if (!response || typeof response !== 'object') {
+            console.error('Invalid response format:', response);
             throw new AuthServiceError(
                 AuthErrorCode.INVALID_RESPONSE,
                 'Invalid response format'
+            );
+        }
+
+        // Check for error response
+        const errorResponse = response as any;
+        if (errorResponse.error) {
+            console.error('API error response:', errorResponse.error);
+            throw new AuthServiceError(
+                errorResponse.error.code || AuthErrorCode.UNKNOWN_ERROR,
+                errorResponse.error.message || 'Unknown error occurred',
+                errorResponse.error.status
             );
         }
     }

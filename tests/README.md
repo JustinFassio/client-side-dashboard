@@ -1,96 +1,25 @@
 # Athlete Dashboard Testing Guide
 
 ## Overview
-This document provides comprehensive guidance for running and maintaining tests for the Athlete Dashboard WordPress theme. Our testing infrastructure covers both backend (PHP/WordPress) and frontend (React/TypeScript) components.
-
-## Test Infrastructure
-
-### Backend Testing
-- PHPUnit with WP_Mock for unit tests
-- wp-phpunit for WordPress integration tests
-- Custom performance testing framework
-
-### Frontend Testing
-- Jest for unit and integration tests
-- React Testing Library for component testing
-- Custom performance monitoring
+This document provides comprehensive guidance for running and maintaining tests for the Athlete Dashboard WordPress theme.
 
 ## Prerequisites
 - PHP 7.4 or higher
-- Node.js 16 or higher
-- MySQL 5.7 or higher
 - WordPress development environment
-- Composer
-- npm or yarn
+- PHPUnit 9.0 or higher
+- WP-CLI installed globally
 
 ## Installation
 
-### Backend Setup
-
-#### 1. Install PHP Dependencies
+1. Install testing dependencies:
 ```bash
-# Install PHP dependencies
 composer require --dev phpunit/phpunit
 composer require --dev yoast/phpunit-polyfills
-composer require --dev 10up/wp_mock
 ```
 
-#### 2. Set Up Local Test Database
-
-The test suite requires a dedicated MySQL database. You can create one using:
-
+2. Set up WordPress test environment:
 ```bash
-# Log into MySQL
-mysql -u root -p
-
-# Create test database
-CREATE DATABASE wordpress_test;
-
-# Create test user (if needed)
-CREATE USER 'wp_test'@'localhost' IDENTIFIED BY 'wp_test_pass';
-GRANT ALL PRIVILEGES ON wordpress_test.* TO 'wp_test'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-Configure your test environment:
-
-1. Create `.env.testing`:
-```bash
-cp .env.example .env.testing
-```
-
-2. Update database credentials in `.env.testing`:
-```ini
-DB_NAME=wordpress_test
-DB_USER=wp_test
-DB_PASSWORD=wp_test_pass
-DB_HOST=localhost
-```
-
-3. Set up WordPress test environment:
-```bash
-bin/install-wp-tests.sh wordpress_test wp_test wp_test_pass localhost latest
-```
-
-This script will:
-- Download WordPress testing suite
-- Configure the test environment
-- Create necessary database tables
-
-#### 3. Verify Setup
-
-```bash
-# Run a quick test to verify setup
-composer test -- --filter=test_sample
-
-# You should see output indicating successful test execution
-```
-
-### Frontend Setup
-```bash
-# Install Node dependencies
-cd features/profile/assets
-npm install
+bin/install-wp-tests.sh wordpress_test root root localhost latest
 ```
 
 ## Directory Structure
@@ -99,248 +28,154 @@ tests/
 ├── php/
 │   ├── endpoints/           # REST API endpoint tests
 │   ├── framework/          # Test framework and utilities
-│   ├── performance/        # Performance test suites
 │   └── bootstrap.php      # PHPUnit bootstrap file
 ├── reports/               # Test reports and coverage
 └── README.md             # This documentation
-
-features/
-└── profile/
-    ├── assets/
-    │   └── tests/
-    │       ├── components/  # React component tests
-    │       ├── hooks/      # Custom hook tests
-    │       └── performance/ # Frontend performance tests
-    └── tests/
-        └── performance/    # Backend performance tests
 ```
 
 ## Running Tests
 
-### Backend Tests
+### Basic Usage
 ```bash
-# Run all PHP tests
-composer test
+# Run all tests
+./bin/run-tests.sh
 
 # Run specific test suite
-composer test -- --testsuite profile
+./bin/run-tests.sh -f ProfileEndpointTest
 
-# Run performance tests
-composer test -- --testsuite performance
-
-# Generate coverage report
-composer test -- --coverage-html=reports/coverage
+# Run tests with database reset
+./bin/run-tests.sh -r
 ```
 
-### Frontend Tests
+### Command Line Options
+- `-e, --environment`: Set test environment (development, staging, production)
+- `-p, --parallel`: Enable parallel test execution
+- `-d, --debug`: Enable debug mode
+- `-r, --reset-db`: Reset test database before running tests
+- `-f, --filter`: Filter tests by name pattern
+
+### Environment Configuration
+Create environment-specific configuration files:
 ```bash
-cd features/profile/assets
+cp .env.example .env.development
+cp .env.example .env.staging
+cp .env.example .env.production
+```
 
-# Run all frontend tests
-npm test
+## Writing Tests
 
-# Run with coverage
-npm run test:coverage
+### Endpoint Tests
+```php
+class My_Endpoint_Test extends WP_Test_REST_Controller_Testcase {
+    public function test_endpoint() {
+        $request = new WP_REST_Request('GET', '/my-endpoint');
+        $response = $this->server->dispatch($request);
+        $this->assertEquals(200, $response->get_status());
+    }
+}
+```
 
-# Run performance tests
-npm run test:perf
+### Best Practices
+1. **Isolation**: Each test should be independent and clean up after itself
+2. **Naming**: Use descriptive test names that explain the scenario
+3. **Assertions**: Make specific assertions about expected outcomes
+4. **Data**: Use data providers for testing multiple scenarios
+5. **Setup**: Use `setUp()` and `tearDown()` methods appropriately
+
+### Common Patterns
+
+#### Testing Authentication
+```php
+public function test_endpoint_requires_authentication() {
+    wp_set_current_user(0);
+    $request = new WP_REST_Request('GET', '/protected-endpoint');
+    $response = $this->server->dispatch($request);
+    $this->assertEquals(401, $response->get_status());
+}
+```
+
+#### Testing Data Validation
+```php
+public function test_invalid_data_returns_error() {
+    $request = new WP_REST_Request('POST', '/my-endpoint');
+    $request->set_body_params(['invalid' => 'data']);
+    $response = $this->server->dispatch($request);
+    $this->assertEquals(400, $response->get_status());
+}
+```
+
+## Debugging
+
+### Debug Mode
+Enable debug mode to get detailed output:
+```bash
+./bin/run-tests.sh -d
+```
+
+### Common Issues
+1. **Database Connection**: Ensure test database credentials are correct
+2. **File Permissions**: Check permissions on test directories
+3. **Memory Limits**: Increase PHP memory limit if needed
+
+### Logging
+Test logs are stored in `tests/reports/`:
+- `coverage/`: HTML coverage reports
+- `junit.xml`: JUnit format test results
+- `testdox.html`: Human-readable test documentation
+
+## Integration Testing
+
+### Setting Up Test Data
+```php
+public static function wpSetUpBeforeClass($factory) {
+    self::$test_user_id = $factory->user->create([
+        'role' => 'subscriber'
+    ]);
+    update_user_meta(self::$test_user_id, 'test_key', 'test_value');
+}
+```
+
+### Testing WordPress Hooks
+```php
+public function test_action_triggered() {
+    $triggered = false;
+    add_action('my_action', function() use (&$triggered) {
+        $triggered = true;
+    });
+    
+    do_action('my_action');
+    $this->assertTrue($triggered);
+}
 ```
 
 ## Performance Testing
 
-### Thresholds
-```typescript
-// Frontend thresholds (in milliseconds)
-const THRESHOLDS = {
-    API_RESPONSE: 300,
-    CACHE_RESPONSE: 50,
-    DB_QUERY: 100,
-    RENDER_TIME: 100
-};
-```
-
-### Running Performance Tests
-```bash
-# Backend performance suite
-composer test -- --testsuite performance
-
-# Frontend performance suite
-npm run test:perf
-```
-
-### Performance Reports and Artifacts
-
-#### Location
-Performance test results are stored in:
-```
-tests/
-└── reports/
-    └── performance/
-        ├── backend/
-        │   ├── results.json       # Latest test results
-        │   └── history/          # Historical results
-        └── frontend/
-            ├── results.json      # Latest test results
-            └── history/         # Historical results
-```
-
-#### Understanding Results
-
-1. **Backend Metrics**
-```json
-{
-    "timestamp": "2025-01-13T12:00:00Z",
-    "metrics": {
-        "database": {
-            "query_time_avg": 45,
-            "query_count_avg": 3,
-            "cache_hit_ratio": 0.95
-        },
-        "api": {
-            "response_time_p95": 280,
-            "response_time_avg": 150
-        }
-    },
-    "thresholds": {
-        "passed": true,
-        "violations": []
+### Load Testing
+```php
+public function test_endpoint_performance() {
+    $start = microtime(true);
+    
+    for ($i = 0; $i < 100; $i++) {
+        $request = new WP_REST_Request('GET', '/my-endpoint');
+        $this->server->dispatch($request);
     }
+    
+    $time = microtime(true) - $start;
+    $this->assertLessThan(5.0, $time);
 }
 ```
-
-2. **Frontend Metrics**
-```json
-{
-    "timestamp": "2025-01-13T12:00:00Z",
-    "metrics": {
-        "render": {
-            "initial_load": 95,
-            "form_update": 45,
-            "unit_conversion": 8
-        },
-        "api": {
-            "profile_fetch": 280,
-            "profile_update": 180
-        }
-    }
-}
-```
-
-#### Interpreting Results
-
-1. **Response Times**
-   - Green: Below threshold
-   - Yellow: Within 20% of threshold
-   - Red: Exceeds threshold
-
-2. **Cache Performance**
-   - Optimal cache hit ratio: > 0.90
-   - Warning level: 0.70 - 0.90
-   - Critical level: < 0.70
-
-3. **Query Counts**
-   - Optimal: ≤ 5 queries per operation
-   - Warning: 6-10 queries
-   - Critical: > 10 queries
-
-### Historical Trends
-
-Performance history is tracked in CI/CD:
-1. Access the GitHub Actions artifacts
-2. Download performance reports
-3. View trend graphs in the CI dashboard
-
-Example trend analysis:
-```bash
-# Generate performance trend report
-composer test:perf-report
-
-# Output shows 30-day trend
-Last 30 Days:
-- API Response Time: -15% (improved)
-- Cache Hit Ratio: +5% (improved)
-- Query Count: No change
-```
-
-### Debugging Performance Issues
-
-1. **High Response Times**
-   - Check database query execution plans
-   - Verify cache effectiveness
-   - Monitor external service calls
-
-2. **Cache Misses**
-   - Review cache key generation
-   - Check cache expiration settings
-   - Verify cache storage configuration
-
-3. **Excessive Queries**
-   - Use query monitoring
-   - Check for N+1 query patterns
-   - Review eager loading implementation
 
 ## Continuous Integration
+Tests are automatically run on:
+- Pull request creation
+- Push to main branch
+- Nightly builds
 
-### GitHub Actions Workflow
-- Separate jobs for PHP and frontend tests
-- Real MySQL database for integration tests
-- Performance metrics collection
-- Coverage reporting to Codecov
+### CI Configuration
+See `.github/workflows/tests.yml` for CI setup details.
 
-### Environment Variables
-```yaml
-# CI environment variables
-MYSQL_ROOT_PASSWORD: root
-MYSQL_DATABASE: wordpress_test
-WP_VERSION: latest
-NODE_VERSION: '16'
-```
-
-## Best Practices
-
-### Writing Tests
-1. **Isolation**: Each test should be independent
-2. **Mocking**: Use WP_Mock for WordPress functions in unit tests
-3. **Performance**: Include performance assertions in integration tests
-4. **Coverage**: Maintain minimum 80% coverage for new code
-
-### Common Patterns
-
-#### Testing WordPress Functions
-```php
-public function test_wordpress_function() {
-    \WP_Mock::userFunction('get_option', [
-        'args' => ['my_option'],
-        'times' => 1,
-        'return' => 'value'
-    ]);
-}
-```
-
-#### Testing React Components
-```typescript
-it('renders profile form', () => {
-    render(<ProfileForm />);
-    expect(screen.getByRole('form')).toBeInTheDocument();
-});
-```
-
-## Troubleshooting
-
-### Common Issues
-1. **Database Connection**: Check MySQL credentials and permissions
-2. **WordPress Test Environment**: Verify wp-tests-config.php settings
-3. **Node Modules**: Clear npm cache and node_modules if tests fail
-4. **Performance Thresholds**: Adjust based on environment
-
-### Debug Mode
-```bash
-# PHP debug mode
-composer test -- --debug
-
-# Jest debug mode
-npm test -- --debug
-```
-
-## Legacy Support
-The old `./bin/run-tests.sh` script is maintained for backward compatibility but will be deprecated in future versions. Please migrate to the new test commands. 
+## Contributing
+1. Write tests for new features
+2. Update tests for modified functionality
+3. Ensure all tests pass before submitting PR
+4. Include test coverage reports with PRs 

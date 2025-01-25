@@ -1,10 +1,17 @@
 import { createElement, useState } from '@wordpress/element';
 import { PlusCircle, XCircle } from 'lucide-react';
-import type { TrackerProps } from '../InjuryTracker/types';
+import type { TrackerProps, TrackerField } from '../InjuryTracker/types';
 import { Button } from '../../../../dashboard/components/Button';
 import './styles.css';
 
-export function Tracker<T extends { id: string }>({
+interface TrackedItem {
+    id: string;
+    name: string;
+    isCustom?: boolean;
+    [key: string]: any;
+}
+
+export function Tracker<T extends TrackedItem>({
     items,
     onAdd,
     onUpdate,
@@ -23,12 +30,14 @@ export function Tracker<T extends { id: string }>({
             const predefinedItem = predefinedItems?.find(item => item.value === value);
             onAdd({ 
                 id: `item_${Date.now()}`,
-                name: predefinedItem?.label || ''
+                name: predefinedItem?.label || '',
+                isCustom: false
             } as Partial<T>);
         } else {
             onAdd({ 
                 id: `item_${Date.now()}`,
-                name: value
+                name: value,
+                isCustom: true
             } as Partial<T>);
         }
         setNewItemValue('');
@@ -38,7 +47,7 @@ export function Tracker<T extends { id: string }>({
     const renderField = (item: T, field: TrackerField<T>) => {
         const value = item[field.key] as string;
         
-        if (field.key === 'name' && !item['isCustom']) {
+        if (field.key === 'name' && !item.isCustom) {
             return null;
         }
         
@@ -134,7 +143,7 @@ export function Tracker<T extends { id: string }>({
                     {items.map(item => (
                         <div key={item.id} className="tracker__item">
                             <div className="tracker__item-header">
-                                <h5 className="tracker__item-title">{item['name'] as string}</h5>
+                                <h5 className="tracker__item-title">{item.name}</h5>
                                 <Button
                                     variant="secondary"
                                     feature="profile"

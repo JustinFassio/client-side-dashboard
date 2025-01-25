@@ -11,6 +11,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Load asset helper functions
+require_once get_stylesheet_directory() . '/functions.php';
+
 // Debug information
 if ( WP_DEBUG ) {
 	error_log( 'Loading dashboard template.' );
@@ -41,6 +44,7 @@ if ( ! class_exists( '\\AthleteDashboard\\Core\\DashboardBridge' ) ) {
 }
 
 use AthleteDashboard\Core\DashboardBridge;
+use AthleteDashboard\Core\Config\Environment;
 
 // Initialize dashboard bridge if not already initialized
 if ( ! DashboardBridge::get_current_feature() ) {
@@ -59,21 +63,8 @@ if ( WP_DEBUG ) {
 	error_log( 'Feature data: ' . wp_json_encode( $feature_data ) );
 }
 
-// Pass dashboard data to JavaScript
-wp_localize_script(
-	'athlete-dashboard-script',
-	'athleteDashboardData',
-	array(
-		'nonce'   => wp_create_nonce( 'wp_rest' ),
-		'siteUrl' => get_site_url(),
-		'apiUrl'  => rest_url(),
-		'userId'  => get_current_user_id(),
-		'debug'   => WP_DEBUG,
-	)
-);
-
 // Pass feature data to JavaScript
-wp_localize_script( 'athlete-dashboard-script', 'athleteDashboardFeature', $feature_data );
+wp_localize_script( 'athlete-dashboard', 'athleteDashboardFeature', $feature_data );
 
 // Get header with minimal wrapper
 get_header( 'minimal' );
@@ -84,32 +75,60 @@ get_header( 'minimal' );
 		<div id="debug-info" style="background: #f5f5f5; padding: 20px; margin: 20px 0; border: 1px solid #ddd;">
 			<h3>Debug Information</h3>
 			<pre>
-Template File: <?php echo get_page_template(); ?>
-Is Dashboard Template: <?php echo is_page_template( 'dashboard/templates/dashboard.php' ) ? 'Yes' : 'No'; ?>
-WP_DEBUG: <?php echo WP_DEBUG ? 'Enabled' : 'Disabled'; ?>
-Current Template: <?php echo get_page_template(); ?>
-Theme Directory: <?php echo get_stylesheet_directory(); ?>
-Script Path: <?php echo get_stylesheet_directory_uri() . '/assets/build/app.26e094f6e87125cfab1b.js'; ?>
-Script Exists: <?php echo file_exists( get_stylesheet_directory() . '/assets/build/app.26e094f6e87125cfab1b.js' ) ? 'Yes' : 'No'; ?>
-Current Feature: <?php echo $current_feature; ?>
-Feature Data: <?php echo wp_json_encode( $feature_data ); ?>
-DashboardBridge Class Exists: <?php echo class_exists( '\\AthleteDashboard\\Core\\DashboardBridge' ) ? 'Yes' : 'No'; ?>
-DashboardBridge File Exists: <?php echo file_exists( $dashboardbridge_path ) ? 'Yes' : 'No'; ?>
-athleteDashboardData: 
 		<?php
-		echo wp_json_encode(
-			array(
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
-				'siteUrl' => get_site_url(),
-				'apiUrl'  => rest_url(),
-				'userId'  => get_current_user_id(),
-				'debug'   => WP_DEBUG,
-			)
+		// Only log debug information in debug mode
+		$debug_info = array(
+			'template_info'  => array(
+				'file'            => get_page_template(),
+				'is_dashboard'    => is_page_template( 'dashboard/templates/dashboard.php' ),
+				'theme_directory' => get_stylesheet_directory(),
+			),
+			'script_info'    => array(
+				'path'   => get_stylesheet_directory_uri() . '/assets/build/' . get_asset_filename( 'app', 'js' ),
+				'exists' => file_exists( get_stylesheet_directory() . '/assets/build/' . get_asset_filename( 'app', 'js' ) ),
+			),
+			'feature_info'   => array(
+				'current' => $current_feature,
+				'data'    => $feature_data,
+			),
+			'bootstrap_info' => array(
+				'dashboard_bridge_exists'      => class_exists( '\\AthleteDashboard\\Core\\DashboardBridge' ),
+				'dashboard_bridge_file_exists' => file_exists( $dashboardbridge_path ),
+			),
+			'profile_info'   => array(
+				'routes'           => array_filter(
+					rest_get_server()->get_routes(),
+					function ( $route ) {
+						return strpos( $route, 'athlete-dashboard/v1/profile' ) === 0;
+					},
+					ARRAY_FILTER_USE_KEY
+				),
+				'bootstrap_status' => array(
+					'container_exists'         => class_exists( '\\AthleteDashboard\\Core\\Container' ),
+					'profile_bootstrap_exists' => class_exists( '\\AthleteDashboard\\Features\\Profile\\Profile_Bootstrap' ),
+				),
+			),
 		);
+
+		echo "Debug Information:\n";
+		echo wp_json_encode( $debug_info, JSON_PRETTY_PRINT );
 		?>
 			</pre>
 		</div>
+
+		<script>
+			// Add runtime debug info only in debug mode
+			window.addEventListener('load', function() {
+				console.log('=== Dashboard Debug Info ===');
+				console.log('athleteDashboardData:', window.athleteDashboardData);
+				console.log('athleteDashboardFeature:', window.athleteDashboardFeature);
+				console.log('React Mount Target:', document.getElementById('athlete-dashboard'));
+				console.log('=========================');
+			});
+		</script>
 	<?php endif; ?>
+
+	<div id="athlete-dashboard"></div>
 </div>
 
 <?php get_footer( 'minimal' ); ?>

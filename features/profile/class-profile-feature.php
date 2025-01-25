@@ -7,7 +7,7 @@
 
 namespace AthleteDashboard\Features\Profile;
 
-use AthleteDashboard\Features\Core\Contracts\Feature_Contract;
+use AthleteDashboard\Features\Core\Contracts\Abstract_Feature;
 use AthleteDashboard\Features\Profile\API\Profile_Routes;
 use AthleteDashboard\Features\Profile\API\CLI\Migration_Commands;
 use AthleteDashboard\Features\Profile\Services\Profile_Service;
@@ -23,7 +23,7 @@ use AthleteDashboard\Features\Profile\API\Endpoints\Physical\Physical_History;
  *
  * Main class for the Profile feature.
  */
-class Profile_Feature implements Feature_Contract {
+class Profile_Feature extends Abstract_Feature {
 	/**
 	 * Profile routes instance.
 	 *

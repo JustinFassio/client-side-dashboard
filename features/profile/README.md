@@ -3,85 +3,10 @@
 ## Overview
 The Profile feature manages athlete profile data, including personal information, preferences, and training settings. It provides a complete interface for users to view and update their profile information while maintaining data consistency across the application.
 
-## Testing
-
-### Test Infrastructure
-The Profile feature uses a comprehensive testing approach covering both frontend and backend:
-
-#### Backend Tests
-- Unit tests for services and validators
-- Integration tests for REST endpoints
-- Performance tests for database and cache operations
-
-#### Frontend Tests
-- React component tests using Jest and React Testing Library
-- Custom hook tests
-- Performance monitoring for rendering and API calls
-
-### Running Tests
-
-#### Backend Tests
-```bash
-# Run all Profile tests
-composer test -- --testsuite profile
-
-# Run Profile performance tests
-composer test -- --testsuite profile-performance
-```
-
-#### Frontend Tests
-```bash
-# From features/profile/assets
-npm test
-
-# Run with watch mode
-npm run test:watch
-
-# Run performance tests
-npm run test:perf
-```
-
-### Performance Testing
-The Profile feature includes dedicated performance tests that measure:
-
-1. **API Response Times**
-   - Profile data retrieval: < 300ms
-   - Profile updates: < 200ms
-   - Cache operations: < 50ms
-
-2. **Database Performance**
-   - Query execution: < 100ms
-   - Maximum query count: 5 per operation
-   - History retrieval: < 150ms
-
-3. **Frontend Performance**
-   - Initial render: < 100ms
-   - Form updates: < 50ms
-   - Unit conversion calculations: < 10ms
-
-### Test Files
-
-```
-features/profile/
-├── tests/
-│   ├── class-test-physical-service.php
-│   ├── class-test-profile-validator.php
-│   ├── class-test-profile-rest-controller.php
-│   └── performance/
-│       └── test-profile-performance.php
-└── assets/
-    └── tests/
-        ├── ProfileFeature.test.tsx
-        ├── hooks/
-        │   └── useProfileValidation.test.ts
-        └── performance/
-            └── ProfileFeature.perf.test.tsx
-```
-
 ## Debug Logging
 
 ### Implementation
-The Profile feature uses the core `Debug` class for all logging operations:
+The Profile feature now uses the core `Debug` class for all logging operations:
 
 ```php
 use AthleteDashboard\Core\Config\Debug;
@@ -97,6 +22,30 @@ Debug::log( sprintf( 'Operation failed: %s [user_id=%d]', $error, $user_id ), 'p
 - Data State: `Data state [user_id=%d, fields=%s]`
 - Success: `Operation complete [user_id=%d, updated=%d]`
 - Errors: `Operation failed: %s [user_id=%d]`
+
+### Context
+All logs use the 'profile' context string for consistent filtering and include:
+- User ID for all operations
+- Field counts for data operations
+- Error messages for failures
+- Operation-specific metrics
+
+## Configuration
+```typescript
+interface ProfileConfig {
+    enabled: boolean;
+    fields: {
+        required: string[];
+        optional: string[];
+    };
+    validation: {
+        age: {
+            min: number;
+            max: number;
+        };
+    };
+}
+```
 
 ## API Endpoints
 
@@ -138,72 +87,113 @@ Debug::log( sprintf( 'Operation failed: %s [user_id=%d]', $error, $user_id ), 'p
       preferences?: Partial<UserPreferences>;
   }
   ```
+- **Error Codes**:
+  - `400`: Invalid profile data
+  - `401`: Unauthorized
+  - `500`: Server error
 
-## Components
+### Get User Profile
 
-### Main Components
-- `ProfileLayout`: Main profile page layout
-- `ProfileForm`: Profile editing form
-- `PhysicalSection`: Physical measurements section
-- `ExperienceSection`: Experience level section
+```
+GET /wp-json/athlete-dashboard/v1/profile/user/{id}
+```
 
-### Hooks
-- `useProfile`: Access and manage profile data
-- `useProfileValidation`: Form validation logic
-- `usePhysicalData`: Physical measurements state management
+Retrieves a user's profile data.
 
-## Performance Considerations
+#### Parameters
 
-### Caching Strategy
-- Profile data cached using WordPress transients
-- Cache invalidation on profile updates
-- Separate caches for physical data and preferences
+- `id` (number, required): The ID of the user whose profile to retrieve.
 
-### Frontend Optimization
-- Lazy loading of non-critical sections
-- Debounced form updates
-- Memoized calculations for unit conversions
+#### Response
 
-### Database Optimization
-- Indexed queries for profile retrieval
-- Batch updates for multiple field changes
-- Optimized history table structure
-
-## Contributing
-
-### Development Workflow
-1. Write tests first (TDD approach)
-2. Implement features
-3. Run full test suite
-4. Check performance metrics
-5. Submit PR with test results
-
-### Code Coverage Requirements
-- Backend: Minimum 80% coverage
-- Frontend: Minimum 80% coverage
-- All new code must include tests
-
-### Performance Requirements
-- Must pass all performance thresholds
-- Include performance tests for new features
-- Document any performance implications
-
-## Configuration
-```typescript
-interface ProfileConfig {
-    enabled: boolean;
-    fields: {
-        required: string[];
-        optional: string[];
-    };
-    validation: {
-        age: {
-            min: number;
-            max: number;
-        };
-    };
+```json
+{
+  "user_id": 1,
+  "data": {
+    "basic": {
+      "firstName": "string",
+      "lastName": "string",
+      "email": "string"
+    },
+    "medical": {
+      "medicalConditions": ["string"],
+      "exerciseLimitations": ["string"],
+      "notes": "string"
+    },
+    "account": {
+      "username": "string",
+      "displayName": "string"
+    },
+    "injuries": [
+      {
+        "id": "string",
+        "type": "string",
+        "description": "string",
+        "date": "string"
+      }
+    ]
+  }
 }
 ```
+
+#### Error Responses
+
+- `401 Unauthorized`: User is not logged in
+- `403 Forbidden`: User does not have permission to view the requested profile
+- `404 Not Found`: Profile not found
+
+### Update User Profile
+
+```
+POST /wp-json/athlete-dashboard/v1/profile/user/{id}
+```
+
+Updates a user's profile data.
+
+#### Parameters
+
+- `id` (number, required): The ID of the user whose profile to update.
+- `data` (object, required): The profile data to update.
+
+#### Request Body
+
+```json
+{
+  "basic": {
+    "firstName": "string",
+    "lastName": "string",
+    "email": "string"
+  },
+  "medical": {
+    "medicalConditions": ["string"],
+    "exerciseLimitations": ["string"],
+    "notes": "string"
+  },
+  "account": {
+    "username": "string",
+    "displayName": "string"
+  },
+  "injuries": [
+    {
+      "id": "string",
+      "type": "string",
+      "description": "string",
+      "date": "string"
+    }
+  ]
+}
+```
+
+#### Response
+
+Returns the updated profile data in the same format as the Get User Profile endpoint.
+
+#### Error Responses
+
+- `401 Unauthorized`: User is not logged in
+- `403 Forbidden`: User does not have permission to update the profile
+- `404 Not Found`: Profile not found
+- `400 Bad Request`: Invalid request data
 
 ## Events/Actions
 
@@ -228,6 +218,131 @@ enum ProfileEvent {
 }
 ```
 
+## Components
+
+### Main Components
+- `ProfileLayout`: Main profile page layout
+  ```typescript
+  interface ProfileLayoutProps {
+      context: FeatureContext;
+  }
+  ```
+- `ProfileForm`: Profile editing form
+  ```typescript
+  interface ProfileFormProps {
+      onSubmit: (data: ProfileUpdateRequest) => Promise<void>;
+      initialData?: ProfileData;
+  }
+  ```
+
+### Styling Guidelines
+
+#### Button Patterns
+All primary action buttons (e.g., "Save Changes", "Update Profile") should follow these styling rules:
+```css
+.action-button {
+    background: var(--primary-color);
+    color: var(--background-darker);  /* Critical for text contrast */
+    border: none;
+    padding: var(--spacing-sm) var(--spacing-lg);
+    border-radius: var(--border-radius-sm);
+    font-size: var(--font-size-base);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+}
+
+.action-button:hover {
+    background: var(--primary-hover);
+    color: var(--background-darker);
+    transform: translateY(-1px);
+}
+
+.action-button:disabled {
+    background-color: var(--text-dim);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+```
+
+Key styling principles:
+1. Use `var(--background-darker)` for button text to ensure contrast against citron green
+2. Maintain consistent padding using spacing variables
+3. Include hover state with subtle transform effect
+4. Use transition for smooth hover effects
+5. Include disabled state styling
+
+#### Theme Integration
+- Import variables from dashboard: `@import '../../../../dashboard/styles/variables.css';`
+- Use CSS variables for colors, spacing, and typography
+- Follow dark theme color scheme for consistent UI
+
+#### Responsive Design
+- Use breakpoints at 768px and 480px
+- Adjust grid layouts and padding for mobile
+- Maintain button styling across all screen sizes
+
+### Hooks
+- `useProfile`: Access and manage profile data
+  ```typescript
+  function useProfile(): {
+      profile: ProfileData | null;
+      loading: boolean;
+      error: Error | null;
+      updateProfile: (data: ProfileUpdateRequest) => Promise<void>;
+  }
+  ```
+
+## Dependencies
+
+### External
+- @wordpress/api-fetch
+- @wordpress/hooks
+- react-hook-form
+
+### Internal
+- UserContext (from user feature)
+- ErrorBoundary (from dashboard/components)
+- ValidationUtils (from dashboard/utils)
+
+## Testing
+
+### Environment
+We use jsdom to simulate a DOM environment for React Testing Library. This allows us to test React components in a browser-like environment without a real browser.
+
+### Test Organization
+All Profile tests, including UI and hooks, are under `features/profile/tests/`. This follows our "feature-first" pattern where all test files related to a feature are co-located with the feature code.
+
+Structure:
+```
+features/profile/
+├── tests/
+│   ├── Unit/           # Unit tests for utilities and hooks
+│   ├── Integration/    # Integration tests
+│   └── Components/     # React component tests
+```
+
+### Running Tests
+```bash
+# Run profile feature tests
+npm run test features/profile
+
+# Run specific test file
+npm run test features/profile/tests/Unit/Components/ProfileForm.test.tsx
+```
+
+### Test Patterns
+- Use React Testing Library for component tests
+- Follow AAA pattern (Arrange, Act, Assert)
+- Mock external dependencies
+- Test error states and loading states
+- Validate form submissions and user interactions
+
+### Integration Tests
+```bash
+# Run profile integration tests
+npm run test:integration features/profile
+```
+
 ## Error Handling
 
 ### Error Types
@@ -243,6 +358,12 @@ enum ProfileErrorCodes {
 - Automatic retry on network failures
 - Form data persistence on browser refresh
 - Optimistic updates with rollback
+
+## Performance Considerations
+- Profile data is cached using WordPress transients
+- Lazy loading of non-critical profile sections
+- Debounced form updates
+- Optimistic UI updates
 
 ## Security
 - All endpoints require authentication
@@ -600,3 +721,44 @@ features/profile/
 2. Do we need caching at the repository level?
 3. How should we handle backward compatibility?
 4. What level of test coverage is required? 
+
+## Database Configuration
+
+### Profile Tables
+The profile feature uses the following database tables:
+- `wp_athlete_profiles`: Stores core profile data
+- `wp_athlete_physical_data`: Stores physical measurements
+- `wp_athlete_physical_history`: Stores historical physical measurements
+
+### Test Database Setup
+When running profile feature tests:
+
+1. Ensure the test database is configured in `wp-tests-config.php`:
+```php
+define( 'DB_NAME', 'wordpress_test' );
+define( 'DB_USER', 'root' );
+define( 'DB_PASSWORD', 'root' );
+define( 'DB_HOST', 'localhost:/Users/justinfassio/Library/Application Support/Local/run/8U-IQPW3o/mysql/mysqld.sock' );
+```
+
+2. The test suite will automatically:
+- Create necessary tables
+- Set up test data
+- Clean up after tests complete
+
+### Running Profile Tests
+To run profile-specific tests:
+```bash
+WP_TESTS_DIR=/tmp/wordpress-tests-lib vendor/bin/phpunit --filter=Profile
+```
+
+### Database Migrations
+Profile feature includes database migrations that:
+1. Create required tables
+2. Add necessary indexes
+3. Set up foreign key constraints
+
+To run migrations manually:
+```bash
+wp athlete-dashboard migrate profile
+```

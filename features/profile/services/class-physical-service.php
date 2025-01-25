@@ -117,11 +117,11 @@ class Physical_Service {
 				$feet         = (float) $data['heightFeet'];
 				$inches       = (float) $data['heightInches'];
 				$total_inches = ( $feet * 12 ) + $inches;
-				$height_cm    = round( $total_inches * 2.54, 2 );
+				$height_cm    = $total_inches * 2.54;
 				error_log( 'Physical_Service: Converted from ft/in: ' . $feet . 'ft ' . $inches . 'in = ' . $height_cm . 'cm' );
 			} else {
 				// Convert from decimal feet to cm
-				$height_cm = round( $data['height'] * 30.48, 2 );
+				$height_cm = $data['height'] * 30.48;
 				error_log( 'Physical_Service: Converted from decimal feet: ' . $data['height'] . 'ft = ' . $height_cm . 'cm' );
 			}
 		} elseif ( $data['units']['height'] !== 'cm' ) {
@@ -321,21 +321,10 @@ class Physical_Service {
 			'date'               => current_time( 'mysql' ),
 			'height'             => $data['height'],  // Already in cm from update_physical_data
 			'weight'             => $data['weight'],  // Keep original value for history tracking
-			'units_height'       => 'cm',            // Always store height in cm
-			'units_weight'       => $data['units']['weight'] ?? 'kg',  // Original unit for weight
+			'units_height'       => 'cm',            // Always cm as converted in update_physical_data
+			'units_weight'       => $data['units']['weight'] ?? 'kg',  // Original unit for history
 			'units_measurements' => $data['units']['measurements'] ?? 'cm',
 		);
-
-		// Additional validation for history data
-		if ( ! is_numeric( $insert_data['height'] ) || $insert_data['height'] < 50 || $insert_data['height'] > 300 ) {
-			error_log( 'Physical_Service: Invalid height value for history: ' . $insert_data['height'] );
-			return new WP_Error(
-				'invalid_height',
-				__( 'Invalid height value for history record.', 'athlete-dashboard' ),
-				array( 'status' => 400 )
-			);
-		}
-
 		error_log( 'Physical_Service: Attempting to insert data: ' . wp_json_encode( $insert_data ) );
 
 		$result = $wpdb->insert(
@@ -363,75 +352,5 @@ class Physical_Service {
 
 		error_log( 'Physical_Service: Successfully saved to history' );
 		return true;
-	}
-
-	/**
-	 * Check if table exists
-	 *
-	 * @param string $table_name Table name to check.
-	 * @return bool Whether table exists.
-	 */
-	private function table_exists( $table_name ) {
-		global $wpdb;
-		$table_name = esc_sql( $table_name );
-		$query      = $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name );
-		$result     = $wpdb->get_var( $query );
-		return ! empty( $result );
-	}
-
-	/**
-	 * Get total records count
-	 *
-	 * @return int Total number of records
-	 */
-	private function get_total_records() {
-		global $wpdb;
-		$query = $wpdb->prepare(
-			"SELECT COUNT(*) FROM {$this->table_name}"
-		);
-		return (int) $wpdb->get_var( $query );
-	}
-
-	/**
-	 * Get records with pagination
-	 *
-	 * @param array $args Query arguments
-	 * @return array Records found
-	 */
-	private function get_records( $args = array() ) {
-		global $wpdb;
-
-		$defaults = array(
-			'orderby' => 'id',
-			'order'   => 'DESC',
-			'offset'  => 0,
-			'limit'   => 10,
-		);
-
-		$args    = wp_parse_args( $args, $defaults );
-		$orderby = esc_sql( $args['orderby'] );
-		$order   = esc_sql( $args['order'] );
-		$offset  = absint( $args['offset'] );
-		$limit   = absint( $args['limit'] );
-
-		$query = $wpdb->prepare(
-			"SELECT * FROM {$this->table_name} 
-			ORDER BY %s %s
-			LIMIT %d OFFSET %d",
-			$orderby,
-			$order,
-			$limit,
-			$offset
-		);
-
-		$cache_key = 'physical_records_' . md5( $query );
-		$results   = wp_cache_get( $cache_key );
-
-		if ( false === $results ) {
-			$results = $wpdb->get_results( $query );
-			wp_cache_set( $cache_key, $results, '', 3600 );
-		}
-
-		return $results;
 	}
 }

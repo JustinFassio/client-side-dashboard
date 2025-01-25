@@ -23,4 +23,11 @@ export const PROFILE_EVENTS = {
     INJURY_ADDED: 'profile:injury-added',
     INJURY_UPDATED: 'profile:injury-updated',
     INJURY_REMOVED: 'profile:injury-removed'
-} as const; 
+} as const;
+
+export enum ProfileEvent {
+    UPDATE_SUCCESS = 'PROFILE_UPDATE_SUCCESS',
+    UPDATE_ERROR = 'PROFILE_UPDATE_ERROR',
+    FETCH_SUCCESS = 'PROFILE_FETCH_SUCCESS',
+    FETCH_ERROR = 'PROFILE_FETCH_ERROR'
+} 

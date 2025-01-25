@@ -5,29 +5,38 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   variant?: 'primary' | 'secondary';
   feature?: 'physical' | 'profile';
   children: React.ReactNode;
+  isLoading?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   children,
-  variant = 'primary',
+  variant,
   feature,
   className = '',
+  isLoading = false,
+  disabled,
   ...props
 }) => {
   const baseClass = 'btn';
   const classes = [
     baseClass,
-    `btn--${variant}`,
+    variant && `btn--${variant}`,
     feature && `btn--feature-${feature}`,
+    isLoading && 'btn--loading',
+    disabled && 'btn--disabled',
     className
   ].filter(Boolean).join(' ');
 
   return (
     <button 
       className={classes}
+      disabled={isLoading || disabled}
+      aria-busy={isLoading}
       {...props}
     >
-      {children}
+      <span className="btn__content">
+        {isLoading ? 'Loading...' : children}
+      </span>
     </button>
   );
 }; 

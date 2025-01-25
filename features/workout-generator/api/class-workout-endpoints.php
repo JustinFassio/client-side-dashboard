@@ -13,6 +13,7 @@ use AthleteDashboard\Features\Profile\Repository\Profile_Repository;
 use AthleteDashboard\Features\Profile\Validation\Profile_Validator;
 use AthleteDashboard\Features\WorkoutGenerator\API\AI_Service;
 use AthleteDashboard\Features\WorkoutGenerator\API\Workout_Validator;
+use AthleteDashboard\Features\WorkoutGenerator\API\Rate_Limiter;
 
 class Workout_Endpoints {
 	/**
@@ -97,80 +98,106 @@ class Workout_Endpoints {
 	 * @param WP_REST_Request $request Request object.
 	 * @return WP_REST_Response|WP_Error Response object or error.
 	 */
-	public function generate_workout( WP_REST_Request $request ) {
-		$user_id = get_current_user_id();
+	public function generate_workout( WP_REST_Request $request ): WP_REST_Response {
+		try {
+			$preferences = $request->get_param( 'preferences' );
+			$settings    = $request->get_param( 'settings' );
+			$user_id     = get_current_user_id();
 
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf( 'Workout Generator: Generating workout for user %d', $user_id ) );
-		}
+			// Get user profile data
+			$profile_service = new \AthleteDashboard\Features\Profile\API\Profile_Service();
+			$profile         = $profile_service->get_profile( $user_id );
+			$training_prefs  = $profile_service->get_training_preferences( $user_id );
+			$equipment       = $profile_service->get_equipment_availability( $user_id );
 
-		// Get profile data
-		$repository      = new Profile_Repository();
-		$validator       = new Profile_Validator();
-		$profile_service = new Profile_Service( $repository, $validator );
-
-		$profile_data = $profile_service->get_profile( $user_id );
-
-		if ( is_wp_error( $profile_data ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( sprintf( 'Workout Generator: Profile error - %s', $profile_data->get_error_message() ) );
-			}
-			return new WP_Error(
-				'profile_error',
-				__( 'Unable to generate workout: Profile not found or incomplete. Please complete your profile first.', 'athlete-dashboard' ),
-				array( 'status' => 400 )
+			// Generate AI prompt
+			$prompt = array(
+				'profile'             => $profile,
+				'preferences'         => $preferences,
+				'trainingPreferences' => $training_prefs,
+				'equipment'           => $equipment,
+				'settings'            => $settings,
 			);
-		}
 
-		// Validate profile data for workout requirements
-		$validation_result = $validator->validate_workout_requirements( $profile_data );
-		if ( is_wp_error( $validation_result ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( sprintf( 'Workout Generator: Profile validation error - %s', $validation_result->get_error_message() ) );
+			// Call AI service
+			$ai_service = new AI_Service();
+			$workout    = $ai_service->generate_workout_plan_with_profile( $prompt );
+
+			// Validate workout
+			$validator         = new Workout_Validator();
+			$validation_result = $validator->validate(
+				$workout,
+				array(
+					'maxExercises'   => $preferences['maxExercises'] ?? 10,
+					'minRestPeriod'  => $preferences['minRestPeriod'] ?? 60,
+					'requiredWarmup' => true,
+				)
+			);
+
+			if ( ! $validation_result['isValid'] ) {
+				return new WP_Error(
+					'validation_failed',
+					'Generated workout failed validation',
+					array(
+						'status' => 400,
+						'errors' => $validation_result['errors'],
+					)
+				);
 			}
-			return new WP_Error(
-				'profile_validation_error',
-				sprintf(
-					__( 'Unable to generate workout: %s', 'athlete-dashboard' ),
-					$validation_result->get_error_message()
+
+			// Add metadata
+			$workout['createdAt'] = current_time( 'mysql' );
+			$workout['updatedAt'] = current_time( 'mysql' );
+			$workout['userId']    = $user_id;
+
+			$response = new WP_REST_Response(
+				array(
+					'success' => true,
+					'data'    => $workout,
 				),
-				array( 'status' => 400 )
+				200
+			);
+
+			// Add rate limit headers to response
+			$rate_limiter = new Rate_Limiter();
+			$headers      = $rate_limiter->get_rate_limit_headers();
+			foreach ( $headers as $header => $value ) {
+				$response->header( $header, $value );
+			}
+
+			return $response;
+
+		} catch ( AI_Service_Exception $e ) {
+			$error = new WP_Error(
+				$e->getCode() ?: 'ai_service_error',
+				$e->getMessage(),
+				array(
+					'status' => 500,
+					'data'   => $e->getData(),
+				)
+			);
+
+			// Add rate limit headers from exception data
+			if ( is_array( $e->getData() ) && isset( $e->getData()['X-RateLimit-Limit'] ) ) {
+				$error->add_data(
+					array(
+						'headers' => array(
+							'X-RateLimit-Limit'     => $e->getData()['X-RateLimit-Limit'],
+							'X-RateLimit-Remaining' => $e->getData()['X-RateLimit-Remaining'],
+							'X-RateLimit-Reset'     => $e->getData()['X-RateLimit-Reset'],
+						),
+					)
+				);
+			}
+
+			return $error;
+		} catch ( \Exception $e ) {
+			return new WP_Error(
+				'generation_failed',
+				'Failed to generate workout: ' . $e->getMessage(),
+				array( 'status' => 500 )
 			);
 		}
-
-		// Get workout preferences from request
-		$preferences = $request->get_param( 'preferences' ) ?? array();
-
-		// Merge profile data with preferences
-		$workout_params = array_merge(
-			array(
-				'heightCm'        => $profile_data['heightCm'],
-				'weightKg'        => $profile_data['weightKg'],
-				'experienceLevel' => $profile_data['experienceLevel'],
-				'age'             => $profile_data['age'] ?? null,
-				'gender'          => $profile_data['gender'] ?? null,
-				'injuries'        => $profile_data['injuries'] ?? array(),
-				'equipment'       => $profile_data['equipment'] ?? array(),
-			),
-			$preferences
-		);
-
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			error_log( sprintf( 'Workout Generator: Using parameters - %s', print_r( $workout_params, true ) ) );
-		}
-
-		// Generate workout using AI Service
-		$ai_service   = new AI_Service();
-		$workout_data = $ai_service->generate_workout_plan( $workout_params );
-
-		if ( is_wp_error( $workout_data ) ) {
-			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-				error_log( sprintf( 'Workout Generator: AI Service error - %s', $workout_data->get_error_message() ) );
-			}
-			return $workout_data;
-		}
-
-		return rest_ensure_response( $workout_data );
 	}
 
 	/**

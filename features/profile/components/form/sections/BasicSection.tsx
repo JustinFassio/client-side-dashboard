@@ -86,13 +86,12 @@ export const BasicSection: React.FC<BasicSectionProps> = ({
 
             <div className={styles.actions}>
                 <Button
-                    variant="primary"
-                    feature="profile"
                     onClick={onSave}
                     disabled={isSaving}
-                    aria-busy={isSaving}
+                    isLoading={isSaving}
+                    feature="physical"
                 >
-                    {isSaving ? 'Saving...' : 'Save Basic Information'}
+                    Save Basic Information
                 </Button>
             </div>
         </div>

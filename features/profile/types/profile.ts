@@ -12,17 +12,29 @@ export interface ProfileData {
     nickname: string;          // wp_usermeta.nickname
     roles: string[];           // wp_usermeta.wp_capabilities
 
+    // Physical measurements
+    heightCm: number;
+    weightKg: number;
+    experienceLevel: 'beginner' | 'intermediate' | 'advanced';
+
+    // Medical information
+    medicalConditions: string[];
+    exerciseLimitations: string[];
+    medications: string;
+    medicalClearance: boolean;
+    medicalNotes: string;
+
     // Custom profile fields
     phone: string;
     age: number;
     dateOfBirth: string;
     gender: 'male' | 'female' | 'other' | '';
     dominantSide: 'left' | 'right' | '';
-    medicalClearance: boolean;
-    medicalNotes: string;
     emergencyContactName: string;
     emergencyContactPhone: string;
     injuries: Injury[];
+    equipment?: string[];
+    fitnessGoals?: string[];
 }
 
 export interface Injury {
@@ -63,7 +75,8 @@ export type ProfileErrorCode =
     | 'VALIDATION_ERROR'
     | 'NOT_FOUND'
     | 'INVALID_RESPONSE'
-    | 'UNAUTHORIZED';
+    | 'UNAUTHORIZED'
+    | 'INITIALIZATION_ERROR';
 
 export interface ProfileError {
     code: ProfileErrorCode;
@@ -286,7 +299,85 @@ export const PROFILE_CONFIG: Record<keyof ProfileData, ProfileFieldConfig> = {
         type: 'text',
         required: true,
         editable: false
-    }
+    },
+    heightCm: {
+        name: 'heightCm',
+        label: 'Height',
+        type: 'number',
+        required: true,
+        validation: {
+            min: 100,
+            max: 250,
+            message: 'Height must be between 100cm and 250cm'
+        }
+    },
+    weightKg: {
+        name: 'weightKg',
+        label: 'Weight',
+        type: 'number',
+        required: true,
+        validation: {
+            min: 30,
+            max: 200,
+            message: 'Weight must be between 30kg and 200kg'
+        }
+    },
+    experienceLevel: {
+        name: 'experienceLevel',
+        label: 'Experience Level',
+        type: 'select',
+        required: true,
+        options: [
+            { value: '', label: 'Select Experience Level' },
+            { value: 'beginner', label: 'Beginner' },
+            { value: 'intermediate', label: 'Intermediate' },
+            { value: 'advanced', label: 'Advanced' }
+        ]
+    },
+    equipment: {
+        name: 'equipment',
+        label: 'Available Equipment',
+        type: 'select',
+        required: false,
+        options: [
+            { value: 'dumbbells', label: 'Dumbbells' },
+            { value: 'barbell', label: 'Barbell' },
+            { value: 'kettlebell', label: 'Kettlebell' },
+            { value: 'resistance_bands', label: 'Resistance Bands' },
+            { value: 'bodyweight', label: 'Bodyweight Only' }
+        ]
+    },
+    fitnessGoals: {
+        name: 'fitnessGoals',
+        label: 'Fitness Goals',
+        type: 'select',
+        required: false,
+        options: [
+            { value: 'strength', label: 'Strength' },
+            { value: 'endurance', label: 'Endurance' },
+            { value: 'flexibility', label: 'Flexibility' },
+            { value: 'weight_loss', label: 'Weight Loss' },
+            { value: 'muscle_gain', label: 'Muscle Gain' }
+        ]
+    },
+    medicalConditions: {
+        name: 'medicalConditions',
+        label: 'Medical Conditions',
+        type: 'text',
+        required: false
+    },
+    exerciseLimitations: {
+        name: 'exerciseLimitations',
+        label: 'Exercise Limitations',
+        type: 'text',
+        required: false
+    },
+    medications: {
+        name: 'medications',
+        label: 'Medications',
+        type: 'text',
+        required: false
+    },
 }; 
 
 /**

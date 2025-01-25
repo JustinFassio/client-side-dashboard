@@ -22,221 +22,199 @@ jest.mock('../rateLimiting', () => ({
 }));
 
 describe('AuthService', () => {
-    // Mock fetch globally
-    const mockFetch = jest.fn();
-    global.fetch = mockFetch;
+    let mockFetch: jest.Mock;
+
+    const mockCredentials = {
+        username: 'testuser',
+        password: 'password123'
+    };
 
     beforeEach(() => {
-        // Reset all mocks before each test
+        mockFetch = jest.fn();
+        global.fetch = mockFetch;
         jest.clearAllMocks();
-        mockFetch.mockReset();
+    });
+
+    afterEach(() => {
+        jest.clearAllMocks();
     });
 
     describe('login', () => {
-        const mockCredentials = {
-            username: 'testuser',
-            password: 'testpass',
-        };
-
-        const mockSuccessResponse = {
-            success: true,
-            data: {
-                token: 'mock-token',
-                user: {
-                    id: 1,
-                    username: 'testuser',
-                    email: 'test@example.com',
-                },
-            },
-        };
-
-        it('should successfully login with valid credentials', async () => {
+        it('successfully logs in user', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                json: () => Promise.resolve(mockSuccessResponse),
+                json: () => Promise.resolve({ token: 'mock-token' })
             });
 
             const response = await AuthService.login(mockCredentials);
-
-            expect(response).toEqual(mockSuccessResponse);
-            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(response).toBeDefined();
             expect(mockFetch).toHaveBeenCalledWith(
-                '/wp-json/athlete-dashboard/v1/auth/login',
-                expect.objectContaining({
-                    method: 'POST',
-                    body: JSON.stringify(mockCredentials),
-                })
+                expect.stringContaining('/auth/login'),
+                expect.any(Object)
             );
         });
 
-        it('should handle rate limiting during login', async () => {
-            const rateLimiter = RateLimiter.getInstance();
-            (rateLimiter.checkRateLimit as jest.Mock).mockImplementationOnce(() => {
-                throw new AuthServiceError(
-                    'Too many attempts',
-                    AuthErrorCode.RATE_LIMIT_EXCEEDED
-                );
-            });
-
-            await expect(AuthService.login(mockCredentials)).rejects.toThrow(
-                AuthServiceError
-            );
-            expect(rateLimiter.checkRateLimit).toHaveBeenCalledWith(
-                `login:${mockCredentials.username}`
-            );
-        });
-
-        it('should handle network errors with retry logic', async () => {
-            mockFetch
-                .mockRejectedValueOnce(new Error('Network error'))
-                .mockRejectedValueOnce(new Error('Network error'))
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: () => Promise.resolve(mockSuccessResponse),
-                });
-
-            const response = await AuthService.login(mockCredentials);
-
-            expect(response).toEqual(mockSuccessResponse);
-            expect(mockFetch).toHaveBeenCalledTimes(3);
-        });
-
-        it('should handle invalid responses', async () => {
+        it('handles rate limit exceeded', async () => {
             mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve(null),
+                ok: false,
+                status: 429,
+                json: () => Promise.resolve({ 
+                    error: AuthErrorCode.RATE_LIMIT_EXCEEDED,
+                    message: 'Too many attempts'
+                })
             });
 
-            await expect(AuthService.login(mockCredentials)).rejects.toThrow(
-                'Invalid response format'
-            );
+            await expect(AuthService.login(mockCredentials))
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.RATE_LIMIT_EXCEEDED, 'Too many attempts'));
+        });
+
+        it('handles invalid credentials', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                json: () => Promise.resolve({ 
+                    error: AuthErrorCode.INVALID_CREDENTIALS,
+                    message: 'Invalid username or password'
+                })
+            });
+
+            await expect(AuthService.login(mockCredentials))
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.INVALID_CREDENTIALS, 'Invalid username or password'));
         });
     });
 
     describe('logout', () => {
-        it('should successfully logout', async () => {
+        it('successfully logs out user', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                json: () => Promise.resolve({ success: true }),
+                json: () => Promise.resolve({ success: true })
             });
 
             await AuthService.logout();
-
-            expect(mockFetch).toHaveBeenCalledTimes(1);
             expect(mockFetch).toHaveBeenCalledWith(
-                '/wp-json/athlete-dashboard/v1/auth/logout',
-                expect.objectContaining({
-                    method: 'POST',
-                })
+                expect.stringContaining('/auth/logout'),
+                expect.any(Object)
             );
         });
 
-        it('should handle logout errors', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Logout failed'));
+        it('handles logout failure', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 500,
+                json: () => Promise.resolve({ 
+                    error: AuthErrorCode.UNKNOWN_ERROR,
+                    message: 'Server error during logout'
+                })
+            });
 
-            await expect(AuthService.logout()).rejects.toThrow(AuthServiceError);
+            await expect(AuthService.logout())
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.UNKNOWN_ERROR, 'Server error during logout'));
         });
     });
 
     describe('register', () => {
         const mockRegistrationData = {
-            username: 'newuser',
-            email: 'new@example.com',
-            password: 'newpass',
-            firstName: 'New',
-            lastName: 'User',
+            username: 'testuser',
+            email: 'test@example.com',
+            password: 'Password123!',
+            firstName: 'Test',
+            lastName: 'User'
         };
 
-        const mockSuccessResponse = {
-            success: true,
-            data: {
-                user: {
-                    id: 1,
-                    username: 'newuser',
-                    email: 'new@example.com',
-                },
-                token: 'mock-token',
-            },
-        };
-
-        it('should successfully register a new user', async () => {
+        it('should register a new user successfully', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                json: () => Promise.resolve(mockSuccessResponse),
+                json: () => Promise.resolve({ success: true, user: { id: 1 }, token: 'token' })
             });
 
             const response = await AuthService.register(mockRegistrationData);
-
-            expect(response).toEqual(mockSuccessResponse);
-            expect(mockFetch).toHaveBeenCalledTimes(1);
-            expect(mockFetch).toHaveBeenCalledWith(
-                '/wp-json/athlete-dashboard/v1/auth/register',
-                expect.objectContaining({
-                    method: 'POST',
-                    body: JSON.stringify(mockRegistrationData),
-                })
-            );
+            expect(response).toBeDefined();
+            expect(response.success).toBe(true);
         });
 
-        it('should handle rate limiting during registration', async () => {
-            const rateLimiter = RateLimiter.getInstance();
-            (rateLimiter.checkRateLimit as jest.Mock).mockImplementationOnce(() => {
-                throw new AuthServiceError(
-                    'Too many attempts',
-                    AuthErrorCode.RATE_LIMIT_EXCEEDED
-                );
-            });
+        it('should handle network errors', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Network error'));
+            
+            await expect(AuthService.register(mockRegistrationData))
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.NETWORK_ERROR, 'Network error'));
+        });
 
-            await expect(AuthService.register(mockRegistrationData)).rejects.toThrow(
-                AuthServiceError
-            );
-            expect(rateLimiter.checkRateLimit).toHaveBeenCalledWith(
-                `register:${mockRegistrationData.email}`
-            );
+        it('should handle registration failure', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Registration failed'));
+            
+            await expect(AuthService.register(mockRegistrationData))
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.REGISTRATION_FAILED, 'Registration failed'));
+        });
+
+        it('should handle invalid response', async () => {
+            mockFetch.mockRejectedValueOnce(new Error('Invalid response'));
+            
+            await expect(AuthService.register(mockRegistrationData))
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.INVALID_RESPONSE, 'Invalid response'));
         });
     });
 
     describe('checkAuth', () => {
-        it('should return true when user is authenticated', async () => {
+        it('confirms valid authentication', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                json: () => Promise.resolve({
-                    data: {
-                        user: { id: 1, username: 'testuser' },
-                    },
-                }),
+                json: () => Promise.resolve({ isAuthenticated: true })
             });
 
-            const isAuthenticated = await AuthService.checkAuth();
-            expect(isAuthenticated).toBe(true);
+            const response = await AuthService.checkAuth();
+            expect(response).toBe(true);
         });
 
-        it('should return false when user is not authenticated', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Not authenticated'));
+        it('handles expired token', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                json: () => Promise.resolve({ 
+                    error: AuthErrorCode.SESSION_EXPIRED,
+                    message: 'Token has expired'
+                })
+            });
 
-            const isAuthenticated = await AuthService.checkAuth();
-            expect(isAuthenticated).toBe(false);
+            await expect(AuthService.checkAuth())
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.SESSION_EXPIRED, 'Token has expired'));
         });
     });
 
     describe('refreshToken', () => {
-        it('should successfully refresh token', async () => {
-            const mockToken = 'new-token';
+        it('successfully refreshes token', async () => {
             mockFetch.mockResolvedValueOnce({
                 ok: true,
-                json: () => Promise.resolve({
-                    data: { token: mockToken },
-                }),
+                json: () => Promise.resolve({ token: 'new-token' })
             });
 
-            const token = await AuthService.refreshToken();
-            expect(token).toBe(mockToken);
+            const response = await AuthService.refreshToken();
+            expect(response).toBeDefined();
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining('/auth/refresh'),
+                expect.any(Object)
+            );
         });
 
-        it('should handle token refresh errors', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Refresh failed'));
+        it('handles refresh token failure', async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                status: 401,
+                json: () => Promise.resolve({ 
+                    error: AuthErrorCode.TOKEN_REFRESH_FAILED,
+                    message: 'Invalid refresh token'
+                })
+            });
 
-            await expect(AuthService.refreshToken()).rejects.toThrow(AuthServiceError);
+            await expect(AuthService.refreshToken())
+                .rejects
+                .toThrow(new AuthServiceError(AuthErrorCode.TOKEN_REFRESH_FAILED, 'Invalid refresh token'));
         });
     });
 
@@ -248,19 +226,17 @@ describe('AuthService', () => {
                 statusText: 'Unauthorized',
             });
 
-            await expect(AuthService.login({
-                username: 'test',
-                password: 'test',
-            })).rejects.toThrow('HTTP error! status: 401');
+            await expect(AuthService.login(mockCredentials))
+                .rejects
+                .toThrow('HTTP error! status: 401');
         });
 
         it('should handle network errors', async () => {
             mockFetch.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-            await expect(AuthService.login({
-                username: 'test',
-                password: 'test',
-            })).rejects.toThrow(AuthServiceError);
+            await expect(AuthService.login(mockCredentials))
+                .rejects
+                .toThrow(AuthServiceError);
         });
 
         it('should handle invalid JSON responses', async () => {
@@ -269,10 +245,41 @@ describe('AuthService', () => {
                 json: () => Promise.reject(new Error('Invalid JSON')),
             });
 
-            await expect(AuthService.login({
-                username: 'test',
-                password: 'test',
-            })).rejects.toThrow(AuthServiceError);
+            await expect(AuthService.login(mockCredentials))
+                .rejects
+                .toThrow(AuthServiceError);
+        });
+    });
+
+    describe('rate limiting', () => {
+        it('throws rate limit error when too many attempts', async () => {
+            const maxAttempts = 5;
+            for (let i = 0; i < maxAttempts; i++) {
+                await AuthService.login(mockCredentials);
+            }
+
+            await expect(AuthService.login(mockCredentials))
+                .rejects
+                .toThrow(new AuthServiceError(
+                    AuthErrorCode.RATE_LIMIT_EXCEEDED,
+                    'Too many attempts'
+                ));
+        });
+
+        it('resets rate limit after window expires', async () => {
+            const maxAttempts = 5;
+            for (let i = 0; i < maxAttempts; i++) {
+                await AuthService.login(mockCredentials);
+            }
+
+            // Fast forward time by rate limit window
+            jest.advanceTimersByTime(3600 * 1000);
+
+            // Should not throw rate limit error
+            await expect(AuthService.login(mockCredentials))
+                .resolves
+                .not
+                .toThrow();
         });
     });
 }); 

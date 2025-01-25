@@ -8,9 +8,10 @@ import { Button } from '../../../../dashboard/components/Button';
 interface MeasurementFormProps {
   initialData: PhysicalData;
   onUpdate: (data: PhysicalData) => Promise<void>;
+  isSaving?: boolean;
 }
 
-export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, onUpdate }) => {
+export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, onUpdate, isSaving }) => {
   const [formState, setFormState] = useState<PhysicalData>(initialData);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -54,7 +55,38 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
     });
   };
 
-  const handleUnitSwitch = (useMetric: boolean) => {
+  const handleHeightChange = (unit: 'feet' | 'inches', value: string) => {
+    const feetVal = unit === 'feet'
+      ? parseFloat(value) || 0
+      : (formState.heightFeet ?? 0);
+    const inchesVal = unit === 'inches'
+      ? parseFloat(value) || 0
+      : (formState.heightInches ?? 0);
+
+    // Validate inches to be between 0 and 11
+    const validatedInches = Math.min(Math.max(inchesVal, 0), 11);
+
+    // Store feet/inches values
+    setFormState(prev => {
+      // Always store height in centimeters internally
+      const heightInFeet = feetVal + (validatedInches / 12);
+      const heightInCm = heightInFeet * 30.48;
+
+      return {
+        ...prev,
+        heightFeet: feetVal,
+        heightInches: validatedInches,
+        // Always store in centimeters
+        height: heightInCm,
+        units: {
+          ...prev.units,
+          height: prev.preferences?.showMetric ? 'cm' : 'ft'
+        }
+      };
+    });
+  };
+
+  const handleUnitSwitch = async (useMetric: boolean) => {
     setFormState(prev => {
       const newUnits = {
         height: useMetric ? ('cm' as const) : ('ft' as const),
@@ -62,54 +94,20 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
         measurements: useMetric ? ('cm' as const) : ('in' as const)
       };
       
-      // Convert height based on current unit system
-      let newHeight: number;
+      // Height is always stored in centimeters internally
+      let heightInCm = prev.height;
       let newHeightFeet: number | undefined;
       let newHeightInches: number | undefined;
 
-      if (useMetric) {
-        // Converting from imperial to metric
-        if (prev.heightFeet !== undefined && prev.heightInches !== undefined) {
-          // Convert from feet/inches to cm
-          newHeight = (prev.heightFeet + (prev.heightInches / 12)) * 30.48;
-        } else if (prev.units.height === 'ft') {
-          // Convert from decimal feet to cm
-          newHeight = prev.height * 30.48;
-        } else {
-          // Already in cm
-          newHeight = prev.height;
-        }
-        newHeightFeet = undefined;
-        newHeightInches = undefined;
-      } else {
-        // Converting from metric to imperial
-        if (prev.units.height === 'cm') {
-          // Convert from cm to feet/inches
-          const totalFeet = prev.height / 30.48;
-          newHeightFeet = Math.floor(totalFeet);
-          newHeightInches = Math.round((totalFeet % 1) * 12);
-          newHeight = totalFeet; // Store as decimal feet
-        } else {
-          // Already in feet
-          newHeight = prev.height;
-          newHeightFeet = Math.floor(prev.height);
-          newHeightInches = Math.round((prev.height % 1) * 12);
-        }
+      if (!useMetric) {
+        // Calculate feet and inches for display
+        const totalFeet = heightInCm / 30.48;
+        newHeightFeet = Math.floor(totalFeet);
+        newHeightInches = Math.round((totalFeet % 1) * 12);
       }
 
-      console.log('Unit switch conversion:', {
-        from: prev.units,
-        to: newUnits,
-        oldHeight: prev.height,
-        newHeight,
-        oldUnits: prev.units.height,
-        newUnits: newUnits.height,
-        heightFeet: newHeightFeet,
-        heightInches: newHeightInches
-      });
-
       const convertedValues = {
-        height: newHeight,
+        // Height stays in cm internally
         heightFeet: newHeightFeet,
         heightInches: newHeightInches,
         weight: prev.weight ? convertMeasurement(prev.weight, prev.units.weight, newUnits.weight) : prev.weight,
@@ -118,7 +116,7 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
         hips: prev.hips ? convertMeasurement(prev.hips, prev.units.measurements, newUnits.measurements) : prev.hips
       };
 
-      return {
+      const newState = {
         ...prev,
         ...convertedValues,
         units: newUnits,
@@ -127,6 +125,14 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
           showMetric: useMetric
         }
       };
+
+      // Call onUpdate with the new state
+      const result = onUpdate(newState);
+      if (result && typeof result.catch === 'function') {
+        result.catch(console.error);
+      }
+
+      return newState;
     });
   };
 
@@ -152,79 +158,10 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
     return units[field];
   };
 
-  const handleHeightChange = (unit: 'feet' | 'inches', value: string) => {
-    const feetVal = unit === 'feet'
-      ? parseFloat(value) || 0
-      : (formState.heightFeet ?? 0);
-    const inchesVal = unit === 'inches'
-      ? parseFloat(value) || 0
-      : (formState.heightInches ?? 0);
-
-    // Validate inches to be between 0 and 11
-    const validatedInches = Math.min(Math.max(inchesVal, 0), 11);
-
-    // Store feet/inches values
-    setFormState(prev => {
-      // Calculate total height in the current unit system
-      const heightInFeet = feetVal + (validatedInches / 12);
-      const heightInCm = heightInFeet * 30.48;
-
-      return {
-        ...prev,
-        heightFeet: feetVal,
-        heightInches: validatedInches,
-        // Store height in the current unit system
-        height: prev.preferences?.showMetric ? heightInCm : heightInFeet,
-        units: {
-          ...prev.units,
-          height: prev.preferences?.showMetric ? 'cm' : 'ft'
-        }
-      };
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submitting) return;
-
-    try {
-      setSubmitting(true);
-      setFormError(null); // Clear any previous errors
-      
-      // Ensure height is in the correct format before sending
-      const dataToSubmit = {
-        ...formState,
-        height: formState.units.height === 'ft'
-          ? formState.height // Already in decimal feet
-          : formState.height, // Already in cm
-        heightFeet: formState.heightFeet,
-        heightInches: formState.heightInches,
-        preferences: {
-          showMetric: formState.preferences.showMetric
-        }
-      };
-      
-      console.log('Submitting physical data:', {
-        height: dataToSubmit.height,
-        units: dataToSubmit.units,
-        heightFeet: formState.heightFeet,
-        heightInches: formState.heightInches,
-        showMetric: dataToSubmit.preferences.showMetric
-      });
-
-      // Validate required fields before submission
-      if (!dataToSubmit.height || !dataToSubmit.weight) {
-        throw new Error('Height and weight are required');
-      }
-
-      await onUpdate(dataToSubmit);
-    } catch (err) {
-      console.error('Error updating measurements:', err);
-      setFormError(err instanceof Error ? err.message : 'Failed to update measurements');
-      throw err;
-    } finally {
-      setSubmitting(false);
-    }
+    console.log('Submitting physical data:', formState);
+    await onUpdate(formState);
   };
 
   return (
@@ -252,6 +189,7 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
                   max="8"
                   required
                   aria-required="true"
+                  aria-label="Height in feet"
                 />
                 <span aria-label="feet">ft</span>
                 <input
@@ -263,6 +201,7 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
                   max="11"
                   required
                   aria-required="true"
+                  aria-label="Height in inches"
                 />
                 <span aria-label="inches">in</span>
               </div>
@@ -278,8 +217,14 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
                   aria-required="true"
                   min="0"
                   max="300"
+                  aria-label="Height in centimeters"
                 />
                 <span aria-label="unit">{getUnitLabel('height')}</span>
+              </div>
+            )}
+            {formState.height < 100 && (
+              <div className="form-error" role="alert">
+                {__('Height must be between 100cm and 300cm')}
               </div>
             )}
           </div>
@@ -296,9 +241,15 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
                 required
                 aria-required="true"
                 min="0"
+                aria-label={`Weight in ${getUnitLabel('weight')}`}
               />
               <span aria-label="unit">{getUnitLabel('weight')}</span>
             </div>
+            {formState.weight < 30 && (
+              <div className="form-error" role="alert">
+                {__('Weight must be between 30kg and 300kg')}
+              </div>
+            )}
           </div>
         </fieldset>
 
@@ -418,12 +369,11 @@ export const MeasurementForm: React.FC<MeasurementFormProps> = ({ initialData, o
 
         <Button 
           type="submit"
-          disabled={submitting}
-          aria-busy={submitting}
           feature="physical"
-          variant="primary"
+          isLoading={isSaving}
+          disabled={isSaving}
         >
-          {submitting ? __('Saving...') : __('Save Changes')}
+          {__('Save Changes')}
         </Button>
       </form>
     </Section>

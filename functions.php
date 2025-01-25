@@ -25,11 +25,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Load Composer autoloader
 require_once get_stylesheet_directory() . '/vendor/autoload.php';
 
-// Load core contracts
+// Load core contracts and dependencies first
 require_once get_stylesheet_directory() . '/features/core/contracts/interface-feature-contract.php';
 require_once get_stylesheet_directory() . '/features/core/contracts/class-abstract-feature.php';
+require_once get_stylesheet_directory() . '/features/core/container/class-container.php';
+require_once get_stylesheet_directory() . '/features/core/events/class-events.php';
 
-// Load core configurations.
+// Load core configurations
 require_once get_stylesheet_directory() . '/dashboard/core/config/debug.php';
 require_once get_stylesheet_directory() . '/dashboard/core/config/environment.php';
 require_once get_stylesheet_directory() . '/dashboard/core/dashboardbridge.php';
@@ -37,43 +39,36 @@ require_once get_stylesheet_directory() . '/dashboard/core/dashboardbridge.php';
 // Load Redis configuration
 require_once get_stylesheet_directory() . '/includes/config/redis-config.php';
 
-// Load cache services.
+// Load cache services
 require_once get_stylesheet_directory() . '/includes/services/class-cache-service.php';
 require_once get_stylesheet_directory() . '/includes/services/class-cache-warmer.php';
 require_once get_stylesheet_directory() . '/includes/services/class-cache-monitor.php';
 
-// Load admin widgets.
+// Load admin widgets
 require_once get_stylesheet_directory() . '/includes/admin/class-cache-stats-widget.php';
 
-/**
- * Initialize the Cache Statistics Widget in the WordPress admin dashboard.
- *
- * Creates and initializes an instance of the Cache_Stats_Widget class when in the admin area.
- * This widget provides real-time monitoring of cache performance metrics and statistics
- * to help administrators track and optimize the caching system's effectiveness.
- *
- * @since 1.0.0
- * @see \AthleteDashboard\Admin\Cache_Stats_Widget
- */
-function init_cache_stats_widget() {
-	if ( is_admin() ) {
-		$widget = new AthleteDashboard\Admin\Cache_Stats_Widget();
-		$widget->init();
-	}
-}
-add_action( 'init', 'init_cache_stats_widget' );
+// Load profile feature dependencies
+require_once get_stylesheet_directory() . '/features/profile/validation/class-base-validator.php';
+require_once get_stylesheet_directory() . '/features/profile/services/interface-profile-service.php';
+require_once get_stylesheet_directory() . '/features/profile/validation/class-profile-validator.php';
+require_once get_stylesheet_directory() . '/features/profile/repository/class-profile-repository.php';
+require_once get_stylesheet_directory() . '/features/profile/services/class-profile-service.php';
+require_once get_stylesheet_directory() . '/features/profile/api/class-response-factory.php';
+require_once get_stylesheet_directory() . '/features/profile/api/registry/class-endpoint-registry.php';
+require_once get_stylesheet_directory() . '/features/profile/api/class-profile-routes.php';
+require_once get_stylesheet_directory() . '/features/profile/api/migration/class-endpoint-verifier.php';
+require_once get_stylesheet_directory() . '/features/profile/api/cli/class-migration-commands.php';
+require_once get_stylesheet_directory() . '/features/profile/class-profile-feature.php';
 
-/**
- * Initialize cache service.
- */
-function init_cache_service() {
-	AthleteDashboard\Services\Cache_Service::init();
-}
-add_action( 'init', 'init_cache_service', 5 ); // Run before cache stats widget initialization
+// Initialize Profile feature through the Bootstrap class
+$profile_bootstrap = new AthleteDashboard\Features\Profile\Profile_Bootstrap();
+$container         = new AthleteDashboard\Core\Container();
+$profile_bootstrap->bootstrap( $container );
 
 // Load feature configurations.
 require_once get_stylesheet_directory() . '/features/profile/Config/Config.php';
-require_once get_stylesheet_directory() . '/features/profile/api/class-profile-endpoints.php';
+// Remove legacy Profile_Endpoints initialization
+// use AthleteDashboard\Features\Profile\api\Profile_Endpoints;
 
 // Load workout generator feature
 require_once get_stylesheet_directory() . '/features/workout-generator/src/class-workout-generator-bootstrap.php';
@@ -100,7 +95,32 @@ use AthleteDashboard\Core\Config\Debug;
 use AthleteDashboard\Core\Config\Environment;
 use AthleteDashboard\Core\DashboardBridge;
 use AthleteDashboard\Features\Profile\Config\Config as ProfileConfig;
-use AthleteDashboard\Features\Profile\api\Profile_Endpoints;
+
+/**
+ * Initialize the Cache Statistics Widget in the WordPress admin dashboard.
+ *
+ * Creates and initializes an instance of the Cache_Stats_Widget class when in the admin area.
+ * This widget provides real-time monitoring of cache performance metrics and statistics
+ * to help administrators track and optimize the caching system's effectiveness.
+ *
+ * @since 1.0.0
+ * @see \AthleteDashboard\Admin\Cache_Stats_Widget
+ */
+function init_cache_stats_widget() {
+	if ( is_admin() ) {
+		$widget = new AthleteDashboard\Admin\Cache_Stats_Widget();
+		$widget->init();
+	}
+}
+add_action( 'init', 'init_cache_stats_widget' );
+
+/**
+ * Initialize cache service.
+ */
+function init_cache_service() {
+	AthleteDashboard\Services\Cache_Service::init();
+}
+add_action( 'init', 'init_cache_service', 5 ); // Run before cache stats widget initialization
 
 /**
  * Add custom query variables for dashboard feature routing.
@@ -231,29 +251,40 @@ function enqueue_core_dependencies() {
  */
 function localize_dashboard_data() {
 	// Configure core dashboard data.
+	$dashboard_data = array_merge(
+		array(
+			'nonce'   => wp_create_nonce( 'wp_rest' ),
+			'siteUrl' => get_site_url(),
+			'apiUrl'  => rest_url(),
+			'userId'  => get_current_user_id(),
+		),
+		array( 'environment' => Environment::get_settings() ),
+		array( 'debug' => Debug::get_settings() ),
+		array(
+			'features' => array(
+				'profile' => ProfileConfig::get_settings(),
+			),
+		)
+	);
+
+	if ( WP_DEBUG ) {
+		error_log( 'Dashboard data being localized: ' . wp_json_encode( $dashboard_data ) );
+	}
+
 	wp_localize_script(
 		'athlete-dashboard',
 		'athleteDashboardData',
-		array_merge(
-			array(
-				'nonce'   => wp_create_nonce( 'wp_rest' ),
-				'siteUrl' => get_site_url(),
-				'apiUrl'  => rest_url(),
-				'userId'  => get_current_user_id(),
-			),
-			array( 'environment' => Environment::get_settings() ),
-			array( 'debug' => Debug::get_settings() ),
-			array(
-				'features' => array(
-					'profile' => ProfileConfig::get_settings(),
-				),
-			)
-		)
+		$dashboard_data
 	);
 
 	// Initialize feature-specific data.
 	$current_feature = DashboardBridge::get_current_feature();
 	$feature_data    = DashboardBridge::get_feature_data( $current_feature );
+
+	if ( WP_DEBUG ) {
+		error_log( 'Feature data being localized: ' . wp_json_encode( $feature_data ) );
+	}
+
 	wp_localize_script( 'athlete-dashboard', 'athleteDashboardFeature', $feature_data );
 }
 
@@ -273,6 +304,9 @@ function localize_dashboard_data() {
  */
 function enqueue_athlete_dashboard_scripts() {
 	if ( ! is_page_template( 'dashboard/templates/dashboard.php' ) ) {
+		if ( WP_DEBUG ) {
+			error_log( 'Not loading dashboard scripts - not on dashboard template' );
+		}
 		return;
 	}
 
@@ -281,12 +315,18 @@ function enqueue_athlete_dashboard_scripts() {
 	// Load core dependencies.
 	enqueue_core_dependencies();
 
+	// Get the script filename
+	$script_filename = get_asset_filename( 'app', 'js' );
+	if ( WP_DEBUG ) {
+		error_log( 'Loading script: ' . $script_filename );
+	}
+
 	// Load application scripts.
 	wp_enqueue_script(
 		'athlete-dashboard',
-		get_stylesheet_directory_uri() . '/assets/build/' . get_asset_filename( 'app', 'js' ),
+		get_stylesheet_directory_uri() . '/assets/build/' . $script_filename,
 		array( 'wp-element', 'wp-data', 'wp-api-fetch', 'wp-i18n', 'wp-hooks' ),
-		get_asset_version( get_stylesheet_directory() . '/assets/build/' . get_asset_filename( 'app', 'js' ) ),
+		get_asset_version( get_stylesheet_directory() . '/assets/build/' . $script_filename ),
 		true
 	);
 
@@ -296,7 +336,9 @@ function enqueue_athlete_dashboard_scripts() {
 	// Configure runtime data.
 	localize_dashboard_data();
 
-	Debug::log( 'Dashboard scripts enqueued.', 'core' );
+	if ( WP_DEBUG ) {
+		error_log( 'Dashboard scripts enqueued successfully' );
+	}
 }
 add_action( 'wp_enqueue_scripts', 'enqueue_athlete_dashboard_scripts' );
 
@@ -396,16 +438,12 @@ add_action(
 add_action(
 	'rest_api_init',
 	function () {
-		// Initialize profile endpoints
-		AthleteDashboard\Features\Profile\api\Profile_Endpoints::init();
-
 		// Initialize workout generator endpoints
 		$workout_generator = new AthleteDashboard\Features\WorkoutGenerator\Workout_Generator_Bootstrap();
 		$workout_generator->init();
 
 		// Log registration and API details.
 		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			Debug::log( 'Profile endpoints initialized.', 'api' );
 			Debug::log( 'REST API URL: ' . rest_url( 'athlete-dashboard/v1/profile' ) . '.', 'api' );
 			Debug::log( 'Current user: ' . get_current_user_id() . '.', 'api' );
 
@@ -477,69 +515,6 @@ function enqueue_app_styles() {
 	);
 }
 
-// Load base classes and interfaces first
-require_once get_stylesheet_directory() . '/features/profile/validation/class-base-validator.php';
-require_once get_stylesheet_directory() . '/features/profile/services/interface-profile-service.php';
-
-// Load implementations
-require_once get_stylesheet_directory() . '/features/profile/validation/class-profile-validator.php';
-require_once get_stylesheet_directory() . '/features/profile/repository/class-profile-repository.php';
-require_once get_stylesheet_directory() . '/features/profile/services/class-profile-service.php';
-
-// Load API related classes
-require_once get_stylesheet_directory() . '/features/profile/api/class-response-factory.php';
-require_once get_stylesheet_directory() . '/features/profile/api/registry/class-endpoint-registry.php';
-require_once get_stylesheet_directory() . '/features/profile/api/class-profile-routes.php';
-require_once get_stylesheet_directory() . '/features/profile/api/migration/class-endpoint-verifier.php';
-require_once get_stylesheet_directory() . '/features/profile/api/cli/class-migration-commands.php';
-
-// Load feature class last
-require_once get_stylesheet_directory() . '/features/profile/class-profile-feature.php';
-
-// Initialize Profile feature
-if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	// Initialize dependencies
-	$registry         = new AthleteDashboard\Features\Profile\API\Registry\Endpoint_Registry();
-	$repository       = new AthleteDashboard\Features\Profile\Repository\Profile_Repository();
-	$validator        = new AthleteDashboard\Features\Profile\Validation\Profile_Validator();
-	$service          = new AthleteDashboard\Features\Profile\Services\Profile_Service( $repository, $validator );
-	$response_factory = new AthleteDashboard\Features\Profile\API\Response_Factory();
-	$routes           = new AthleteDashboard\Features\Profile\API\Profile_Routes( $service, $response_factory, $registry );
-
-	// Initialize feature
-	$profile_feature = new AthleteDashboard\Features\Profile\Profile_Feature( $routes );
-	$profile_feature->init();
-} else {
-	// Initialize dependencies for normal requests
-	$registry         = new AthleteDashboard\Features\Profile\API\Registry\Endpoint_Registry();
-	$repository       = new AthleteDashboard\Features\Profile\Repository\Profile_Repository();
-	$validator        = new AthleteDashboard\Features\Profile\Validation\Profile_Validator();
-	$service          = new AthleteDashboard\Features\Profile\Services\Profile_Service( $repository, $validator );
-	$response_factory = new AthleteDashboard\Features\Profile\API\Response_Factory();
-	$routes           = new AthleteDashboard\Features\Profile\API\Profile_Routes( $service, $response_factory, $registry );
-
-	// Initialize profile feature
-	$profile_feature = new AthleteDashboard\Features\Profile\Profile_Feature( $routes );
-	$profile_feature->init();
-}
-
-require_once get_stylesheet_directory() . '/features/profile/database/migrations/class-physical-measurements-table.php';
-
-/**
- * Run migrations on theme activation
- */
-function athlete_dashboard_run_migrations() {
-	error_log( 'Running athlete dashboard migrations...' );
-	$physical_table = new \AthleteDashboard\Features\Profile\Database\Migrations\Physical_Measurements_Table();
-	$result         = $physical_table->up();
-	if ( is_wp_error( $result ) ) {
-		error_log( 'Failed to run physical measurements table migration: ' . $result->get_error_message() );
-	} else {
-		error_log( 'Physical measurements table migration completed successfully' );
-	}
-}
-add_action( 'after_switch_theme', 'athlete_dashboard_run_migrations' );
-
 /**
  * Validate AI Service Configuration
  */
@@ -557,5 +532,249 @@ add_action(
 		} else {
 			error_log( 'Warning: AI Service Endpoint is not configured' );
 		}
+	}
+);
+
+/**
+ * Initialize the Profile feature.
+ */
+function athlete_dashboard_init_profile_feature() {
+	// Create container
+	$container = new \AthleteDashboard\Core\Container();
+
+	// Initialize Profile feature
+	$profile_bootstrap = new \AthleteDashboard\Features\Profile\Profile_Bootstrap();
+
+	// Bootstrap the feature
+	$profile_bootstrap->bootstrap( $container );
+
+	// Debug logging
+	if ( WP_DEBUG ) {
+		error_log( 'Profile feature initialized via athlete_dashboard_init_profile_feature' );
+
+		// Log registered routes after rest_api_init
+		add_action(
+			'rest_api_init',
+			function () {
+				$routes = rest_get_server()->get_routes();
+				error_log( 'All registered routes after profile initialization:' );
+				foreach ( $routes as $route => $handlers ) {
+					if ( strpos( $route, 'athlete-dashboard/v1/profile' ) === 0 ) {
+						error_log( "Route: $route" );
+						error_log( 'Handlers: ' . print_r( $handlers, true ) );
+					}
+				}
+			},
+			999
+		);
+	}
+}
+
+/**
+ * Clean up legacy profile functionality.
+ */
+function athlete_dashboard_cleanup_legacy_profile() {
+	// Remove legacy actions
+	remove_all_actions( 'athlete_dashboard_register_rest_routes' );
+	remove_all_actions( 'athlete_dashboard_init_profile' );
+	remove_all_actions( 'athlete_dashboard_profile_endpoints' );
+
+	// Unregister legacy REST routes if they exist
+	add_action(
+		'rest_api_init',
+		function () {
+			if ( WP_DEBUG ) {
+				error_log( '🧹 Starting legacy route cleanup at priority 5' );
+				error_log( '📋 Current routes before cleanup:' );
+				$routes = rest_get_server()->get_routes();
+				foreach ( $routes as $route => $handlers ) {
+					if ( strpos( $route, 'athlete-dashboard/v1/profile' ) === 0 ) {
+						error_log( "  - Found route: $route" );
+					}
+				}
+			}
+
+			global $wp_rest_server;
+			if ( $wp_rest_server ) {
+				$routes  = $wp_rest_server->get_routes();
+				$cleaned = 0;
+				foreach ( $routes as $route => $handlers ) {
+					// Only clean up routes that don't match our new pattern
+					if ( strpos( $route, 'athlete-dashboard/v1/profile' ) === 0 &&
+					! preg_match( '/athlete-dashboard\/v1\/profile\/\(\?P<user_id>\\\d\+\)/', $route ) ) {
+						unregister_rest_route( 'athlete-dashboard/v1', ltrim( $route, 'athlete-dashboard/v1' ) );
+						$cleaned++;
+						if ( WP_DEBUG ) {
+							error_log( "🗑️ Cleaned up legacy route: $route" );
+						}
+					}
+				}
+				if ( WP_DEBUG ) {
+					error_log( "✨ Legacy cleanup complete. Removed $cleaned routes" );
+					error_log( '📋 Remaining routes after cleanup:' );
+					$routes = rest_get_server()->get_routes();
+					foreach ( $routes as $route => $handlers ) {
+						if ( strpos( $route, 'athlete-dashboard/v1/profile' ) === 0 ) {
+							error_log( "  - Route still present: $route" );
+						}
+					}
+				}
+			}
+		},
+		5
+	);  // Run at priority 5, before new registration
+}
+
+// Initialize on plugins_loaded to ensure all dependencies are available
+add_action( 'plugins_loaded', 'athlete_dashboard_cleanup_legacy_profile' );
+add_action( 'plugins_loaded', 'athlete_dashboard_init_profile_feature' );
+
+// Add debug logging for script localization
+add_action(
+	'wp_enqueue_scripts',
+	function () {
+		if ( WP_DEBUG ) {
+			error_log( '🚀 Localizing athlete-dashboard script' );
+		}
+
+		// Generate nonce for REST API
+		$nonce = wp_create_nonce( 'wp_rest' );
+		if ( WP_DEBUG ) {
+			error_log( '✨ Generated REST API nonce' );
+		}
+
+		// Get API URL
+		$api_url = rest_url( 'athlete-dashboard/v1' );
+		if ( WP_DEBUG ) {
+			error_log( '📍 API URL: ' . $api_url );
+		}
+
+		// Localize script with debug data
+		wp_localize_script(
+			'athlete-dashboard',
+			'athleteDashboardData',
+			array(
+				'nonce'      => $nonce,
+				'apiUrl'     => $api_url,
+				'siteUrl'    => get_site_url(),
+				'debug'      => WP_DEBUG,
+				'userId'     => get_current_user_id(),
+				'isLoggedIn' => is_user_logged_in(),
+			)
+		);
+
+		if ( WP_DEBUG ) {
+			error_log( '✅ Script localization complete' );
+			error_log(
+				'📋 Localized data: ' . wp_json_encode(
+					array(
+						'nonce_set'    => ! empty( $nonce ),
+						'api_url_set'  => ! empty( $api_url ),
+						'user_id'      => get_current_user_id(),
+						'is_logged_in' => is_user_logged_in(),
+					)
+				)
+			);
+		}
+	},
+	20
+);
+
+// Add comprehensive route debugging
+add_action(
+	'rest_api_init',
+	function () {
+		error_log( '=== FULL ROUTE DEBUG ===' );
+		error_log( 'Debug timestamp: ' . date( 'Y-m-d H:i:s' ) );
+		$routes = rest_get_server()->get_routes();
+		foreach ( $routes as $route => $handlers ) {
+			if ( strpos( $route, 'athlete-dashboard' ) !== false ) {
+				error_log( "\nRoute: $route" );
+				error_log( 'Number of handlers: ' . count( $handlers ) );
+				foreach ( $handlers as $index => $handler ) {
+					error_log( "Handler #$index:" );
+					error_log( '- Methods: ' . print_r( array_keys( $handler ), true ) );
+					error_log( '- Callback: ' . ( is_array( $handler['callback'] ) ? get_class( $handler['callback'][0] ) : 'Closure' ) );
+					error_log( '- Permission Callback: ' . ( isset( $handler['permission_callback'] ) ? 'Present' : 'Missing' ) );
+					if ( isset( $handler['args'] ) ) {
+						error_log( '- Arguments: ' . print_r( $handler['args'], true ) );
+					}
+				}
+			}
+		}
+	},
+	999
+);
+
+// Add request debugging
+add_action(
+	'rest_pre_dispatch',
+	function ( $result, $server, $request ) {
+		if ( strpos( $request->get_route(), 'athlete-dashboard' ) !== false ) {
+			error_log( "\n=== REST REQUEST DEBUG ===" );
+			error_log( 'Debug timestamp: ' . date( 'Y-m-d H:i:s' ) );
+			error_log( 'Request URI: ' . $_SERVER['REQUEST_URI'] );
+			error_log( 'Request Path: ' . $request->get_route() );
+			error_log( 'Request Method: ' . $request->get_method() );
+			error_log( 'Request Params: ' . print_r( $request->get_params(), true ) );
+			error_log( 'Request Headers: ' . print_r( $request->get_headers(), true ) );
+			error_log( 'Current User ID: ' . get_current_user_id() );
+			error_log( 'Is User Logged In: ' . ( is_user_logged_in() ? 'Yes' : 'No' ) );
+
+			// Check if route exists by checking registered routes
+			$routes       = rest_get_server()->get_routes();
+			$route_exists = false;
+			$request_path = $request->get_route();
+
+			foreach ( $routes as $route => $handlers ) {
+				// Temporarily comment out problematic regex code
+				/*
+				// Convert route parameters to regex pattern
+				$pattern = preg_replace('/\(\?P<[\w-]+>([^)]+)\)/', '($1)', $route);
+				$pattern = str_replace('/', '\\/', $pattern);
+				$pattern = '/^' . $pattern . '$/';
+
+				if (preg_match($pattern, $request_path)) {
+				$route_exists = true;
+				error_log('Matched Route: ' . $route);
+				error_log('Handler Details: ' . print_r($handlers, true));
+				break;
+				}
+				*/
+				// Simple string comparison for now
+				if ( $route === $request_path ) {
+					$route_exists = true;
+					error_log( 'Matched Route: ' . $route );
+					error_log( 'Handler Details: ' . print_r( $handlers, true ) );
+					break;
+				}
+			}
+
+			if ( ! $route_exists ) {
+				error_log( 'WARNING: No matching route found for ' . $request_path );
+				error_log( 'Available routes:' );
+				foreach ( $routes as $route => $handlers ) {
+					if ( strpos( $route, 'athlete-dashboard' ) !== false ) {
+						error_log( '  - ' . $route );
+						error_log( '    Methods: ' . implode( ', ', array_keys( $handlers[0] ) ) );
+					}
+				}
+			}
+		}
+		return $result;
+	},
+	10,
+	3
+);
+
+add_action(
+	'init',
+	function () {
+		error_log( '=== DEBUG: Inspecting rest_api_init hooks ===' );
+		global $wp_filter;
+		if ( isset( $wp_filter['rest_api_init'] ) ) {
+			error_log( print_r( $wp_filter['rest_api_init'], true ) );
+		}
+		error_log( '=== END DEBUG ===' );
 	}
 );

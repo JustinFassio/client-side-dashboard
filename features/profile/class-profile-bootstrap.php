@@ -9,8 +9,13 @@ namespace AthleteDashboard\Features\Profile;
 
 use AthleteDashboard\Core\Events;
 use AthleteDashboard\Core\Container;
-use AthleteDashboard\Features\Profile\API\Profile_Endpoints;
 use AthleteDashboard\Features\Profile\API\Response_Factory;
+use AthleteDashboard\Features\Profile\API\Registry\Endpoint_Registry;
+use AthleteDashboard\Features\Profile\API\Profile_Routes;
+use AthleteDashboard\Features\Profile\Services;
+use AthleteDashboard\Features\Profile\Repository;
+use AthleteDashboard\Features\Profile\Validation;
+use AthleteDashboard\Features\Profile\Database\Migrations\Physical_Measurements_Table;
 use AthleteDashboard\Features\Profile\Events\Listeners\User_Updated_Listener;
 use AthleteDashboard\Features\Profile\Services\Profile_Service;
 use AthleteDashboard\Features\User\Events\User_Updated;
@@ -20,6 +25,20 @@ use AthleteDashboard\Features\Profile\Admin\Profile_Admin;
  * Bootstrap class for the Profile feature.
  */
 class Profile_Bootstrap {
+	/**
+	 * Whether the bootstrap has been initialized.
+	 *
+	 * @var bool
+	 */
+	private static $initialized = false;
+
+	/**
+	 * Container instance.
+	 *
+	 * @var Container
+	 */
+	private $container;
+
 	/**
 	 * Register event listeners for the Profile feature.
 	 *
@@ -71,40 +90,56 @@ class Profile_Bootstrap {
 			)
 		);
 
-		// Bind the Profile Endpoints
+		// Bind the Endpoint Registry
 		$container->singleton(
-			Profile_Endpoints::class,
-			fn( Container $container ) => new Profile_Endpoints(
+			Endpoint_Registry::class,
+			fn() => new Endpoint_Registry()
+		);
+
+		// Bind the Profile Routes
+		$container->singleton(
+			Profile_Routes::class,
+			fn( Container $container ) => new Profile_Routes(
 				$container->get( Services\Profile_Service::class ),
-				$container->get( Validation\Profile_Validator::class ),
-				$container->get( Response_Factory::class )
+				$container->get( Response_Factory::class ),
+				$container->get( Endpoint_Registry::class )
 			)
 		);
 	}
 
 	/**
 	 * Register REST API routes.
-	 *
-	 * @param Container $container Service container instance.
 	 */
-	public function register_routes( Container $container ): void {
-		add_action(
-			'rest_api_init',
-			function () use ( $container ) {
-				$endpoints = $container->get( Profile_Endpoints::class );
-				$endpoints->init();
-			}
-		);
+	public function register_routes(): void {
+		if ( ! $this->container ) {
+			error_log( '🚫 Profile_Bootstrap: Container not initialized when registering routes' );
+			return;
+		}
+
+		try {
+			error_log( '🚀 Profile_Bootstrap: Starting route registration' );
+
+			// Get routes instance from container
+			$routes = $this->container->get( Profile_Routes::class );
+
+			// Initialize routes - this sets up the rest_api_init hook
+			$routes->init();
+
+			error_log( '✨ Profile_Bootstrap: Route registration complete' );
+		} catch ( \Exception $e ) {
+			error_log( '❌ Profile_Bootstrap: Error registering routes: ' . $e->getMessage() );
+			error_log( 'Stack trace: ' . $e->getTraceAsString() );
+		}
 	}
 
 	/**
 	 * Run migrations for database setup.
 	 */
-	private function run_migrations(): void {
+	public function run_migrations(): void {
 		error_log( 'Profile_Bootstrap: Running migrations' );
 
-		$physical_migration = new Physical_Data_Migration();
-		$result = $physical_migration->up();
+		$physical_migration = new Physical_Measurements_Table();
+		$result             = $physical_migration->up();
 
 		if ( is_wp_error( $result ) ) {
 			error_log( 'Profile_Bootstrap: Migration failed - ' . $result->get_error_message() );
@@ -117,13 +152,29 @@ class Profile_Bootstrap {
 	 * Initialize the feature.
 	 */
 	public function init(): void {
-		error_log( 'Profile_Bootstrap: Initializing' );
-		
-		// Run migrations on after_switch_theme hook
-		add_action('after_switch_theme', array($this, 'run_migrations'));
-		
-		$this->register_events();
-		$this->register_routes();
+		error_log( '🚀 Profile_Bootstrap: Initializing' );
+
+		try {
+			// Run migrations on after_switch_theme hook
+			add_action( 'after_switch_theme', array( $this, 'run_migrations' ) );
+
+			// Register routes on rest_api_init hook with high priority (after cleanup)
+			add_action(
+				'rest_api_init',
+				function () {
+					if ( WP_DEBUG ) {
+						error_log( '📝 Profile_Bootstrap: Registering routes at priority 30 (after cleanup)' );
+					}
+					$this->register_routes();
+				},
+				30
+			);
+
+			error_log( '✅ Profile_Bootstrap: Initialization complete' );
+		} catch ( \Exception $e ) {
+			error_log( '❌ Profile_Bootstrap: Error during initialization: ' . $e->getMessage() );
+			error_log( 'Stack trace: ' . $e->getTraceAsString() );
+		}
 	}
 
 	/**
@@ -132,14 +183,33 @@ class Profile_Bootstrap {
 	 * @param Container $container Service container instance.
 	 */
 	public function bootstrap( Container $container ): void {
-		$this->register_services( $container );
-		$this->register_events( $container );
-		$this->register_routes( $container );
+		if ( self::$initialized ) {
+			error_log( '⚠️ Profile_Bootstrap: Already initialized, skipping' );
+			return;
+		}
 
-		// Initialize admin functionality
-		if (is_admin()) {
-			$profile_admin = new Profile_Admin();
-			$profile_admin->init();
+		error_log( '🚀 Profile_Bootstrap: Starting bootstrap process' );
+
+		try {
+			$this->container = $container;
+
+			// Register services first
+			$this->register_services( $container );
+			error_log( '✅ Profile services registered' );
+
+			// Register events
+			$this->register_events( $container );
+			error_log( '✅ Profile events registered' );
+
+			// Initialize the feature
+			$this->init();
+			error_log( '✅ Profile feature initialized' );
+
+			self::$initialized = true;
+			error_log( '✨ Profile_Bootstrap: Bootstrap process completed' );
+		} catch ( \Exception $e ) {
+			error_log( '❌ Profile_Bootstrap: Error during bootstrap - ' . $e->getMessage() );
+			error_log( 'Stack trace: ' . $e->getTraceAsString() );
 		}
 	}
 }

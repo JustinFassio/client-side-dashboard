@@ -4,8 +4,14 @@ interface LoadingStateProps {
     label?: string;
 }
 
+const isPerformanceAvailable = typeof performance !== 'undefined' && 
+    typeof performance.mark === 'function' && 
+    typeof performance.measure === 'function';
+
 export const LoadingState: React.FC<LoadingStateProps> = ({ label }) => {
     React.useEffect(() => {
+        if (!isPerformanceAvailable) return;
+
         performance.mark('feature-loading-start');
         return () => {
             performance.mark('feature-loading-end');

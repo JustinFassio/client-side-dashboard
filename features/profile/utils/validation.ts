@@ -1,21 +1,97 @@
 import { ProfileData } from '../types/profile';
 
+export function validateField(field: keyof ProfileData, value: any): string | null {
+    if (value === undefined || value === null) {
+        return null;
+    }
+
+    switch (field) {
+        case 'heightCm':
+            if (typeof value !== 'number' || value <= 0) {
+                return 'Height must be a positive number';
+            }
+            break;
+
+        case 'weightKg':
+            if (typeof value !== 'number' || value <= 0) {
+                return 'Weight must be a positive number';
+            }
+            break;
+
+        case 'experienceLevel':
+            if (!value || !['beginner', 'intermediate', 'advanced'].includes(value)) {
+                return 'Please select a valid experience level';
+            }
+            break;
+
+        case 'gender':
+            if (value && !['male', 'female', 'other', ''].includes(value)) {
+                return 'Please select a valid gender';
+            }
+            break;
+
+        case 'age':
+            if (typeof value !== 'number' || value < 0) {
+                return 'Age must be a positive number';
+            }
+            break;
+
+        case 'phone':
+            if (typeof value !== 'string') {
+                return 'Phone must be a text value';
+            }
+            break;
+
+        case 'email':
+            if (typeof value !== 'string' || !value.includes('@')) {
+                return 'Please enter a valid email address';
+            }
+            break;
+
+        case 'injuries':
+            if (!Array.isArray(value)) {
+                return 'Injuries must be a list';
+            }
+            break;
+
+        default:
+            return null;
+    }
+
+    return null;
+}
+
+export function getFieldError(field: keyof ProfileData, value: any): string | null {
+    if (validateField(field, value)) {
+        return null;
+    }
+
+    switch (field) {
+        case 'heightCm':
+            return 'Height must be between 100cm and 250cm';
+        
+        case 'weightKg':
+            return 'Weight must be between 30kg and 200kg';
+        
+        case 'experienceLevel':
+            return 'Experience level must be beginner, intermediate, or advanced';
+        
+        case 'age':
+            return 'Age must be between 13 and 120';
+        
+        default:
+            return 'Invalid value';
+    }
+}
+
 export const validateProfileField = (field: keyof ProfileData, value: any): string | null => {
     if (value === null || value === undefined || value === '') {
-        const requiredFields = ['age', 'gender', 'height', 'weight', 'fitnessLevel', 'activityLevel'];
+        const requiredFields = ['age', 'gender', 'heightCm', 'weightKg', 'experienceLevel'];
         return requiredFields.includes(field) ? 'Field cannot be empty' : null;
     }
 
     // Pre-declare variables used in switch cases
     const numValue = Number(value);
-    const validFitnessLevels = ['beginner', 'intermediate', 'advanced'];
-    const validActivityLevels = [
-        'sedentary',
-        'lightly_active',
-        'moderately_active',
-        'very_active',
-        'extra_active'
-    ];
     const validGenders = ['male', 'female', 'other', 'prefer_not_to_say'];
 
     switch (field) {
@@ -24,35 +100,11 @@ export const validateProfileField = (field: keyof ProfileData, value: any): stri
                 ? null 
                 : 'Invalid email address';
 
-        case 'age':
-            return numValue >= 13 && numValue <= 120 
-                ? null 
-                : 'Age must be between 13 and 120';
-
-        case 'height':
-            return numValue >= 100 && numValue <= 250 
-                ? null 
-                : 'Height must be between 100cm and 250cm';
-
-        case 'weight':
-            return numValue >= 30 && numValue <= 300 
-                ? null 
-                : 'Weight must be between 30kg and 300kg';
-
-        case 'fitnessLevel':
-            return validFitnessLevels.includes(value) 
-                ? null 
-                : 'Invalid fitness level';
-
-        case 'activityLevel':
-            return validActivityLevels.includes(value) 
-                ? null 
-                : 'Invalid activity level';
-
         case 'gender':
-            return validGenders.includes(value) 
-                ? null 
-                : 'Invalid gender selection';
+            if (value && !['male', 'female', 'other', ''].includes(value)) {
+                return 'Please select a valid gender';
+            }
+            break;
 
         case 'injuries':
             if (!Array.isArray(value)) {
@@ -77,7 +129,15 @@ export const validateProfileField = (field: keyof ProfileData, value: any): stri
         case 'medications':
             return typeof value === 'string' ? null : 'Must be a text value';
 
+        case 'experienceLevel':
+            if (!value || !['beginner', 'intermediate', 'advanced'].includes(value)) {
+                return 'Please select a valid experience level';
+            }
+            break;
+
         default:
             return null;
     }
+
+    return null;
 }; 
