@@ -26,7 +26,7 @@ class Endpoint_Registry {
 	 * Constructor.
 	 */
 	public function __construct() {
-		add_action( 'rest_api_init', array( $this, 'register_all_endpoints' ), 40 );
+		add_action( 'rest_api_init', array( $this, 'register_all_endpoints' ), 5 );
 	}
 
 	/**

@@ -1,7 +1,7 @@
 {
-  "name": "athlete-dashboard-child",
+  "name": "athlete-dashboard",
   "version": "1.0.0",
-  "description": "Athlete Dashboard Child Theme",
+  "description": "Athlete Dashboard Parent Theme",
   "main": "index.js",
   "scripts": {
     "build": "wp-scripts build",

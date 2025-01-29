@@ -50,19 +50,18 @@ class User_Get extends Base_Endpoint {
 	}
 
 	/**
-	 * Get the route for this endpoint.
+	 * Get the endpoint route.
 	 *
 	 * @return string
 	 */
 	public function get_route(): string {
-		error_log( '🎯 DEBUG: User_Get::get_route() called' );
-		return 'user/(?P<user_id>\d+)';
+		return '(?P<user_id>\d+)';
 	}
 
 	/**
-	 * Get the endpoint's HTTP method.
+	 * Get the endpoint method.
 	 *
-	 * @return string HTTP method.
+	 * @return string
 	 */
 	public function get_method(): string {
 		return WP_REST_Server::READABLE;

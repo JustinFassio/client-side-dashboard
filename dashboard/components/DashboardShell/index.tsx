@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useUser } from '../../hooks/useUser';
+import { useUser } from '../../../features/user/context/UserContext';
 import { FeatureRegistry } from '../../core/FeatureRegistry';
 import { FeatureContext } from '../../contracts/Feature';
 import { Events } from '../../core/events';
@@ -15,11 +15,20 @@ interface DashboardShellProps {
     context: FeatureContext;
 }
 
-export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, context }) => {
-    const { user, isLoading: isUserLoading, error: userError } = useUser(context);
+export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, context: initialContext }) => {
+    const { user, isLoading: isUserLoading, error: userError } = useUser();
     const [activeFeature, setActiveFeature] = useState<string>(DEFAULT_FEATURE);
     const [isInitializing, setIsInitializing] = useState(true);
     const [initError, setInitError] = useState<Error | null>(null);
+
+    // Create a validated context with required properties
+    const context: FeatureContext = {
+        debug: typeof initialContext?.debug === 'boolean' ? initialContext.debug : false,
+        userId: user?.id || 0,
+        dispatch: initialContext?.dispatch || (() => () => {}),
+        apiClient: initialContext?.apiClient,
+        nonce: initialContext?.nonce || '',
+    };
 
     // Memoize the navigation handler
     const handleNavigation = useCallback(({ identifier }: { identifier: string }) => {
@@ -87,7 +96,7 @@ export const DashboardShell: React.FC<DashboardShellProps> = ({ registry, contex
         return () => {
             Events.off('navigation:changed', handleNavigation);
         };
-    }, [registry, handleNavigation]); // Remove context and user from dependencies
+    }, [registry, handleNavigation, context, user]);
 
     // Handle initialization loading state
     if (isInitializing || isUserLoading) {

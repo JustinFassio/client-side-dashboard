@@ -11,9 +11,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// Load asset helper functions
-require_once get_stylesheet_directory() . '/functions.php';
-
 // Debug information
 if ( WP_DEBUG ) {
 	error_log( 'Loading dashboard template.' );
@@ -63,11 +60,17 @@ if ( WP_DEBUG ) {
 	error_log( 'Feature data: ' . wp_json_encode( $feature_data ) );
 }
 
-// Pass feature data to JavaScript
+// Get header with minimal wrapper
+require get_stylesheet_directory() . '/dashboard/templates/header-minimal.php';
+
+// Pass feature data to JavaScript after script is enqueued
 wp_localize_script( 'athlete-dashboard', 'athleteDashboardFeature', $feature_data );
 
-// Get header with minimal wrapper
-get_header( 'minimal' );
+// Debug script data
+if ( WP_DEBUG ) {
+	error_log( 'athleteDashboardData: ' . wp_json_encode( $GLOBALS['wp_scripts']->get_data( 'athlete-dashboard', 'data' ) ) );
+	error_log( 'athleteDashboardFeature: ' . wp_json_encode( $feature_data ) );
+}
 ?>
 
 <div id="athlete-dashboard" class="athlete-dashboard-container">
@@ -82,10 +85,22 @@ get_header( 'minimal' );
 				'file'            => get_page_template(),
 				'is_dashboard'    => is_page_template( 'dashboard/templates/dashboard.php' ),
 				'theme_directory' => get_stylesheet_directory(),
+				'template_path'   => __FILE__,
 			),
 			'script_info'    => array(
-				'path'   => get_stylesheet_directory_uri() . '/assets/build/' . get_asset_filename( 'app', 'js' ),
-				'exists' => file_exists( get_stylesheet_directory() . '/assets/build/' . get_asset_filename( 'app', 'js' ) ),
+				'path'              => get_stylesheet_directory_uri() . '/assets/build/' . get_asset_filename( 'app', 'js' ),
+				'exists'            => file_exists( get_stylesheet_directory() . '/assets/build/' . get_asset_filename( 'app', 'js' ) ),
+				'localized_data'    => array(
+					'athleteDashboardData'    => $GLOBALS['wp_scripts']->get_data( 'athlete-dashboard', 'data' ),
+					'athleteDashboardFeature' => $feature_data,
+				),
+				'script_queue'      => $GLOBALS['wp_scripts']->queue,
+				'script_registered' => isset( $GLOBALS['wp_scripts']->registered['athlete-dashboard'] ) ?
+					array(
+						'src'  => $GLOBALS['wp_scripts']->registered['athlete-dashboard']->src,
+						'deps' => $GLOBALS['wp_scripts']->registered['athlete-dashboard']->deps,
+						'ver'  => $GLOBALS['wp_scripts']->registered['athlete-dashboard']->ver,
+					) : 'Not registered',
 			),
 			'feature_info'   => array(
 				'current' => $current_feature,
@@ -95,40 +110,23 @@ get_header( 'minimal' );
 				'dashboard_bridge_exists'      => class_exists( '\\AthleteDashboard\\Core\\DashboardBridge' ),
 				'dashboard_bridge_file_exists' => file_exists( $dashboardbridge_path ),
 			),
-			'profile_info'   => array(
-				'routes'           => array_filter(
-					rest_get_server()->get_routes(),
-					function ( $route ) {
-						return strpos( $route, 'athlete-dashboard/v1/profile' ) === 0;
-					},
-					ARRAY_FILTER_USE_KEY
-				),
-				'bootstrap_status' => array(
-					'container_exists'         => class_exists( '\\AthleteDashboard\\Core\\Container' ),
-					'profile_bootstrap_exists' => class_exists( '\\AthleteDashboard\\Features\\Profile\\Profile_Bootstrap' ),
-				),
+			'wp_query_info'  => array(
+				'is_page'       => is_page(),
+				'is_single'     => is_single(),
+				'post_type'     => get_post_type(),
+				'template_slug' => get_page_template_slug(),
 			),
 		);
-
-		echo "Debug Information:\n";
-		echo wp_json_encode( $debug_info, JSON_PRETTY_PRINT );
+		echo wp_kses_post( print_r( $debug_info, true ) );
 		?>
 			</pre>
 		</div>
-
-		<script>
-			// Add runtime debug info only in debug mode
-			window.addEventListener('load', function() {
-				console.log('=== Dashboard Debug Info ===');
-				console.log('athleteDashboardData:', window.athleteDashboardData);
-				console.log('athleteDashboardFeature:', window.athleteDashboardFeature);
-				console.log('React Mount Target:', document.getElementById('athlete-dashboard'));
-				console.log('=========================');
-			});
-		</script>
 	<?php endif; ?>
 
 	<div id="athlete-dashboard"></div>
 </div>
 
-<?php get_footer( 'minimal' ); ?>
+<?php
+// Get footer with minimal wrapper
+require get_stylesheet_directory() . '/dashboard/templates/footer-minimal.php';
+?>

@@ -17,15 +17,15 @@ export class ProfileError extends Error {
     }
 }
 
-interface ApiError {
+export interface ApiError {
     code: string;
     message: string;
     status: number;
 }
 
-interface ApiResponse<T> {
+export interface ApiResponse<T> {
     success: boolean;
-    data: T;
+    data: T | null;
     error?: ApiError;
 }
 
@@ -45,6 +45,7 @@ export class ProfileService {
     private currentUserData: ProfileData | null = null;
     private readonly apiClient: ApiClient;
     private readonly nonce: string | null = null;
+    private readonly namespace: string = 'athlete-dashboard/v1';
 
     constructor(apiClient: ApiClient, nonce?: string) {
         this.apiClient = apiClient;
@@ -351,20 +352,59 @@ export class ProfileService {
 
     async fetchUserProfile(userId: number): Promise<UserProfile> {
         try {
-            const response = await this.apiClient.fetch<UserProfile>(`profile/user/${userId}`);
-            if (response.error || !response.data) {
-                throw new Error(response.error?.message || 'No data received');
+            console.log('[ProfileService] Fetching user profile with ID:', userId);
+            console.log('[ProfileService] Using namespace:', this.namespace);
+            
+            const endpoint = `${this.namespace}/profile/user/${userId}`;
+            console.log('[ProfileService] Calling endpoint:', endpoint);
+            
+            const response = await this.apiClient.fetch<UserProfile>(endpoint);
+            
+            if (!response) {
+                console.error('[ProfileService] No response received');
+                throw new ProfileError({
+                    code: 'NETWORK_ERROR',
+                    message: 'No response received from server',
+                    status: 500
+                });
             }
+
+            if (response.error) {
+                console.error('[ProfileService] API Error:', response.error);
+                throw new ProfileError({
+                    code: response.error.code === 'validation_error' ? 'VALIDATION_ERROR' : 'NETWORK_ERROR',
+                    message: response.error.message || 'Failed to fetch profile data',
+                    status: response.error.status || (response.error.code === 'validation_error' ? 400 : 500)
+                });
+            }
+
+            if (!response.data) {
+                console.error('[ProfileService] No data in response:', response);
+                throw new ProfileError({
+                    code: 'INVALID_RESPONSE',
+                    message: 'No profile data received from server',
+                    status: 500
+                });
+            }
+
+            console.log('[ProfileService] Successfully fetched profile data:', response.data);
             return response.data;
         } catch (error) {
             console.error('[ProfileService] Error fetching user profile:', error);
-            throw error;
+            if (error instanceof ProfileError) {
+                throw error;
+            }
+            throw new ProfileError({
+                code: error instanceof Error && error.message.includes('validation') ? 'VALIDATION_ERROR' : 'NETWORK_ERROR',
+                message: error instanceof Error ? error.message : 'Failed to fetch profile data',
+                status: error instanceof Error && error.message.includes('validation') ? 400 : 500
+            });
         }
     }
 
     async updateUserProfile(userId: number, data: Partial<UserProfile['data']>): Promise<UserProfile> {
         try {
-            const response = await this.apiClient.post<UserProfile>(`profile/user/${userId}`, data);
+            const response = await this.apiClient.post<UserProfile>(`${this.namespace}/profile/user/${userId}`, data);
             if (response.error || !response.data) {
                 throw new Error(response.error?.message || 'No data received');
             }

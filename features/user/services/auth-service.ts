@@ -18,7 +18,18 @@ export class AuthService {
     private readonly baseUrl: string;
 
     private constructor() {
-        this.baseUrl = '/wp-json';
+        console.group('AuthService: Constructor');
+        // Get the base URL from WordPress data, falling back to /wp-json
+        const wpApiUrl = window.athleteDashboardData?.apiUrl || '';
+        console.log('Initial API URL:', wpApiUrl);
+        
+        // Extract the base URL by removing the athlete-dashboard/v1 part
+        this.baseUrl = wpApiUrl.split('/athlete-dashboard/v1')[0];
+        console.log('Extracted base URL:', this.baseUrl);
+        
+        // Log the window.athleteDashboardData for debugging
+        console.log('athleteDashboardData:', window.athleteDashboardData);
+        console.groupEnd();
     }
 
     public static getInstance(): AuthService {
@@ -29,7 +40,9 @@ export class AuthService {
     }
 
     private getNonce(): string {
-        return window.athleteDashboardData?.nonce || '';
+        const nonce = window.athleteDashboardData?.nonce || '';
+        console.log('AuthService: Got nonce:', nonce ? 'present' : 'missing');
+        return nonce;
     }
 
     private transformUserData(wpUser: WordPressUserData): User {
@@ -91,25 +104,32 @@ export class AuthService {
     public async getCurrentUser(): Promise<User | null> {
         try {
             console.group('AuthService: Get Current User');
-            const endpoint = `${this.baseUrl}/wp/v2/users/me?context=edit`;
+            const endpoint = '/wp/v2/users/me?context=edit';
             const nonce = this.getNonce();
+            
+            // Construct the full URL properly
+            const fullUrl = this.baseUrl + endpoint;
             
             console.log('Request details:', {
                 endpoint,
                 hasNonce: !!nonce,
-                baseUrl: this.baseUrl
+                baseUrl: this.baseUrl,
+                fullUrl,
+                athleteDashboardData: window.athleteDashboardData
             });
             
-            const response = await fetch(endpoint, {
+            const response = await fetch(fullUrl, {
                 headers: {
-                    'X-WP-Nonce': nonce
+                    'X-WP-Nonce': nonce,
+                    'Accept': 'application/json'
                 }
             });
 
             console.log('Response details:', {
                 status: response.status,
                 statusText: response.statusText,
-                ok: response.ok
+                ok: response.ok,
+                headers: Object.fromEntries(response.headers.entries())
             });
             
             if (!response.ok) {
@@ -129,16 +149,7 @@ export class AuthService {
                 throw new Error('Invalid user data: missing ID');
             }
 
-            const user = {
-                id: userData.id,
-                username: userData.user_login || userData.username || '',
-                email: userData.user_email || userData.email || '',
-                displayName: userData.display_name || userData.name || '',
-                firstName: userData.first_name || '',
-                lastName: userData.last_name || '',
-                roles: userData.roles || []
-            };
-
+            const user = this.transformUserData(userData);
             console.log('Transformed user data:', user);
             console.groupEnd();
             

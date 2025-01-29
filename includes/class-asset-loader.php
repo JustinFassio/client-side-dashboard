@@ -86,7 +86,17 @@ class Asset_Loader {
 	 * @return array The dashboard data.
 	 */
 	private static function get_dashboard_data() {
-		$data = apply_filters( 'athlete_dashboard_feature_data', array() );
+		$debug_settings = Debug::get_settings();
+
+		$data = array(
+			'debug'    => $debug_settings['enabled'],
+			'debugLog' => $debug_settings['log_enabled'],
+			'apiUrl'   => rest_url( 'athlete-dashboard/v1' ),
+			'nonce'    => wp_create_nonce( 'wp_rest' ),
+			'userId'   => get_current_user_id(),
+		);
+
+		$data = apply_filters( 'athlete_dashboard_feature_data', $data );
 		Debug::log( 'Dashboard data prepared: ' . wp_json_encode( $data ) );
 		return $data;
 	}

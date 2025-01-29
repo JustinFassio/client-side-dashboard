@@ -2,7 +2,7 @@
 /**
  * Athlete Dashboard Theme Functions
  *
- * Core initialization file for the Athlete Dashboard child theme. Handles feature bootstrapping,
+ * Core initialization file for the Athlete Dashboard theme. Handles feature bootstrapping,
  * asset management, template configuration, and REST API setup. This file serves as the main
  * entry point for theme functionality and coordinates the integration of various components.
  *
@@ -11,7 +11,7 @@
  * - Cache service initialization
  * - REST API endpoint registration
  * - Asset management and enqueuing
- * - Template handling and Divi integration
+ * - Template handling
  * - Debug logging configuration
  *
  * @package AthleteDashboard
@@ -290,17 +290,6 @@ function localize_dashboard_data() {
 
 /**
  * Enqueue athlete dashboard scripts and styles.
- *
- * Coordinates the loading of all dashboard-related assets by calling
- * specialized helper functions for each aspect of asset management.
- * Only loads assets when viewing the dashboard template to optimize
- * performance.
- *
- * @since 1.0.0
- * @see enqueue_core_dependencies() For WordPress core script loading
- * @see enqueue_app_scripts() For main application script loading
- * @see enqueue_app_styles() For style loading
- * @see localize_dashboard_data() For runtime data configuration
  */
 function enqueue_athlete_dashboard_scripts() {
 	if ( ! is_page_template( 'dashboard/templates/dashboard.php' ) ) {
@@ -310,31 +299,73 @@ function enqueue_athlete_dashboard_scripts() {
 		return;
 	}
 
-	Debug::log( 'Starting dashboard script enqueuing.', 'core' );
+	if ( WP_DEBUG ) {
+		error_log( 'Starting dashboard script enqueuing.' );
+	}
 
-	// Load core dependencies.
+	// Load core dependencies first
 	enqueue_core_dependencies();
 
 	// Get the script filename
 	$script_filename = get_asset_filename( 'app', 'js' );
+	$script_path     = get_stylesheet_directory() . '/assets/build/' . $script_filename;
+	$script_url      = get_stylesheet_directory_uri() . '/assets/build/' . $script_filename;
+
 	if ( WP_DEBUG ) {
-		error_log( 'Loading script: ' . $script_filename );
+		error_log( 'Script path: ' . $script_path );
+		error_log( 'Script URL: ' . $script_url );
+		error_log( 'Script exists: ' . ( file_exists( $script_path ) ? 'yes' : 'no' ) );
 	}
 
-	// Load application scripts.
+	// Load application scripts
 	wp_enqueue_script(
 		'athlete-dashboard',
-		get_stylesheet_directory_uri() . '/assets/build/' . $script_filename,
+		$script_url,
 		array( 'wp-element', 'wp-data', 'wp-api-fetch', 'wp-i18n', 'wp-hooks' ),
-		get_asset_version( get_stylesheet_directory() . '/assets/build/' . $script_filename ),
+		get_asset_version( $script_path ),
 		true
 	);
 
-	// Load application styles.
-	enqueue_app_styles();
+	// Configure runtime data BEFORE the app loads
+	$dashboard_data = array(
+		'nonce'       => wp_create_nonce( 'wp_rest' ),
+		'apiUrl'      => rest_url( 'athlete-dashboard/v1' ),
+		'siteUrl'     => get_site_url(),
+		'debug'       => defined( 'WP_DEBUG' ) && WP_DEBUG,
+		'userId'      => get_current_user_id(),
+		'isLoggedIn'  => is_user_logged_in(),
+		'environment' => Environment::get_settings(),
+		'features'    => array(
+			'profile' => ProfileConfig::get_settings(),
+		),
+	);
 
-	// Configure runtime data.
-	localize_dashboard_data();
+	if ( WP_DEBUG ) {
+		error_log( 'Localizing dashboard data: ' . wp_json_encode( $dashboard_data ) );
+	}
+
+	wp_localize_script(
+		'athlete-dashboard',
+		'athleteDashboardData',
+		$dashboard_data
+	);
+
+	// Initialize feature-specific data
+	$current_feature = DashboardBridge::get_current_feature();
+	$feature_data    = DashboardBridge::get_feature_data( $current_feature );
+
+	if ( WP_DEBUG ) {
+		error_log( 'Localizing feature data: ' . wp_json_encode( $feature_data ) );
+	}
+
+	wp_localize_script(
+		'athlete-dashboard',
+		'athleteDashboardFeature',
+		$feature_data
+	);
+
+	// Load application styles
+	enqueue_app_styles();
 
 	if ( WP_DEBUG ) {
 		error_log( 'Dashboard scripts enqueued successfully' );
@@ -352,10 +383,25 @@ add_action( 'wp_enqueue_scripts', 'enqueue_athlete_dashboard_scripts' );
  */
 function athlete_dashboard_setup() {
 	add_theme_support( 'editor-styles' );
-	$dashboard_css = get_asset_filename( 'dashboard', 'css' );
-	add_editor_style( "assets/build/{$dashboard_css}" );
+	add_theme_support( 'title-tag' );
+	add_theme_support( 'post-thumbnails' );
+
+	// Register the dashboard template
+	add_theme_support( 'custom-page-templates' );
 }
 add_action( 'after_setup_theme', 'athlete_dashboard_setup' );
+
+/**
+ * Register page templates.
+ *
+ * @param array $templates Array of page templates.
+ * @return array Modified array of page templates.
+ */
+function athlete_dashboard_add_page_templates( $templates ) {
+	$templates['dashboard/templates/dashboard.php'] = 'Dashboard';
+	return $templates;
+}
+add_filter( 'theme_page_templates', 'athlete_dashboard_add_page_templates' );
 
 /**
  * Remove Divi template parts for the dashboard page.
@@ -392,22 +438,6 @@ add_action( 'template_redirect', 'athlete_dashboard_remove_divi_template_parts' 
 require_once get_stylesheet_directory() . '/includes/admin/user-profile.php';
 
 /**
- * Register custom page templates.
- *
- * Adds the dashboard template to the list of available page templates
- * in the WordPress admin area.
- *
- * @since 1.0.0
- * @param array $templates Array of page templates.
- * @return array Modified array of page templates.
- */
-function athlete_dashboard_register_page_templates( $templates ) {
-	$templates['dashboard/templates/dashboard.php'] = 'Dashboard';
-	return $templates;
-}
-add_filter( 'theme_page_templates', 'athlete_dashboard_register_page_templates' );
-
-/**
  * Load the dashboard template.
  *
  * Intercepts template loading to serve our custom dashboard template
@@ -418,12 +448,27 @@ add_filter( 'theme_page_templates', 'athlete_dashboard_register_page_templates' 
  * @return string Modified path to the template file.
  */
 function athlete_dashboard_load_template( $template ) {
-	if ( get_page_template_slug() === 'dashboard/templates/dashboard.php' ) {
-		$template = get_stylesheet_directory() . '/dashboard/templates/dashboard.php';
+	if ( WP_DEBUG ) {
+		error_log( 'Template loading - Current template: ' . $template );
+		error_log( 'Page template slug: ' . get_page_template_slug() );
 	}
+
+	if ( is_page() && get_page_template_slug() === 'dashboard/templates/dashboard.php' ) {
+		$new_template = get_stylesheet_directory() . '/dashboard/templates/dashboard.php';
+
+		if ( WP_DEBUG ) {
+			error_log( 'Loading dashboard template from: ' . $new_template );
+			error_log( 'Template exists: ' . ( file_exists( $new_template ) ? 'yes' : 'no' ) );
+		}
+
+		if ( file_exists( $new_template ) ) {
+			return $new_template;
+		}
+	}
+
 	return $template;
 }
-add_filter( 'template_include', 'athlete_dashboard_load_template' );
+add_filter( 'template_include', 'athlete_dashboard_load_template', 99 );
 
 // Add debug logging for template loading.
 add_action(
@@ -497,23 +542,23 @@ add_action(
  * @since 1.0.0
  */
 function enqueue_app_styles() {
-	// Load main application styles.
-	$app_css = get_asset_filename( 'app', 'css' );
+	// Load main application styles
 	wp_enqueue_style(
-		'athlete-dashboard',
-		get_stylesheet_directory_uri() . "/assets/build/{$app_css}",
+		'athlete-dashboard-app',
+		get_template_directory_uri() . '/assets/build/app.css',
 		array(),
-		get_asset_version( get_stylesheet_directory() . "/assets/build/{$app_css}" )
+		get_asset_version( get_template_directory() . '/assets/build/app.css' )
 	);
 
-	// Load dashboard core styles.
+	// Load dashboard core styles
 	wp_enqueue_style(
 		'athlete-dashboard-core',
-		get_stylesheet_directory_uri() . '/dashboard/styles/main.css',
+		get_template_directory_uri() . '/dashboard/styles/main.css',
 		array(),
-		get_asset_version( get_stylesheet_directory() . '/dashboard/styles/main.css' )
+		get_asset_version( get_template_directory() . '/dashboard/styles/main.css' )
 	);
 }
+add_action( 'wp_enqueue_scripts', 'enqueue_app_styles' );
 
 /**
  * Validate AI Service Configuration
@@ -778,3 +823,51 @@ add_action(
 		error_log( '=== END DEBUG ===' );
 	}
 );
+
+/**
+ * Register custom header and footer templates
+ */
+function athlete_dashboard_register_templates() {
+	add_filter(
+		'get_header',
+		function ( $name ) {
+			if ( $name === 'minimal' ) {
+				return get_stylesheet_directory() . '/dashboard/templates/header-minimal.php';
+			}
+			return $name;
+		}
+	);
+
+	add_filter(
+		'get_footer',
+		function ( $name ) {
+			if ( $name === 'minimal' ) {
+				return get_stylesheet_directory() . '/dashboard/templates/footer-minimal.php';
+			}
+			return $name;
+		}
+	);
+}
+add_action( 'after_setup_theme', 'athlete_dashboard_register_templates' );
+
+/**
+ * Enqueue application scripts
+ */
+function enqueue_app_scripts() {
+	// Enqueue core dependencies first
+	enqueue_core_dependencies();
+
+	// Enqueue the main application script
+	wp_enqueue_script(
+		'athlete-dashboard',
+		get_template_directory_uri() . '/assets/build/' . get_asset_filename( 'app', 'js' ),
+		array( 'wp-element', 'wp-data', 'wp-api-fetch', 'wp-i18n', 'wp-hooks' ),
+		get_asset_version( get_template_directory() . '/assets/build/' . get_asset_filename( 'app', 'js' ) ),
+		true
+	);
+
+	if ( WP_DEBUG ) {
+		error_log( 'Enqueued app.js with version: ' . get_asset_version( get_template_directory() . '/assets/build/' . get_asset_filename( 'app', 'js' ) ) );
+	}
+}
+add_action( 'wp_enqueue_scripts', 'enqueue_app_scripts' );

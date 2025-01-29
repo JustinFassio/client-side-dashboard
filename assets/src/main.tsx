@@ -2,6 +2,8 @@ import { createElement } from '@wordpress/element';
 import { FeatureRegistry } from '../../dashboard/core/FeatureRegistry';
 import { Config as _Config } from '../../dashboard/core/config';
 import { DashboardRoot } from './DashboardRoot';
+import { ProfileService } from '../../features/profile/services/ProfileService';
+import { ApiClient } from '../../dashboard/services/api';
 import '../../dashboard/styles/main.css';
 
 interface DashboardContext {
@@ -16,16 +18,30 @@ async function initializeDashboard() {
     const context: DashboardContext = {
         apiUrl: window.athleteDashboardData.apiUrl,
         nonce: window.athleteDashboardData.nonce,
-        debug: window.athleteDashboardData.debug,
-        userId: window.athleteDashboardData.userId,
+        debug: Boolean(window.athleteDashboardData.debug),
+        userId: Number(window.athleteDashboardData.userId),
         dispatch: (scope: string) => (action) => {
-            console.log(`Dispatching action to ${scope}:`, action);
+            if (window.athleteDashboardData.debug) {
+                console.log(`Dispatching action to ${scope}:`, action);
+            }
         }
     };
 
     try {
-        console.log('[Dashboard] Initializing with context:', context);
-        console.log('[Dashboard] Current feature:', window.athleteDashboardData.feature);
+        if (context.debug) {
+            console.log('[Dashboard] Initializing with context:', context);
+            console.log('[Dashboard] Current feature:', window.athleteDashboardData.feature);
+        }
+
+        // Initialize API client and profile service
+        const apiClient = new ApiClient({
+            baseURL: context.apiUrl,
+            headers: {
+                'X-WP-Nonce': context.nonce
+            }
+        });
+        const profileService = new ProfileService(apiClient, context.nonce);
+        window.profileService = profileService; // For debugging
 
         const registry = new FeatureRegistry(context);
 
@@ -48,36 +64,21 @@ async function initializeDashboard() {
         })));
 
         if (context.debug) {
-            console.log('[Dashboard] Feature registration complete');
+            console.log('[Dashboard] Debug mode enabled');
+            window.registry = registry;
         }
 
-        // Initialize dashboard
-        const container = document.getElementById('athlete-dashboard');
-        if (!container) {
-            throw new Error('Dashboard container not found');
+        const root = document.getElementById('athlete-dashboard');
+        if (!root) {
+            throw new Error('Dashboard root element not found');
         }
 
-        const root = createElement(DashboardRoot, {
-            registry,
-            context
-        });
-
-        window.wp.element.render(root, container);
+        const element = createElement(DashboardRoot, { registry });
+        window.wp.element.render(element, root);
 
     } catch (error) {
         console.error('[Dashboard] Failed to initialize:', error);
-        const container = document.getElementById('athlete-dashboard');
-        if (container) {
-            container.innerHTML = `
-                <div class="dashboard-error">
-                    <h3>Dashboard Error</h3>
-                    <p>Failed to initialize the dashboard. Please try refreshing the page.</p>
-                    <pre>${error instanceof Error ? error.message : 'Unknown error'}</pre>
-                </div>
-            `;
-        }
     }
 }
 
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initializeDashboard);
+initializeDashboard();

@@ -16,23 +16,20 @@ export class WorkoutGeneratorFeature implements Feature {
 
     private context: FeatureContext | null = null;
 
-    async register(context: FeatureContext): Promise<void> {
+    public async register(context: FeatureContext): Promise<void> {
         this.context = context;
-        if (context.debug) {
-            console.log('[WorkoutGeneratorFeature] Registered');
+        if (context?.debug) {
+            console.log('Workout Generator feature registered');
         }
-        return Promise.resolve();
     }
 
-    async init(): Promise<void> {
-        if (!this.context) return;
-
-        if (this.context.debug) {
-            console.log('[WorkoutGeneratorFeature] Initialized');
+    public async init(): Promise<void> {
+        if (this.context?.debug) {
+            console.log('Workout Generator feature initialized');
         }
 
         // Dispatch initial load event
-        this.context.dispatch('athlete-dashboard')({
+        this.context?.dispatch('athlete-dashboard')({
             type: WorkoutEvent.FETCH_REQUEST,
             payload: { userId: 0 } // The actual userId will be determined by the WorkoutContext
         });

@@ -17,27 +17,30 @@ export const FeatureRouter: React.FC<FeatureRouterProps> = ({
     const [isInitializing, setIsInitializing] = useState(false);
     const [initError, setInitError] = useState<Error | null>(null);
 
+    // Safely log debug messages
+    const logDebug = useCallback((message: string) => {
+        if (context?.debug) {
+            console.log(message);
+        }
+    }, [context?.debug]);
+
     // Memoize the initialization function
     const initFeature = useCallback(async (feat: Feature) => {
-        if (context.debug) {
-            console.log('[FeatureRouter] Initializing feature:', feat.identifier);
-        }
+        logDebug(`[FeatureRouter] Initializing feature: ${feat.identifier}`);
         
         setIsInitializing(true);
         setInitError(null);
         
         try {
             await feat.init();
-            if (context.debug) {
-                console.log('[FeatureRouter] Feature initialized:', feat.identifier);
-            }
+            logDebug(`[FeatureRouter] Feature initialized: ${feat.identifier}`);
         } catch (error) {
             console.error('[FeatureRouter] Feature initialization failed:', error);
             setInitError(error instanceof Error ? error : new Error('Feature initialization failed'));
         } finally {
             setIsInitializing(false);
         }
-    }, [context.debug]);
+    }, [logDebug]);
 
     useEffect(() => {
         const newFeature = feature || fallbackFeature;
@@ -92,8 +95,17 @@ export const FeatureRouter: React.FC<FeatureRouterProps> = ({
         );
     }
 
-    if (context.debug) {
-        console.log('[FeatureRouter] Rendering feature:', activeFeature.identifier);
+    logDebug(`[FeatureRouter] Rendering feature: ${activeFeature.identifier}`);
+
+    // Ensure context has required properties before rendering
+    if (!context || typeof context.userId === 'undefined') {
+        console.error('[FeatureRouter] Invalid context:', context);
+        return (
+            <div className="feature-error">
+                <h3>Configuration Error</h3>
+                <p>The feature context is not properly configured.</p>
+            </div>
+        );
     }
 
     return (

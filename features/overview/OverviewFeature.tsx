@@ -14,7 +14,7 @@ export class OverviewFeature implements Feature {
 
     public async register(context: FeatureContext): Promise<void> {
         this.context = context;
-        if (context.debug) {
+        if (context?.debug) {
             console.log('Overview feature registered');
         }
     }

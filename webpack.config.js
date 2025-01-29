@@ -4,16 +4,23 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 module.exports = {
   ...defaultConfig,
+  mode: isDevelopment ? 'development' : 'production',
+  devtool: isDevelopment ? 'eval-source-map' : 'source-map',
   entry: {
-    app: ['./assets/src/main.tsx', './dashboard/styles/main.css']
+    app: [
+      path.resolve(__dirname, './assets/src/main.tsx'),
+      path.resolve(__dirname, './dashboard/styles/main.css')
+    ]
   },
   output: {
     path: path.resolve(__dirname, 'assets/build'),
-    filename: '[name].[contenthash].js',
-    chunkFilename: '[id].[contenthash].js',
-    publicPath: '/wp-content/themes/athlete-dashboard-child/assets/build/'
+    filename: isDevelopment ? '[name].js' : '[name].[contenthash].js',
+    chunkFilename: isDevelopment ? '[id].js' : '[id].[contenthash].js',
+    publicPath: '/wp-content/themes/client-side-dashboard/assets/build/'
   },
   resolve: {
     ...defaultConfig.resolve,
@@ -21,7 +28,8 @@ module.exports = {
     alias: {
       '@dashboard': path.resolve(__dirname, 'dashboard'),
       '@dashboard-styles': path.resolve(__dirname, 'dashboard/styles'),
-      '@styles': path.resolve(__dirname, 'dashboard/styles')
+      '@styles': path.resolve(__dirname, 'dashboard/styles'),
+      '@features': path.resolve(__dirname, 'features')
     }
   },
   module: {
@@ -32,7 +40,7 @@ module.exports = {
           {
             loader: 'ts-loader',
             options: {
-              transpileOnly: true,
+              transpileOnly: isDevelopment,
               compilerOptions: {
                 jsx: 'react-jsx'
               }
@@ -79,7 +87,7 @@ module.exports = {
   plugins: [
     ...defaultConfig.plugins,
     new MiniCssExtractPlugin({
-      filename: 'app.[contenthash].css'
+      filename: isDevelopment ? '[name].css' : '[name].[contenthash].css'
     }),
     new WebpackManifestPlugin({
       publicPath: ''
@@ -87,32 +95,15 @@ module.exports = {
   ],
   optimization: {
     ...defaultConfig.optimization,
-    splitChunks: {
-      chunks: 'all',
-      cacheGroups: {
-        defaultVendors: {
-          test: /[\\/]node_modules[\\/]/,
-          priority: -10,
-          reuseExistingChunk: true
-        }
-      }
-    },
-    minimize: true,
+    minimize: !isDevelopment,
     minimizer: [
       new TerserPlugin({
         terserOptions: {
           compress: {
-            drop_console: false,
-            pure_funcs: ['console.info', 'console.debug', 'console.warn']
-          },
-          mangle: {
-            reserved: ['ApiClient', 'normalizeUrl']
-          },
-          keep_classnames: true,
-          keep_fnames: true
+            drop_console: !isDevelopment
+          }
         }
       })
     ]
-  },
-  devtool: 'source-map'
+  }
 }; 

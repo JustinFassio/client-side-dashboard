@@ -86,38 +86,14 @@ export class ProfileFeature implements Feature {
 
     public async register(context: FeatureContext): Promise<void> {
         this.context = context;
-        if (context.debug) {
-            console.log('[ProfileFeature] Registered with context:', context);
+        if (context?.debug) {
+            console.log('Profile feature registered');
         }
     }
 
     public async init(): Promise<void> {
-        if (!this.context) {
-            console.error('[ProfileFeature] Initialization failed: Context not set');
-            throw new Error('Context not set');
-        }
-
-        try {
-            this.setState({ isLoading: true, error: null });
-            
-            ApiClient.getInstance(this.context);
-            
-            if (this.context.debug) {
-                console.log('[ProfileFeature] Initialized with context:', this.context);
-            }
-            
-            this.setState({ isComplete: true });
-        } catch (error) {
-            console.error('[ProfileFeature] Initialization error:', error);
-            this.setState({
-                error: {
-                    code: 'INITIALIZATION_ERROR' as ProfileErrorCode,
-                    message: error instanceof Error ? error.message : 'Failed to initialize profile',
-                    status: 500
-                }
-            });
-        } finally {
-            this.setState({ isLoading: false });
+        if (this.context?.debug) {
+            console.log('Profile feature initialized');
         }
     }
 

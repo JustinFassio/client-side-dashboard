@@ -45,11 +45,11 @@ abstract class Base_Endpoint extends WP_REST_Controller {
 
 		// Set REST API namespace and base
 		$this->namespace = 'athlete-dashboard/v1';
-		$this->rest_base = 'profile';
+		$this->rest_base = 'profile/user';
 
 		error_log( '🔧 DEBUG: Base_Endpoint constructor called' );
-		error_log( '🔧 DEBUG: Namespace set to: ' . $this->namespace );
-		error_log( '🔧 DEBUG: Rest base set to: ' . $this->rest_base );
+		error_log( '🔧 DEBUG: Namespace: ' . $this->namespace );
+		error_log( '🔧 DEBUG: Rest base: ' . $this->rest_base );
 	}
 
 	/**
